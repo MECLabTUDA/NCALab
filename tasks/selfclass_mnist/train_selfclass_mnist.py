@@ -1,23 +1,52 @@
 import sys, os
 
-root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), ".."))
+root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+print(root_dir)
 sys.path.append(root_dir)
 
-from nca.basicNCA import BasicNCAModel
+from nca.models.classificationNCA import ClassificationNCAModel
 from nca.training import train_basic_nca
+from nca.paths import WEIGHTS_PATH
+
+import click
+
+import torch
+
+from torchvision.datasets import MNIST
+from torchvision import transforms
 
 
-def train_selfclass_mnist():
-    device = ...
-    model = BasicNCAModel(
+def train_selfclass_mnist(batch_size=8, hidden_chanels=9):
+
+    mnist = MNIST(
+        "mnist",
+        download=True,
+        train=True,
+        transform=transforms.Compose([transforms.ToTensor()]),
+    )
+    loader = torch.utils.data.DataLoader(mnist, shuffle=True, batch_size=batch_size)
+    device = torch.device("cuda:0")
+
+    nca = ClassificationNCAModel(
         device,
-        num_hidden_channels=1,
-        num_hidden_channels=9,
-        num_output_channels=10,
+        num_image_channels=1,
+        num_hidden_channels=hidden_chanels,
+        num_classes=10,
         fire_rate=0.5,
         hidden_size=128,
         use_alive_mask=False,
         immutable_image_channels=True,
         learned_filters=2,
     )
-    train_basic_nca(model, dataloader, max_iterations=50000, batch_size=8)
+    train_basic_nca(nca, loader, WEIGHTS_PATH / "selfclass_mnist.pth")
+
+
+@click.command()
+@click.option("--batch-size", "-b", default=8, type=int)
+@click.option("--hidden-channels", "-H", default=9, type=int)
+def main(batch_size, hidden_channels):
+    train_selfclass_mnist(batch_size=batch_size, hidden_chanels=hidden_channels)
+
+
+if __name__ == "__main__":
+    main()
