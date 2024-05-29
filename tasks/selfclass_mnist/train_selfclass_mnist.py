@@ -14,9 +14,11 @@ import torch
 
 from torchvision.datasets import MNIST
 from torchvision import transforms
+from torch.utils.tensorboard import SummaryWriter
 
 
 def train_selfclass_mnist(batch_size=8, hidden_chanels=9):
+    writer = SummaryWriter()
 
     mnist = MNIST(
         "mnist",
@@ -38,7 +40,8 @@ def train_selfclass_mnist(batch_size=8, hidden_chanels=9):
         immutable_image_channels=True,
         learned_filters=2,
     )
-    train_basic_nca(nca, loader, WEIGHTS_PATH / "selfclass_mnist.pth")
+    train_basic_nca(nca, loader, WEIGHTS_PATH / "selfclass_mnist.pth", summary_writer=writer)
+    writer.close()
 
 
 @click.command()
