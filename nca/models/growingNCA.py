@@ -3,7 +3,6 @@ import torch.nn.functional as F
 
 from .basicNCA import BasicNCAModel
 
-
 class GrowingNCAModel(BasicNCAModel):
     def __init__(
         self,
@@ -13,7 +12,7 @@ class GrowingNCAModel(BasicNCAModel):
         fire_rate=0.5,
         hidden_size=128,
         use_alive_mask=False,
-        learned_filters=0,
+        learned_filters=2,
     ):
         super(GrowingNCAModel, self).__init__(
             device,
@@ -26,8 +25,8 @@ class GrowingNCAModel(BasicNCAModel):
             immutable_image_channels=False,
             learned_filters=learned_filters,
         )
-        self.visualization_rows = ["input_image", "pred_image"]
+        self.visualization_rows = ["target_image", "pred_image"]
 
     def loss(self, x, target):
-        loss = F.mse(x[..., :num_image_channels].transpose(3, 1), target)
+        loss = F.mse_loss(x[..., :self.num_image_channels], target)
         return loss

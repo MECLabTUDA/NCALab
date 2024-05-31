@@ -1,34 +1,23 @@
-# TODO: download, verify checksum, unzip
-# TODO: dataset class for images / class labels
+# TODO implement pattern pool
+# TODO implement damage
+from torch.utils.data import Dataset
+import numpy as np
 
 
-
-class SegmentationDataset(Dataset):
-    def __init__(self, image_path, label_path, num_channels_total: int):
+class GrowingNCADataset(Dataset):
+    def __init__(self, image, num_channels, batch_size=8):
         """
         :param num_channels_total: Total number of channels our NCA model processes.
         """
-        super(self, SegmentationDataset).__init__()
-        self.num_channels_total = num_channels_total
+        super(GrowingNCADataset, self).__init__()
+        self.batch_size = batch_size
+        self.seed = np.zeros((num_channels, image.shape[0], image.shape[1]))
+        self.seed[3:, :, :] = 1.0
+        self.image = image.astype(np.float32) / 255.0
+        self.batch_size = batch_size
 
     def __len__(self):
-        pass
+        return self.batch_size
 
     def __getitem__(self, idx):
-        pass
-
-
-class ClassificationDataset(Dataset):
-    def __init__(self, image_path, classes: dict, num_channels_total: int):
-        """
-        :param classes: Dict mapping image filenames to respective class IDs
-        :param num_channels_total: Total number of channels our NCA model processes.
-        """
-        super(self, SegmentationDataset).__init__()
-        self.num_channels_total = num_channels_total
-
-    def __len__(self):
-        pass
-
-    def __getitem__(self, idx):
-        pass
+        return self.seed, self.image

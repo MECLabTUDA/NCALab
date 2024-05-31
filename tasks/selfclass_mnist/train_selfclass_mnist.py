@@ -1,7 +1,6 @@
 import sys, os
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-print(root_dir)
 sys.path.append(root_dir)
 
 from nca.models.classificationNCA import ClassificationNCAModel
@@ -40,7 +39,7 @@ def train_selfclass_mnist(batch_size=8, hidden_chanels=9):
         immutable_image_channels=True,
         learned_filters=2,
     )
-    train_basic_nca(nca, loader, WEIGHTS_PATH / "selfclass_mnist.pth", summary_writer=writer)
+    train_basic_nca(nca, loader, WEIGHTS_PATH / "selfclass_mnist.pth", summary_writer=writer, pad_x0=True)
     writer.close()
 
 

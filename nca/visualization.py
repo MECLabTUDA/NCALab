@@ -7,7 +7,8 @@ row_titles = {
     "pred_class_overlay": "Predicted Class",
     "true_class_overlay": "True Class",
     "input_image": "Input Image",
-    "pred_image": "Predicted Image"
+    "pred_image": "Predicted Image",
+    "target_image": "Target Image",
 }
 
 
@@ -43,9 +44,13 @@ def show_batch(x_seed, x_pred, y_true, nca):
             for k in range(batch_size):
                 for m in range(image_width):
                     for n in range(image_height):
-                        images[k, m, n] = np.argmax(x_pred[k, m, n, :-nca.num_output_channels]) + 1
+                        images[k, m, n] = (
+                            np.argmax(x_pred[k, m, n, : -nca.num_output_channels]) + 1
+                        )
             for c in range(len(y_true)):
-                mask = ((np.max(x_seed[c, :, :, :nca.num_image_channels], axis=-1) > 0) * 2 - 1)
+                mask = (
+                    np.max(x_seed[c, :, :, : nca.num_image_channels], axis=-1) > 0
+                ) * 2 - 1
                 images[c, :, :, -1] *= mask
                 images[c] = np.clip(images[c], -1, nca.num_output_channels)
         elif row == "true_class":
@@ -55,30 +60,36 @@ def show_batch(x_seed, x_pred, y_true, nca):
             images = np.ones((batch_size, image_width, image_height))
             for c in range(len(y_true)):
                 images[c] *= y_true[c]
-                mask = ((np.max(x_seed[c, :, :, :nca.num_image_channels], axis=-1) > 0) * 2 - 1)
+                mask = (
+                    np.max(x_seed[c, :, :, : nca.num_image_channels], axis=-1) > 0
+                ) * 2 - 1
                 images[c] *= mask
                 images[c] = np.clip(images[c], -1, nca.num_output_channels)
         elif row == "pred_class_overlay":
             cmap_overlay = "Set3"
-            images = x_seed[..., :nca.num_image_channels]
-            overlay = x_pred[..., :-nca.num_output_channels]
+            images = x_seed[..., : nca.num_image_channels]
+            overlay = x_pred[..., : -nca.num_output_channels]
         elif row == "true_class_overlay":
-            images = x_seed[..., :nca.num_image_channels]
-            overlay = y_true[..., :-nca.num_output_channels]
+            images = x_seed[..., : nca.num_image_channels]
+            overlay = y_true[..., : -nca.num_output_channels]
         elif row == "input_image":
-            images = x_seed[..., :nca.num_image_channels]
+            images = np.clip(x_seed[..., : nca.num_image_channels], 0, 1)
+        elif row == "target_image":
+            images = np.clip(y_true[..., : nca.num_image_channels], 0, 1)
         elif row == "pred_image":
-            images = x_pred[..., :nca.num_image_channels]
+            images = np.clip(x_pred[..., : nca.num_image_channels], 0, 1)
 
         title_idx = batch_size // 2 - 1
         if title_idx < 0:
             title_idx = 0
         ax[i, title_idx].set_title(row_titles[row])
-            
+
         for j in range(batch_size):
             image = images[j]
             ax[i, j].imshow(image, vmin=vmin, vmax=vmax, cmap=cmap)
             if overlay is not None:
-                ax[i, j].imshow(overlay, vmin=overlay_vmin, vmax=overlay_vmax, cmap=overlay_cmap)
+                ax[i, j].imshow(
+                    overlay, vmin=overlay_vmin, vmax=overlay_vmax, cmap=overlay_cmap
+                )
             ax[i, j].axis("off")
     return figure

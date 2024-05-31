@@ -10,6 +10,8 @@ import matplotlib.pyplot as plt
 import PIL.Image
 from torchvision.transforms import ToTensor
 
+from tqdm import tqdm
+
 from .visualization import show_batch
 
 
@@ -26,6 +28,7 @@ def train_basic_nca(
     adam_betas=(0.5, 0.5),
     summary_writer=None,
     hooks: dict | None = None,
+    pad_x0: bool = False
 ):
     def exec_hook(name, *args, **kwargs):
         if not hooks:
@@ -56,20 +59,22 @@ def train_basic_nca(
 
     exec_hook("pre_training", optimizer, scheduler)
 
-    for iteration in range(max_iterations + 1):
+    for iteration in tqdm(range(max_iterations + 1)):
         sample = next(iter(dataloader))
         x0, y0 = sample
-        x0 = np.pad(
-            x0,
-            [
-                (0, 0),  # batch
-                (0, nca.num_hidden_channels + nca.num_output_channels),  # channels
-                (0, 0),  # width
-                (0, 0),  # height
-            ],
-            mode="constant",
-        )
-        x0 = torch.from_numpy(x0.astype(np.float32)).to(nca.device)
+        if pad_x0:
+            x0 = np.pad(
+                x0,
+                [
+                    (0, 0),  # batch
+                    (0, nca.num_hidden_channels + nca.num_output_channels),  # channels
+                    (0, 0),  # width
+                    (0, 0),  # height
+                ],
+                mode="constant",
+            )
+            x0 = torch.from_numpy(x0.astype(np.float32))
+        x0 = x0.to(nca.device).float()
         x0 = x0.transpose(1, 3)
         y0 = y0.to(nca.device)
         x, loss = training_iteration(
@@ -78,7 +83,6 @@ def train_basic_nca(
         if iteration % save_every == 0:
             exec_hook("pre_save")
             torch.save(nca.state_dict(), model_path)
-            # figure = visualize_batch(x0.detach().cpu().numpy(), x.detach().cpu().numpy(), y0.detach().cpu().numpy())
             figure = show_batch(
                 x0.detach().cpu().numpy(),
                 x.detach().cpu().numpy(),

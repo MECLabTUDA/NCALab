@@ -77,8 +77,8 @@ class BasicNCAModel(nn.Module):
                 return weight(x)
             # hard coded filter matrix:
             conv_weights = torch.from_numpy(weight.astype(np.float32)).to(self.device)
-            conv_weights = conv_weights.view(1, 1, 3, 3).repeat(self.channel_n, 1, 1, 1)
-            return F.conv2d(x, conv_weights, padding=1, groups=self.channel_n)
+            conv_weights = conv_weights.view(1, 1, 3, 3).repeat(self.num_channels, 1, 1, 1)
+            return F.conv2d(x, conv_weights, padding=1, groups=self.num_channels)
 
         perception = [x]
         perception.extend([_perceive_with(x, w) for w in self.filters])
@@ -98,12 +98,14 @@ class BasicNCAModel(nn.Module):
         stochastic = torch.rand([dx.size(0), dx.size(1), dx.size(2), 1]) > self.fire_rate
         stochastic = stochastic.float().to(self.device)
         dx = dx * stochastic
-        dx[..., :self.num_image_channels] *= 0
+        if self.immutable_image_channels:
+            dx[..., :self.num_image_channels] *= 0
         
         x = x + dx.transpose(1, 3)
         x = x.transpose(1, 0)
-        life_mask = x[0] > 0
-        x = x * life_mask
+        if self.use_alive_mask:
+            life_mask = x[0] > 0
+            x = x * life_mask
         x = x.transpose(0, 1)
         x = x.transpose(1, 3)
         return x
