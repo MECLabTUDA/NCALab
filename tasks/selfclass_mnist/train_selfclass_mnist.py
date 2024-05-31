@@ -16,7 +16,7 @@ from torchvision import transforms
 from torch.utils.tensorboard import SummaryWriter
 
 
-def train_selfclass_mnist(batch_size=8, hidden_chanels=9):
+def train_selfclass_mnist(batch_size=8, hidden_channels=9):
     writer = SummaryWriter()
 
     mnist = MNIST(
@@ -31,7 +31,7 @@ def train_selfclass_mnist(batch_size=8, hidden_chanels=9):
     nca = ClassificationNCAModel(
         device,
         num_image_channels=1,
-        num_hidden_channels=hidden_chanels,
+        num_hidden_channels=hidden_channels,
         num_classes=10,
         fire_rate=0.5,
         hidden_size=128,
@@ -47,7 +47,7 @@ def train_selfclass_mnist(batch_size=8, hidden_chanels=9):
 @click.option("--batch-size", "-b", default=8, type=int)
 @click.option("--hidden-channels", "-H", default=9, type=int)
 def main(batch_size, hidden_channels):
-    train_selfclass_mnist(batch_size=batch_size, hidden_chanels=hidden_channels)
+    train_selfclass_mnist(batch_size=batch_size, hidden_channels=hidden_channels)
 
 
 if __name__ == "__main__":

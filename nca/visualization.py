@@ -36,6 +36,7 @@ def show_batch(x_seed, x_pred, y_true, nca):
         overlay_vmin = None
         overlay_vmax = None
 
+        # predicted class, color-coded pixel-wise
         if row == "pred_class":
             cmap = "Set3"
             vmin = -1
@@ -47,12 +48,7 @@ def show_batch(x_seed, x_pred, y_true, nca):
                         images[k, m, n] = (
                             np.argmax(x_pred[k, m, n, : -nca.num_output_channels]) + 1
                         )
-            for c in range(len(y_true)):
-                mask = (
-                    np.max(x_seed[c, :, :, : nca.num_image_channels], axis=-1) > 0
-                ) * 2 - 1
-                images[c, :, :, -1] *= mask
-                images[c] = np.clip(images[c], -1, nca.num_output_channels)
+        # true class, color-coded pixel-wise
         elif row == "true_class":
             cmap = "Set3"
             vmin = -1
@@ -60,11 +56,6 @@ def show_batch(x_seed, x_pred, y_true, nca):
             images = np.ones((batch_size, image_width, image_height))
             for c in range(len(y_true)):
                 images[c] *= y_true[c]
-                mask = (
-                    np.max(x_seed[c, :, :, : nca.num_image_channels], axis=-1) > 0
-                ) * 2 - 1
-                images[c] *= mask
-                images[c] = np.clip(images[c], -1, nca.num_output_channels)
         elif row == "pred_class_overlay":
             cmap_overlay = "Set3"
             images = x_seed[..., : nca.num_image_channels]
@@ -89,7 +80,12 @@ def show_batch(x_seed, x_pred, y_true, nca):
             ax[i, j].imshow(image, vmin=vmin, vmax=vmax, cmap=cmap)
             if overlay is not None:
                 ax[i, j].imshow(
-                    overlay, vmin=overlay_vmin, vmax=overlay_vmax, cmap=overlay_cmap
+                    overlay,
+                    vmin=overlay_vmin,
+                    vmax=overlay_vmax,
+                    cmap=overlay_cmap,
+                    alpha=0.5,
+                    colormap="jet",
                 )
             ax[i, j].axis("off")
     return figure

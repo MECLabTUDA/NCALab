@@ -15,7 +15,7 @@ class ClassificationNCAModel(BasicNCAModel):
         hidden_size=128,
         use_alive_mask=False,
         immutable_image_channels=True,
-        learned_filters=0,
+        learned_filters=2,
     ):
         self.num_classes = num_classes
         super(ClassificationNCAModel, self).__init__(
