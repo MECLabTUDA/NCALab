@@ -30,7 +30,7 @@ def get_emoji_image(emoji="🦎", padding=2, size=24):
         return image
 
 
-def train_growing_emoji(batch_size=8, hidden_chanels=12):
+def train_growing_emoji(batch_size=8, hidden_channels=12):
     writer = SummaryWriter()
 
     device = torch.device("cuda:0")
@@ -38,7 +38,7 @@ def train_growing_emoji(batch_size=8, hidden_chanels=12):
     nca = GrowingNCAModel(
         device,
         num_image_channels=4,
-        num_hidden_channels=hidden_chanels,
+        num_hidden_channels=hidden_channels,
         fire_rate=0.5,
         hidden_size=128,
         use_alive_mask=False,
@@ -59,7 +59,7 @@ def train_growing_emoji(batch_size=8, hidden_chanels=12):
 @click.option("--batch-size", "-b", default=8, type=int)
 @click.option("--hidden-channels", "-H", default=16, type=int)
 def main(batch_size, hidden_channels):
-    train_growing_emoji(batch_size=batch_size, hidden_chanels=hidden_channels)
+    train_growing_emoji(batch_size=batch_size, hidden_channels=hidden_channels)
 
 
 if __name__ == "__main__":
