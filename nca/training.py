@@ -10,38 +10,11 @@ import matplotlib.pyplot as plt
 import PIL.Image
 from torchvision.transforms import ToTensor
 
-from .models.basicNCA import BasicNCAModel
-
-
-def visualize_batch(x0, x, y0):
-    vis0 = x[..., 0]
-    mask = x0[..., 0] > 0
-    vis0 = np.array([(vis0[i] > 0) * y0[i] for i in range(vis0.shape[0])]) + 1
-    vis0 *= mask
-    vis0 -= 1
-    vis1 = np.zeros(x.shape[0:3])
-    for i in range(8):
-        for j in range(28):
-            for k in range(28):
-                vis1[i, j, k] = np.argmax(x[i, j, k, :-10]) + 1
-    vis1 *= mask
-    vis1 -= 1
-    figure = plt.figure(figsize=[15, 5])
-    for i in range(x0.shape[0]):
-        plt.subplot(2, x0.shape[0], i + 1)
-        plt.imshow(vis0[i], cmap="Set3", vmin=-1, vmax=9)
-        plt.axis("off")
-    for i in range(x0.shape[0]):
-        plt.subplot(2, x0.shape[0], i + 1 + x0.shape[0])
-        plt.imshow(vis1[i], cmap="Set3", vmin=-1, vmax=9)
-        plt.axis("off")
-    plt.colorbar(ticks=[-1, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9])
-    return figure
-
+from .visualization import show_batch
 
 
 def train_basic_nca(
-    nca: BasicNCAModel,
+    nca,
     dataloader,
     model_path: str,
     max_iterations: int = 50000,
@@ -51,8 +24,17 @@ def train_basic_nca(
     lr: float = 2e-3,
     lr_gamma: float = 0.9999,
     adam_betas=(0.5, 0.5),
-    summary_writer=None
+    summary_writer=None,
+    hooks: dict | None = None,
 ):
+    def exec_hook(name, *args, **kwargs):
+        if not hooks:
+            return
+        hook = hooks.get(name, None)
+        if not hook:
+            return
+        return hook(*args, **kwargs)
+
     optimizer = optim.Adam(nca.parameters(), lr=lr, betas=adam_betas)
     scheduler = optim.lr_scheduler.ExponentialLR(optimizer, lr_gamma)
 
@@ -61,10 +43,7 @@ def train_basic_nca(
         x = x0.clone()
         x = nca(x, steps=steps)
 
-        y = torch.ones((x.shape[0], x.shape[1], x.shape[2])).to(nca.device).long()
-        for i in range(x.shape[0]):
-            y[i] *= target[i]
-        loss = F.cross_entropy(x[..., :-10].transpose(3, 1), y.long())
+        loss = nca.loss(x, target)
         loss.backward()
 
         if gradient_clipping:
@@ -74,6 +53,8 @@ def train_basic_nca(
         if summary_writer:
             summary_writer.add_scalar("Loss/train", loss, batch_iteration)
         return x, loss
+
+    exec_hook("pre_training", optimizer, scheduler)
 
     for iteration in range(max_iterations + 1):
         sample = next(iter(dataloader))
@@ -95,6 +76,14 @@ def train_basic_nca(
             x0, y0, np.random.randint(*steps_range), optimizer, scheduler, iteration
         )
         if iteration % save_every == 0:
+            exec_hook("pre_save")
             torch.save(nca.state_dict(), model_path)
-            figure = visualize_batch(x0.detach().cpu().numpy(), x.detach().cpu().numpy(), y0.detach().cpu().numpy())
+            # figure = visualize_batch(x0.detach().cpu().numpy(), x.detach().cpu().numpy(), y0.detach().cpu().numpy())
+            figure = show_batch(
+                x0.detach().cpu().numpy(),
+                x.detach().cpu().numpy(),
+                y0.detach().cpu().numpy(),
+                nca,
+            )
             summary_writer.add_figure("Current Batch", figure, iteration)
+            exec_hook("post_save")

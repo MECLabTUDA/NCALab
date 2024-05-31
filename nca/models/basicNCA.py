@@ -36,6 +36,8 @@ class BasicNCAModel(nn.Module):
         self.learned_filters = learned_filters
         self.filters = []
 
+        self.visualization_rows = ["input_image"]
+
         if learned_filters > 0:
             self.num_filters = learned_filters
             for _ in range(learned_filters):
@@ -110,3 +112,6 @@ class BasicNCAModel(nn.Module):
         for _ in range(steps):
             x = self.update(x, angle)
         return x
+
+    def loss(self, x, target):
+        return NotImplemented
