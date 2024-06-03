@@ -9,7 +9,7 @@ import torch.nn.functional as F
 class BasicNCAModel(nn.Module):
     def __init__(
         self,
-        device,
+        device: torch.device,
         num_image_channels: int,
         num_hidden_channels: int,
         num_output_channels: int,
@@ -17,8 +17,21 @@ class BasicNCAModel(nn.Module):
         hidden_size=128,
         use_alive_mask=False,
         immutable_image_channels=True,
-        learned_filters=2,
+        learned_filters=2
     ):
+        """_summary_
+
+        Args:
+            device (device): _description_
+            num_image_channels (int): _description_
+            num_hidden_channels (int): _description_
+            num_output_channels (int): _description_
+            fire_rate (float, optional): _description_. Defaults to 0.5.
+            hidden_size (int, optional): _description_. Defaults to 128.
+            use_alive_mask (bool, optional): _description_. Defaults to False.
+            immutable_image_channels (bool, optional): _description_. Defaults to True.
+            learned_filters (int, optional): _description_. Defaults to 2.
+        """
         super(BasicNCAModel, self).__init__()
 
         self.device = device
@@ -36,7 +49,7 @@ class BasicNCAModel(nn.Module):
         self.learned_filters = learned_filters
         self.filters = []
 
-        self.visualization_rows = ["input_image"]
+        self.plot_function = None
 
         if learned_filters > 0:
             self.num_filters = learned_filters
@@ -62,7 +75,9 @@ class BasicNCAModel(nn.Module):
             self.num_channels * (self.num_filters + 1), hidden_size
         ).to(device)
         self.activation = nn.ReLU().to(device)
-        self.final_layer = nn.Linear(hidden_size, self.num_channels, bias=False).to(device)
+        self.final_layer = nn.Linear(hidden_size, self.num_channels, bias=False).to(
+            device
+        )
         with torch.no_grad():
             self.final_layer.weight.zero_()
 
@@ -77,7 +92,9 @@ class BasicNCAModel(nn.Module):
                 return weight(x)
             # hard coded filter matrix:
             conv_weights = torch.from_numpy(weight.astype(np.float32)).to(self.device)
-            conv_weights = conv_weights.view(1, 1, 3, 3).repeat(self.num_channels, 1, 1, 1)
+            conv_weights = conv_weights.view(1, 1, 3, 3).repeat(
+                self.num_channels, 1, 1, 1
+            )
             return F.conv2d(x, conv_weights, padding=1, groups=self.num_channels)
 
         perception = [x]
@@ -95,12 +112,14 @@ class BasicNCAModel(nn.Module):
         dx = self.activation(dx)
         dx = self.final_layer(dx)
 
-        stochastic = torch.rand([dx.size(0), dx.size(1), dx.size(2), 1]) > self.fire_rate
+        stochastic = (
+            torch.rand([dx.size(0), dx.size(1), dx.size(2), 1]) > self.fire_rate
+        )
         stochastic = stochastic.float().to(self.device)
         dx = dx * stochastic
         if self.immutable_image_channels:
-            dx[..., :self.num_image_channels] *= 0
-        
+            dx[..., : self.num_image_channels] *= 0
+
         x = x + dx.transpose(1, 3)
         x = x.transpose(1, 0)
         if self.use_alive_mask:

@@ -35,18 +35,12 @@ def train_selfclass_medmnist(batch_size=8, hidden_channels=9):
         num_image_channels=3,
         num_hidden_channels=hidden_channels,
         num_classes=num_classes,
-        fire_rate=0.5,
-        hidden_size=128,
-        use_alive_mask=False,
-        immutable_image_channels=True,
-        learned_filters=2,
     )
     train_basic_nca(
         nca,
-        loader,
         WEIGHTS_PATH / "selfclass_medmnist.pth",
+        loader,
         summary_writer=writer,
-        pad_x0=True,
     )
     writer.close()
 

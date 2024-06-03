@@ -21,7 +21,17 @@ from pilmoji import Pilmoji
 from PIL import Image, ImageFont
 
 
-def get_emoji_image(emoji="🦎", padding=2, size=24):
+def get_emoji_image(emoji: str = "🦎", padding: int = 2, size: int = 24):
+    """_summary_
+
+    Args:
+        emoji (str, optional): String containing a single emoji character. Defaults to "🦎".
+        padding (int, optional): Number of pixels to pad to the sides. Defaults to 2.
+        size (int, optional): Total image size without padding. Defaults to 24.
+
+    Returns:
+        Image: Output PIL.Image containing an emoji on transparent background.
+    """
     dims = (padding * 2 + size, padding * 2 + size)
     with Image.new("RGBA", dims, (255, 255, 255, 0)) as image:
         font = ImageFont.truetype("arial.ttf", size)
@@ -30,7 +40,13 @@ def get_emoji_image(emoji="🦎", padding=2, size=24):
         return image
 
 
-def train_growing_emoji(batch_size=8, hidden_channels=12):
+def train_growing_emoji(batch_size: int = 8, hidden_channels: int = 12):
+    """_summary_
+
+    Args:
+        batch_size (int, optional): _description_. Defaults to 8.
+        hidden_channels (int, optional): _description_. Defaults to 12.
+    """
     writer = SummaryWriter()
 
     device = torch.device("cuda:0")
@@ -39,10 +55,6 @@ def train_growing_emoji(batch_size=8, hidden_channels=12):
         device,
         num_image_channels=4,
         num_hidden_channels=hidden_channels,
-        fire_rate=0.5,
-        hidden_size=128,
-        use_alive_mask=False,
-        learned_filters=0,
     )
 
     image = np.asarray(get_emoji_image())
@@ -50,14 +62,14 @@ def train_growing_emoji(batch_size=8, hidden_channels=12):
     loader = DataLoader(dataset, batch_size=8, shuffle=False)
 
     train_basic_nca(
-        nca, loader, WEIGHTS_PATH / "growing_emoji.pth", summary_writer=writer
+        nca, WEIGHTS_PATH / "growing_emoji.pth", loader, summary_writer=writer
     )
     writer.close()
 
 
 @click.command()
 @click.option("--batch-size", "-b", default=8, type=int)
-@click.option("--hidden-channels", "-H", default=16, type=int)
+@click.option("--hidden-channels", "-H", default=12, type=int)
 def main(batch_size, hidden_channels):
     train_growing_emoji(batch_size=batch_size, hidden_channels=hidden_channels)
 

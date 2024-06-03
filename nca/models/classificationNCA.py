@@ -17,6 +17,19 @@ class ClassificationNCAModel(BasicNCAModel):
         immutable_image_channels=True,
         learned_filters=2,
     ):
+        """_summary_
+
+        Args:
+            device (_type_): _description_
+            num_image_channels (int): _description_
+            num_hidden_channels (int): _description_
+            num_classes (int): _description_
+            fire_rate (float, optional): _description_. Defaults to 0.5.
+            hidden_size (int, optional): _description_. Defaults to 128.
+            use_alive_mask (bool, optional): _description_. Defaults to False.
+            immutable_image_channels (bool, optional): _description_. Defaults to True.
+            learned_filters (int, optional): _description_. Defaults to 2.
+        """
         self.num_classes = num_classes
         super(ClassificationNCAModel, self).__init__(
             device,
@@ -29,7 +42,6 @@ class ClassificationNCAModel(BasicNCAModel):
             immutable_image_channels,
             learned_filters,
         )
-        self.visualization_rows = ["input_image", "true_class", "pred_class"]
 
     def classify(self, image, steps=100):
         x = image.clone()

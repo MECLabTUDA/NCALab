@@ -3,34 +3,39 @@ from torch import nn
 
 
 class DiceBCELoss(nn.Module):
-    r"""Dice BCE Loss
+    """_summary_
 
-    Addition of Dice loss and Binary Cross Entropy, as described in MedNCA."""
+    Args:
+        nn (_type_): _description_
+    """
+    def __init__(self):
+        """_summary_
 
-    def __init__(self, useSigmoid=True):
-        r"""Initialisation method of DiceBCELoss
-        #Args:
-            useSigmoid: Whether to use sigmoid
+        Args:
+            useSigmoid (bool, optional): _description_. Defaults to True.
         """
-        self.useSigmoid = useSigmoid
         super(DiceBCELoss, self).__init__()
 
-    def forward(self, input, target, smooth=1):
-        r"""Forward function
-        #Args:
-            input: input array
-            target: target array
-            smooth: Smoothing value
+    def forward(self, x, target, smooth=1):
+        """_summary_
+
+        Args:
+            input (_type_): _description_
+            target (_type_): _description_
+            smooth (int, optional): _description_. Defaults to 1.
+
+        Returns:
+            _type_: _description_
         """
-        input = torch.sigmoid(input)
-        input = torch.flatten(input)
+        x = torch.sigmoid(x)
+        x = torch.flatten(x)
         target = torch.flatten(target)
 
-        intersection = (input * target).sum()
+        intersection = (x * target).sum()
         dice_loss = 1 - (2.0 * intersection + smooth) / (
-            input.sum() + target.sum() + smooth
+            x.sum() + target.sum() + smooth
         )
-        BCE = torch.nn.functional.binary_cross_entropy(input, target, reduction="mean")
+        BCE = torch.nn.functional.binary_cross_entropy(x, target, reduction="mean")
         Dice_BCE = BCE + dice_loss
 
         return Dice_BCE

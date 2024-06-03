@@ -5,9 +5,20 @@ import numpy as np
 
 
 class GrowingNCADataset(Dataset):
-    def __init__(self, image, num_channels, batch_size=8):
-        """
-        :param num_channels_total: Total number of channels our NCA model processes.
+    def __init__(
+        self,
+        image: np.ndarray,
+        num_channels: int,
+        batch_size: int = 8,
+        use_pattern_pool: bool = False,
+        damage: bool = False,
+    ):
+        """_summary_
+
+        Args:
+            image (np.ndarray): _description_
+            num_channels (int): _description_
+            batch_size (int, optional): _description_. Defaults to 8.
         """
         super(GrowingNCADataset, self).__init__()
         self.batch_size = batch_size

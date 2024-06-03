@@ -8,7 +8,7 @@ Since NCAs are so small (less than 1 MB each), we include pre-trained weights fo
 
   * Growing NCA for emoji generation
   * Self-classifying MNIST digits
-  * Self-classifying MedMNIST images
+  * Self-classifying MedMNIST images (PathMNIST)
 
 
 ## Future tasks
@@ -17,6 +17,12 @@ Tasks we want to include in the future:
 
   * Other MedMNIST tasks
   * FashionMNIST
+  * Detection tasks
 
-Feel free to create an issue if there is a task you're interested in.
+Feel free to open an issue if there is a particular task or dataset you're interested in.
 However, we will only provide weights for public data.
+
+
+## Getting started
+
+## Cite this work
