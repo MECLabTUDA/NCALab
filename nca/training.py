@@ -28,7 +28,7 @@ def train_basic_nca(
     adam_betas=(0.5, 0.5),
     summary_writer=None,
     hooks: dict | None = None,
-    pad_x0: bool = False
+    pad_x: bool = False
 ):
     def exec_hook(name, *args, **kwargs):
         if not hooks:
@@ -41,12 +41,12 @@ def train_basic_nca(
     optimizer = optim.Adam(nca.parameters(), lr=lr, betas=adam_betas)
     scheduler = optim.lr_scheduler.ExponentialLR(optimizer, lr_gamma)
 
-    def training_iteration(x0, target, steps, optimizer, scheduler, batch_iteration):
+    def training_iteration(x, target, steps, optimizer, scheduler, batch_iteration):
         optimizer.zero_grad()
-        x = x0.clone()
-        x = nca(x, steps=steps)
+        x_pred = x.clone()
+        x_pred = nca(x_pred, steps=steps)
 
-        loss = nca.loss(x, target)
+        loss = nca.loss(x_pred, target)
         loss.backward()
 
         if gradient_clipping:
@@ -55,16 +55,16 @@ def train_basic_nca(
         scheduler.step()
         if summary_writer:
             summary_writer.add_scalar("Loss/train", loss, batch_iteration)
-        return x, loss
+        return x_pred, loss
 
     exec_hook("pre_training", optimizer, scheduler)
 
     for iteration in tqdm(range(max_iterations + 1)):
         sample = next(iter(dataloader))
-        x0, y0 = sample
-        if pad_x0:
-            x0 = np.pad(
-                x0,
+        x, y = sample
+        if pad_x:
+            x = np.pad(
+                x,
                 [
                     (0, 0),  # batch
                     (0, nca.num_hidden_channels + nca.num_output_channels),  # channels
@@ -73,20 +73,20 @@ def train_basic_nca(
                 ],
                 mode="constant",
             )
-            x0 = torch.from_numpy(x0.astype(np.float32))
-        x0 = x0.to(nca.device).float()
-        x0 = x0.transpose(1, 3)
-        y0 = y0.to(nca.device)
-        x, loss = training_iteration(
-            x0, y0, np.random.randint(*steps_range), optimizer, scheduler, iteration
+            x = torch.from_numpy(x.astype(np.float32))
+        x = x.to(nca.device).float()
+        x = x.transpose(1, 3)
+        y = y.to(nca.device)
+        x_pred, loss = training_iteration(
+            x, y, np.random.randint(*steps_range), optimizer, scheduler, iteration
         )
         if iteration % save_every == 0:
             exec_hook("pre_save")
             torch.save(nca.state_dict(), model_path)
             figure = show_batch(
-                x0.detach().cpu().numpy(),
                 x.detach().cpu().numpy(),
-                y0.detach().cpu().numpy(),
+                x_pred.detach().cpu().numpy(),
+                y.detach().cpu().numpy(),
                 nca,
             )
             summary_writer.add_figure("Current Batch", figure, iteration)
