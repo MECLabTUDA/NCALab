@@ -6,6 +6,7 @@ sys.path.append(root_dir)
 from nca.models.classificationNCA import ClassificationNCAModel
 from nca.training import train_basic_nca
 from nca.paths import WEIGHTS_PATH
+from nca.visualization import show_batch_classification
 
 import click
 
@@ -17,17 +18,25 @@ from torchvision import transforms
 from torch.utils.tensorboard import SummaryWriter
 
 
-def train_selfclass_medmnist(batch_size=8, hidden_channels=9):
+def train_selfclass_medmnist(batch_size: int, hidden_channels: int):
     writer = SummaryWriter()
 
     device = torch.device("cuda:0")
 
-    dataset = PathMNIST(
+    dataset_train = PathMNIST(
         split="train",
         download=True,
         transform=transforms.Compose([transforms.ToTensor()]),
     )
-    loader = torch.utils.data.DataLoader(dataset, shuffle=True, batch_size=batch_size)
+    loader_train = torch.utils.data.DataLoader(dataset_train, shuffle=True, batch_size=batch_size)
+
+    dataset_val = PathMNIST(
+        split="val",
+        download=True,
+        transform=transforms.Compose([transforms.ToTensor()]),
+    )
+    loader_val = torch.utils.data.DataLoader(dataset_val, shuffle=True, batch_size=batch_size)
+
     num_classes = 9
 
     nca = ClassificationNCAModel(
@@ -39,8 +48,10 @@ def train_selfclass_medmnist(batch_size=8, hidden_channels=9):
     train_basic_nca(
         nca,
         WEIGHTS_PATH / "selfclass_medmnist.pth",
-        loader,
+        loader_train,
+        loader_val,
         summary_writer=writer,
+        plot_function=show_batch_classification,
     )
     writer.close()
 

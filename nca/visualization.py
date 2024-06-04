@@ -53,12 +53,34 @@ def show_batch_binary_image_classification(x_seed, x_pred, y_true, nca):
         images[i, :, :] *= (y_pred[i] + 1)
     images -= 1
     show_image_row(ax[1], images, vmin=-1, vmax=nca.num_classes, cmap="Set3")
-
     return figure
 
 
 def show_batch_classification(x_seed, x_pred, y_true, nca):
-    pass
+    batch_size = x_pred.shape[0]
+    image_width = x_pred.shape[1]
+    image_height = x_pred.shape[2]
+
+    figure, ax = plt.subplots(
+        2, batch_size, figsize=[batch_size * 2, 5], tight_layout=True
+    )
+
+    # 1st row: input image
+    images = np.ones((batch_size, image_width, image_height))
+    class_channels = x_pred[..., : -nca.num_output_channels]
+    images = x_seed[:, :, :, :nca.num_image_channels]
+    show_image_row(ax[0], images)
+
+    y_pred = np.mean(class_channels, 1)
+    y_pred = np.mean(y_pred, 1)
+    y_pred = np.argmax(y_pred, axis=-1)
+
+    # 2nd row: prediction vs. true
+    for j in range(batch_size):
+        ax[1, j].text(0, 1, f"true: {y_true[j][0]}")
+        ax[1, j].text(0, 0.9, f"pred: {y_pred[j]}")
+        ax[1, j].axis("off")
+    return figure
 
 
 def show_batch_segmentation(x_seed, x_pred, y_true, nca):
