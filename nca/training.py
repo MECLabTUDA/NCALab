@@ -35,6 +35,7 @@ def train_basic_nca(
     plot_function: (
         Callable[[np.ndarray, np.ndarray, np.ndarray, BasicNCAModel], Figure] | None
     ) = None,
+    batch_repeat: int = 2,
 ):
     """_summary_
 
@@ -53,7 +54,10 @@ def train_basic_nca(
         summary_writer (_type_, optional): _description_. Defaults to None.
         pad_x (bool, optional): _description_. Defaults to False.
         plot_function (Callable[ [np.ndarray, np.ndarray, np.ndarray, BasicNCAModel], Figure ], optional): _description_. Defaults to None.
+        batch_multiplier (int, optional): How often a batch should be repeated, minimum is 1. Batch duplication can stabelize the training. Defaults to 2.
     """
+
+    assert batch_repeat >= 1
 
     if not plot_function:
         if nca.plot_function:
@@ -102,6 +106,10 @@ def train_basic_nca(
             )
             x = torch.from_numpy(x.astype(np.float32))
         x = x.float().transpose(1, 3)
+
+        # batch duplication
+        x = torch.cat(batch_repeat * [x])
+        y = torch.cat(batch_repeat * [y])
 
         steps = np.random.randint(*steps_range)
         x_pred, loss = train_iteration(x, y, steps, optimizer, scheduler, iteration)
