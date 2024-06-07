@@ -46,11 +46,21 @@ class ClassificationNCAModel(BasicNCAModel):
             learned_filters,
         )
 
-    def forward(self, x, steps=1):
+    def forward(self, x, steps: int = 1):
         x = super().forward(x, steps)
         return x
 
-    def classify(self, image, steps=100, softmax=False):
+    def classify(self, image, steps: int = 100, softmax: bool = False):
+        """_summary_
+
+        Args:
+            image (_type_): _description_
+            steps (int, optional): _description_. Defaults to 100.
+            softmax (bool, optional): _description_. Defaults to False.
+
+        Returns:
+            _type_: _description_
+        """
         with torch.no_grad():
             x = image.clone()
             x = self(x, steps=steps)
@@ -80,11 +90,20 @@ class ClassificationNCAModel(BasicNCAModel):
             y_pred = torch.mean(class_channels, 1)
             y_pred = torch.mean(y_pred, 1)
             if softmax:
-                y_pred = torch.argmax(F.softmax(y_pred), axis=1)
+                y_pred = torch.argmax(F.softmax(y_pred, dim=-1), axis=1)
                 return y_pred
             return y_pred
 
     def loss(self, x, target):
+        """_summary_
+
+        Args:
+            x (_type_): _description_
+            target (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
         y = torch.ones((x.shape[0], x.shape[1], x.shape[2])).to(self.device).long()
         hidden_channels = x[..., self.num_image_channels : -self.num_output_channels]
         class_channels = x[..., self.num_image_channels + self.num_hidden_channels :]
