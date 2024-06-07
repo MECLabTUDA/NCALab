@@ -70,15 +70,14 @@ class BasicNCAModel(nn.Module):
             self.filters.append(np.outer([1, 2, 1], [-1, 0, 1]) / 8.0)
             self.filters.append((np.outer([1, 2, 1], [-1, 0, 1]) / 8.0).T)
 
-        self.hidden_layer = nn.Linear(
-            self.num_channels * (self.num_filters + 1), hidden_size
+        self.network = nn.Sequential(
+            nn.Linear(self.num_channels * (self.num_filters + 1), hidden_size),
+            nn.ReLU(),
+            nn.Linear(hidden_size, self.num_channels, bias=False)
         ).to(device)
-        self.activation = nn.ReLU().to(device)
-        self.final_layer = nn.Linear(hidden_size, self.num_channels, bias=False).to(
-            device
-        )
+
         with torch.no_grad():
-            self.final_layer.weight.zero_()
+            self.network[-1].weight.zero_()
 
     def alive(self, x):
         mask = F.max_pool2d(x[:, self.num_image_channels, :, :], kernel_size=3, stride=1, padding=1) > 0.1
@@ -88,7 +87,9 @@ class BasicNCAModel(nn.Module):
         def _perceive_with(x, weight):
             if type(weight) == nn.Conv2d:
                 return weight(x)
-            # hard coded filter matrix:
+            # if using a hard coded filter matrix.
+            # this is done in the original Growing NCA paper, but learned filters typically
+            # work better.
             conv_weights = torch.from_numpy(weight.astype(np.float32)).to(self.device)
             conv_weights = conv_weights.view(1, 1, 3, 3).repeat(
                 self.num_channels, 1, 1, 1
@@ -106,9 +107,7 @@ class BasicNCAModel(nn.Module):
 
         dx = self.perceive(x)
         dx = dx.transpose(1, 3)
-        dx = self.hidden_layer(dx)
-        dx = self.activation(dx)
-        dx = self.final_layer(dx)
+        dx = self.network(dx)
 
         stochastic = (
             torch.rand([dx.size(0), dx.size(1), dx.size(2), 1]) > self.fire_rate
@@ -118,7 +117,8 @@ class BasicNCAModel(nn.Module):
         if self.immutable_image_channels:
             dx[..., : self.num_image_channels] *= 0
 
-        x = x + dx.transpose(1, 3)
+        x = x + dx.transpose(1, 3) # B W H C --> B C W H
+        # FIXME: Something is wrong with the alive masking
         if self.use_alive_mask:
             x = x.transpose(0, 1)
             life_mask = self.alive(x) & pre_life_mask
