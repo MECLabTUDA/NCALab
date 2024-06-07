@@ -1,6 +1,5 @@
-import io
 from pathlib import PosixPath  # for type hint
-from typing import Callable, Iterable, Dict
+from typing import Callable
 
 import numpy as np
 
@@ -9,12 +8,11 @@ import torch.optim as optim
 import torch.nn.functional as F
 from torch.utils.data import DataLoader  # for type hint
 
-import matplotlib.pyplot as plt
 from matplotlib.figure import Figure  # for type hint
-import PIL.Image
-from torchvision.transforms import ToTensor
 
 from tqdm import tqdm
+
+from torcheval.metrics import MulticlassAccuracy
 
 from .models.basicNCA import BasicNCAModel  # for type hint
 
@@ -80,15 +78,24 @@ def train_basic_nca(
         scheduler.step()
         if summary_writer:
             summary_writer.add_scalar("Loss/train", loss, batch_iteration)
-        return x_pred, loss
+        return x_pred
 
     def val_iteration(x, target, steps, batch_iteration):
         with torch.no_grad():
-            x_pred = x.clone().to(nca.device)
-            x_pred = nca(x_pred, steps=steps)
-            loss = nca.loss(x_pred, target.to(nca.device))
+            y_pred = nca.classify(x.to(nca.device), steps, softmax=True)
+            y_logits = nca.classify(x.to(nca.device), steps, softmax=False)
+
+            metric = MulticlassAccuracy(average="macro", num_classes=nca.num_classes)
+            metric.update(y_pred, target[..., 0].to(nca.device))
+            accuracy_macro = metric.compute()
+
+            metric = MulticlassAccuracy(average="micro", num_classes=nca.num_classes)
+            metric.update(y_logits, target[..., 0].to(nca.device))
+            accuracy_micro = metric.compute()
+
             if summary_writer:
-                summary_writer.add_scalar("Loss/val", loss, batch_iteration)
+                summary_writer.add_scalar("Acc/val_macro", accuracy_macro, batch_iteration)
+                summary_writer.add_scalar("Acc/val_micro", accuracy_micro, batch_iteration)
 
     for iteration in tqdm(range(max_iterations)):
         sample = next(iter(dataloader_train))
@@ -112,7 +119,7 @@ def train_basic_nca(
         y = torch.cat(batch_repeat * [y])
 
         steps = np.random.randint(*steps_range)
-        x_pred, loss = train_iteration(x, y, steps, optimizer, scheduler, iteration)
+        x_pred = train_iteration(x, y, steps, optimizer, scheduler, iteration)
 
         if iteration % save_every == 0:
             torch.save(nca.state_dict(), model_path)

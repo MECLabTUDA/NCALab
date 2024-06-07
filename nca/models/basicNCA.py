@@ -2,7 +2,6 @@ import numpy as np
 
 import torch
 import torch.nn as nn
-import torch.optim as optim
 import torch.nn.functional as F
 
 
@@ -82,9 +81,8 @@ class BasicNCAModel(nn.Module):
             self.final_layer.weight.zero_()
 
     def alive(self, x):
-        if not self.use_alive_mask:
-            return True
-        return F.max_pool2d(x[:, 3:4, :, :], kernel_size=3, stride=1, padding=1) > 0.1
+        mask = F.max_pool2d(x[:, self.num_image_channels, :, :], kernel_size=3, stride=1, padding=1) > 0.1
+        return mask
 
     def perceive(self, x):
         def _perceive_with(x, weight):
@@ -102,7 +100,7 @@ class BasicNCAModel(nn.Module):
         y = torch.cat(perception, 1)
         return y
 
-    def update(self, x, angle):
+    def update(self, x):
         x = x.transpose(1, 3)
         pre_life_mask = self.alive(x)
 
@@ -121,17 +119,17 @@ class BasicNCAModel(nn.Module):
             dx[..., : self.num_image_channels] *= 0
 
         x = x + dx.transpose(1, 3)
-        x = x.transpose(1, 0)
         if self.use_alive_mask:
-            life_mask = x[0] > 0
-            x = x * life_mask
-        x = x.transpose(0, 1)
-        x = x.transpose(1, 3)
+            x = x.transpose(0, 1)
+            life_mask = self.alive(x) & pre_life_mask
+            x = x * life_mask.float()
+            x = x.transpose(1, 0)
+        x = x.transpose(1, 3) # B C W H --> B W H C
         return x
 
-    def forward(self, x, steps=1, angle=0.0):
+    def forward(self, x, steps=1):
         for _ in range(steps):
-            x = self.update(x, angle)
+            x = self.update(x)
         return x
 
     def loss(self, x, target):

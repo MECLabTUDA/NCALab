@@ -19,7 +19,7 @@ from torchvision import transforms
 from torch.utils.tensorboard import SummaryWriter
 
 
-def train_selfclass_mnist(batch_size=8, hidden_channels=9):
+def train_selfclass_mnist(batch_size: int, hidden_channels: int):
     writer = SummaryWriter()
 
     mnist_train = MNIST(

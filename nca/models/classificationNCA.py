@@ -11,11 +11,12 @@ class ClassificationNCAModel(BasicNCAModel):
         num_image_channels: int,
         num_hidden_channels: int,
         num_classes: int,
-        fire_rate=0.5,
-        hidden_size=128,
-        use_alive_mask=False,
-        immutable_image_channels=True,
-        learned_filters=2,
+        fire_rate: float = 0.5,
+        hidden_size: int = 128,
+        use_alive_mask: bool = False,
+        immutable_image_channels: bool = True,
+        learned_filters: int = 2,
+        lambda_activity: float = 0.005,
     ):
         """_summary_
 
@@ -29,8 +30,10 @@ class ClassificationNCAModel(BasicNCAModel):
             use_alive_mask (bool, optional): _description_. Defaults to False.
             immutable_image_channels (bool, optional): _description_. Defaults to True.
             learned_filters (int, optional): _description_. Defaults to 2.
+            lambda_activity (float, optional): Activity loss weight, penalizing high NCA activity. Defaults to 0.005.
         """
         self.num_classes = num_classes
+        self.lambda_activity = lambda_activity
         super(ClassificationNCAModel, self).__init__(
             device,
             num_image_channels,
@@ -43,18 +46,45 @@ class ClassificationNCAModel(BasicNCAModel):
             learned_filters,
         )
 
-    def classify(self, image, steps=100):
+    def forward(self, x, steps=1):
+        x = super().forward(x, steps)
+        return x
+
+    def classify(self, image, steps=100, softmax=False):
         x = image.clone()
-        x = self.forward(x, steps=steps)
-        class_channels = x[..., : -self.num_output_channels]
+        x = self(x, steps=steps)
+        hidden_channels = x[
+            ...,
+            self.num_image_channels : self.num_image_channels
+            + self.num_hidden_channels,
+        ]
+
+        class_channels = x[..., self.num_image_channels + self.num_hidden_channels :]
+
+        for i in range(image.shape[0]):
+            mask = torch.max(hidden_channels[i]) > 0.1
+            class_channels[i] *= mask
+
         y_pred = torch.mean(class_channels, 1)
         y_pred = torch.mean(y_pred, 1)
-        y_pred = torch.argmax(F.softmax(y_pred), axis=1)
+        if softmax:
+            y_pred = torch.argmax(F.softmax(y_pred), axis=1)
+            return y_pred
         return y_pred
 
     def loss(self, x, target):
         y = torch.ones((x.shape[0], x.shape[1], x.shape[2])).to(self.device).long()
+        hidden_channels = x[..., self.num_image_channels : -self.num_output_channels]
+
         for i in range(x.shape[0]):
             y[i] *= target[i]
-        loss = F.cross_entropy(x[..., : -self.num_classes].transpose(3, 1), y.long())
+        loss_ce = F.cross_entropy(x[..., : -self.num_classes].transpose(3, 1), y.long())
+
+        loss_activity = torch.sum(torch.square(hidden_channels)) / (
+            x.shape[0] * x.shape[1] * x.shape[2]
+        )
+
+        loss = (
+            1 - self.lambda_activity
+        ) * loss_ce + self.lambda_activity * loss_activity
         return loss
