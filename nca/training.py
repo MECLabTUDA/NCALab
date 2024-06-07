@@ -86,11 +86,11 @@ def train_basic_nca(
             y_logits = nca.classify(x.to(nca.device), steps, softmax=False)
 
             metric = MulticlassAccuracy(average="macro", num_classes=nca.num_classes)
-            metric.update(y_pred, target[..., 0].to(nca.device))
+            metric.update(y_pred, target.to(nca.device))
             accuracy_macro = metric.compute()
 
             metric = MulticlassAccuracy(average="micro", num_classes=nca.num_classes)
-            metric.update(y_logits, target[..., 0].to(nca.device))
+            metric.update(y_logits, target.to(nca.device))
             accuracy_micro = metric.compute()
 
             if summary_writer:

@@ -67,11 +67,8 @@ def show_batch_classification(x_seed, x_pred, y_true, nca):
 
     # 1st row: input image
     images = np.ones((batch_size, image_width, image_height))
-    hidden_channels = x_pred[
-        ...,
-        nca.num_image_channels : nca.num_image_channels + nca.num_hidden_channels,
-    ]
-    class_channels = x_pred[..., : -nca.num_output_channels]
+    hidden_channels = x_pred[..., nca.num_image_channels : -nca.num_output_channels]
+    class_channels = x_pred[..., nca.num_image_channels + nca.num_hidden_channels :]
     images = x_seed[:, :, :, : nca.num_image_channels]
     show_image_row(ax[0], images)
 

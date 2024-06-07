@@ -51,35 +51,53 @@ class ClassificationNCAModel(BasicNCAModel):
         return x
 
     def classify(self, image, steps=100, softmax=False):
-        x = image.clone()
-        x = self(x, steps=steps)
-        hidden_channels = x[
-            ...,
-            self.num_image_channels : self.num_image_channels
-            + self.num_hidden_channels,
-        ]
+        with torch.no_grad():
+            x = image.clone()
+            x = self(x, steps=steps)
+            hidden_channels = x[
+                ...,
+                self.num_image_channels : self.num_image_channels
+                + self.num_hidden_channels,
+            ]
 
-        class_channels = x[..., self.num_image_channels + self.num_hidden_channels :]
+            class_channels = x[
+                ..., self.num_image_channels + self.num_hidden_channels :
+            ]
 
-        for i in range(image.shape[0]):
-            mask = torch.max(hidden_channels[i]) > 0.1
-            class_channels[i] *= mask
+            # mask inactive pixels
+            for i in range(image.shape[0]):
+                mask = torch.max(hidden_channels[i]) > 0.1
+                class_channels[i] *= mask
 
-        y_pred = torch.mean(class_channels, 1)
-        y_pred = torch.mean(y_pred, 1)
-        if softmax:
-            y_pred = torch.argmax(F.softmax(y_pred), axis=1)
+            # if binary classification (e.g. self classifying MNIST),
+            # mask away pixels with the binary image used as a mask
+            if self.num_image_channels == 1:
+                for i in range(image.shape[0]):
+                    mask = image[i, ..., 0]
+                    for c in range(self.num_classes):
+                        class_channels[i, :, :, c] *= mask
+
+            y_pred = torch.mean(class_channels, 1)
+            y_pred = torch.mean(y_pred, 1)
+            if softmax:
+                y_pred = torch.argmax(F.softmax(y_pred), axis=1)
+                return y_pred
             return y_pred
-        return y_pred
 
     def loss(self, x, target):
         y = torch.ones((x.shape[0], x.shape[1], x.shape[2])).to(self.device).long()
         hidden_channels = x[..., self.num_image_channels : -self.num_output_channels]
+        class_channels = x[..., self.num_image_channels + self.num_hidden_channels :]
 
+        # Create one-hot ground truth tensor, where all pixels of the predicted class are
+        # active in the respective classification channel.
         for i in range(x.shape[0]):
             y[i] *= target[i]
-        loss_ce = F.cross_entropy(x[..., : -self.num_classes].transpose(3, 1), y.long())
+        loss_ce = F.cross_entropy(class_channels.transpose(3, 1), y.long())
 
+        # Activity loss, mildly penalizes highly active NCAs.
+        # We want to enforce the NCA model to "focus" on important areas for classification,
+        # so that masking away inactive pixels during inference becomes more effective.
         loss_activity = torch.sum(torch.square(hidden_channels)) / (
             x.shape[0] * x.shape[1] * x.shape[2]
         )
