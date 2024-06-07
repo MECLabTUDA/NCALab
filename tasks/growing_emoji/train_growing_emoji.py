@@ -55,11 +55,12 @@ def train_growing_emoji(batch_size: int = 8, hidden_channels: int = 12):
         device,
         num_image_channels=4,
         num_hidden_channels=hidden_channels,
+        use_alive_mask=True,
     )
 
     image = np.asarray(get_emoji_image())
-    dataset = GrowingNCADataset(image, nca.num_channels, batch_size=8)
-    loader = DataLoader(dataset, batch_size=8, shuffle=False)
+    dataset = GrowingNCADataset(image, nca.num_channels, batch_size=batch_size)
+    loader = DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
     train_basic_nca(
         nca, WEIGHTS_PATH / "growing_emoji.pth", loader, summary_writer=writer
