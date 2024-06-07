@@ -25,4 +25,22 @@ However, we will only provide weights for public data.
 
 ## Getting started
 
+You can find some example tasks inside the `tasks/` directory and its subfolders.
+
+
+## Tensorboard integration
+
+To launch tensorboard, run
+
+```bash
+tensorboard --logdir=runs
+```
+
+in a separate terminal.
+Once it is running, it should show you the URL the tensorboard server is running on, which is [localhost:6006](https://localhost:6006) by default.
+
+Alternatively, you may use the tensorboard integration of your IDE.
+
+
 ## Cite this work
+
