@@ -163,3 +163,8 @@ cython_debug/
 weights/
 mnist/
 runs/
+
+.venv*
+
+# Nix specific
+/result

@@ -1,0 +1,14 @@
+tqdm
+click
+numpy
+pillow
+matplotlib
+scikit-learn
+
+torch
+torchvision
+torcheval
+
+pilmoji
+emoji==1.7
+medmnist
