@@ -43,7 +43,7 @@ def train_selfclass_pathmnist(batch_size: int, hidden_channels: int):
         device,
         num_image_channels=3,
         num_hidden_channels=hidden_channels,
-        hidden_size=256,
+        hidden_size=128,
         num_classes=9,
     )
     train_basic_nca(
