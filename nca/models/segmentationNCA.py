@@ -18,6 +18,7 @@ class SegmentationNCAModel(BasicNCAModel):
         use_alive_mask: bool = False,
         immutable_image_channels: bool = True,
         learned_filters: int = 2,
+        lambda_activity: float = 0.005,
     ):
         """_summary_
 
@@ -33,6 +34,7 @@ class SegmentationNCAModel(BasicNCAModel):
             learned_filters (int, optional): _description_. Defaults to 2.
         """
         self.num_classes = num_classes
+        self.lambda_activity = lambda_activity
         super(SegmentationNCAModel, self).__init__(
             device,
             num_image_channels,
@@ -47,15 +49,44 @@ class SegmentationNCAModel(BasicNCAModel):
         self.plot_function = show_batch_binary_segmentation
 
     def segment(self, image, steps=100):
-        x = image.clone()
-        x = self.forward(x, steps=steps)
-        class_channels = x[..., : -self.num_output_channels]
-        y_pred = torch.mean(class_channels, 1)
-        y_pred = torch.mean(y_pred, 1)
-        y_pred = torch.argmax(F.softmax(y_pred), axis=1)
-        return y_pred
+        with torch.no_grad():
+            x = image.clone()
+            x = self(x, steps=steps)
+            hidden_channels = x[
+                ...,
+                self.num_image_channels : self.num_image_channels
+                + self.num_hidden_channels,
+            ]
+
+            class_channels = x[
+                ..., self.num_image_channels + self.num_hidden_channels :
+            ]
+            return class_channels
 
     def loss(self, x, y):
-        loss_function = DiceBCELoss()
-        loss = loss_function(x[..., -self.num_classes:].swapaxes(3, 1), y)
+        hidden_channels = x[..., self.num_image_channels : -self.num_output_channels]
+        class_channels = x[..., self.num_image_channels + self.num_hidden_channels :]
+
+        loss_segmentation_function = DiceBCELoss()
+        loss_segmentation = loss_segmentation_function(
+            class_channels.transpose(3, 1), y  # B, W, H, C --> B, C, W, H
+        )
+
+        loss_activity = torch.sum(torch.square(hidden_channels)) / (
+            x.shape[0] * x.shape[1] * x.shape[2]
+        )
+
+        loss = (
+            1 - self.lambda_activity
+        ) * loss_segmentation + self.lambda_activity * loss_activity
         return loss
+
+    def validate(
+        self,
+        x: torch.Tensor,
+        target: torch.Tensor,
+        steps: int,
+        batch_iteration: int,
+        summary_writer=None,
+    ):
+        pass

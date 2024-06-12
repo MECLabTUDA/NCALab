@@ -12,24 +12,25 @@ class BasicNCAModel(nn.Module):
         num_image_channels: int,
         num_hidden_channels: int,
         num_output_channels: int,
-        fire_rate=0.5,
-        hidden_size=128,
-        use_alive_mask=False,
-        immutable_image_channels=True,
-        learned_filters=2,
+        fire_rate: float = 0.5,
+        hidden_size: int = 128,
+        use_alive_mask: bool = False,
+        immutable_image_channels: bool = True,
+        learned_filters: int = 2,
     ):
-        """_summary_
+        """Basic abstract class for NCA models.
 
         Args:
-            device (device): _description_
-            num_image_channels (int): _description_
-            num_hidden_channels (int): _description_
-            num_output_channels (int): _description_
-            fire_rate (float, optional): _description_. Defaults to 0.5.
-            hidden_size (int, optional): _description_. Defaults to 128.
-            use_alive_mask (bool, optional): _description_. Defaults to False.
-            immutable_image_channels (bool, optional): _description_. Defaults to True.
-            learned_filters (int, optional): _description_. Defaults to 2.
+            device (device): Pytorch device descriptor.
+            num_image_channels (int): Number of channels reserved for input image.
+            num_hidden_channels (int): Number of hidden channels (communication channels).
+            num_output_channels (int): Number of output channels.
+            fire_rate (float, optional): Fire rate for stochastic weight update. Defaults to 0.5.
+            hidden_size (int, optional): Number of neurons in hidden layer. Defaults to 128.
+            use_alive_mask (bool, optional): Whether to use alive masking during training. Defaults to False.
+            immutable_image_channels (bool, optional): If image channels should be fixed during inference,
+                which is the case for most segmentation or classification problems. Defaults to True.
+            learned_filters (int, optional): Number of learned filters. If zero, use two sobel filters instead. Defaults to 2.
         """
         super(BasicNCAModel, self).__init__()
 

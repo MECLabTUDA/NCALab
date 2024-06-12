@@ -10,10 +10,10 @@ class GrowingNCAModel(BasicNCAModel):
         device,
         num_image_channels: int,
         num_hidden_channels: int,
-        fire_rate=0.5,
-        hidden_size=128,
-        use_alive_mask=False,
-        learned_filters=2,
+        fire_rate: float = 0.5,
+        hidden_size: int = 128,
+        use_alive_mask: bool = False,
+        learned_filters: int = 2,
     ):
         """_summary_
 
@@ -42,3 +42,22 @@ class GrowingNCAModel(BasicNCAModel):
     def loss(self, x, target):
         loss = F.mse_loss(x[..., : self.num_image_channels], target)
         return loss
+
+    def validate(
+        self,
+        x: F.Tensor,
+        target: F.Tensor,
+        steps: int,
+        batch_iteration: int,
+        summary_writer=None,
+    ):
+        """Don't do anything.
+
+        Args:
+            x (F.Tensor): _description_
+            target (F.Tensor): _description_
+            steps (int): _description_
+            batch_iteration (int): _description_
+            summary_writer (_type_, optional): _description_. Defaults to None.
+        """
+        pass
