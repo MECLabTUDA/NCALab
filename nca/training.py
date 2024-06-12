@@ -34,7 +34,7 @@ def train_basic_nca(
     ) = None,
     batch_repeat: int = 2,
 ):
-    """_summary_
+    """Execute basic NCA training loop with a single function call.
 
     Args:
         nca (BasicNCAModel): _description_
@@ -46,11 +46,10 @@ def train_basic_nca(
         steps_range (tuple, optional): _description_. Defaults to (64, 96).
         steps_validation (int, optional): Forward passes during validation. Defaults to 80.
         save_every (int, optional): _description_. Defaults to 100.
-        lr (float, optional): _description_. Defaults to 2e-3.
+        lr (float, optional): Start learning rate. Defaults to 2e-3.
         lr_gamma (float, optional): _description_. Defaults to 0.9999.
         adam_betas (tuple, optional): _description_. Defaults to (0.5, 0.5).
         summary_writer (_type_, optional): _description_. Defaults to None.
-        pad_x (bool, optional): _description_. Defaults to False.
         plot_function (Callable[ [np.ndarray, np.ndarray, np.ndarray, BasicNCAModel], Figure ], optional): _description_. Defaults to None.
         batch_multiplier (int, optional): How often a batch should be repeated, minimum is 1. Batch duplication can stabelize the training. Defaults to 2.
     """
@@ -70,17 +69,22 @@ def train_basic_nca(
     scheduler = optim.lr_scheduler.ExponentialLR(optimizer, lr_gamma)
 
     def train_iteration(
-        x, target, steps: int, optimizer, scheduler, batch_iteration: int
+        x: torch.Tensor,
+        y: torch.Tensor,
+        steps: int,
+        optimizer: torch.optim.Optimizer,
+        scheduler: torch.optim.lr_scheduler.LRScheduler,
+        batch_iteration: int,
     ) -> torch.Tensor:
-        """_summary_
+        """Run a single training iteration.
 
         Args:
-            x (_type_): _description_
-            target (_type_): _description_
-            steps (_type_): _description_
-            optimizer (_type_): _description_
-            scheduler (_type_): _description_
-            batch_iteration (_type_): _description_
+            x (torch.Tensor): _description_
+            y (torch.Tensor): _description_
+            steps (int): Number of inference steps.
+            optimizer (torch.optim.Optimizer): _description_
+            scheduler (torch.optim.lr_scheduler.LRScheduler): _description_
+            batch_iteration (int): _description_
 
         Returns:
             torch.Tensor: Predicted image.
@@ -89,7 +93,7 @@ def train_basic_nca(
         x_pred = x.clone().to(nca.device)
         x_pred = nca(x_pred, steps=steps)
 
-        loss = nca.loss(x_pred, target.to(nca.device))
+        loss = nca.loss(x_pred, y.to(nca.device))
         loss.backward()
 
         if gradient_clipping:
@@ -104,6 +108,10 @@ def train_basic_nca(
     for iteration in tqdm(range(max_iterations)):
         sample = next(iter(dataloader_train))
         x, y = sample
+
+        # Typically, our dataloader supplies a binary, grayscale, RGB or RGBA image.
+        # But out NCA operates on multiple hidden channels and output channels, so we
+        # need to pad the input image with zeros.
         if x.shape[1] < nca.num_channels:
             x = np.pad(
                 x,
@@ -136,7 +144,7 @@ def train_basic_nca(
                 )
                 summary_writer.add_figure("Current Batch", figure, iteration)
 
-        if dataloader_val and hasattr(nca, "validate"):
+        if dataloader_val:
             sample = next(iter(dataloader_val))
             x, y = sample
             if x.shape[1] < nca.num_channels:
