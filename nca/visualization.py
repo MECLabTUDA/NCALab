@@ -105,7 +105,7 @@ def show_batch_binary_segmentation(x_seed, x_pred, y_true, nca):
     show_image_row(ax[0], np.clip(images, 0.0, 1.0))
 
     # 2nd row: prediction
-    images = y_true
+    images = y_true.transpose(1, 2)
     show_image_row(ax[1], np.clip(images, 0.0, 1.0), cmap="gray")
 
     # 3rd row: prediction

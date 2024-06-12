@@ -12,8 +12,6 @@ from matplotlib.figure import Figure  # for type hint
 
 from tqdm import tqdm
 
-from torcheval.metrics import MulticlassAccuracy
-
 from .models.basicNCA import BasicNCAModel  # for type hint
 
 
@@ -25,6 +23,7 @@ def train_basic_nca(
     max_iterations: int = 50000,
     gradient_clipping: bool = True,
     steps_range: tuple = (64, 96),
+    steps_validation: int = 80,
     save_every: int = 100,
     lr: float = 2e-3,
     lr_gamma: float = 0.9999,
@@ -45,6 +44,7 @@ def train_basic_nca(
         max_iterations (int, optional): _description_. Defaults to 50000.
         gradient_clipping (bool, optional): _description_. Defaults to True.
         steps_range (tuple, optional): _description_. Defaults to (64, 96).
+        steps_validation (int, optional): Forward passes during validation. Defaults to 80.
         save_every (int, optional): _description_. Defaults to 100.
         lr (float, optional): _description_. Defaults to 2e-3.
         lr_gamma (float, optional): _description_. Defaults to 0.9999.
@@ -71,7 +71,7 @@ def train_basic_nca(
 
     def train_iteration(
         x, target, steps: int, optimizer, scheduler, batch_iteration: int
-    ):
+    ) -> torch.Tensor:
         """_summary_
 
         Args:
@@ -83,7 +83,7 @@ def train_basic_nca(
             batch_iteration (_type_): _description_
 
         Returns:
-            _type_: _description_
+            torch.Tensor: Predicted image.
         """
         optimizer.zero_grad()
         x_pred = x.clone().to(nca.device)
@@ -99,35 +99,6 @@ def train_basic_nca(
         if summary_writer:
             summary_writer.add_scalar("Loss/train", loss, batch_iteration)
         return x_pred
-
-    def val_iteration(x, target, steps: int, batch_iteration: int):
-        """_summary_
-
-        Args:
-            x (_type_): _description_
-            target (_type_): _description_
-            steps (_type_): _description_
-            batch_iteration (_type_): _description_
-        """
-        with torch.no_grad():
-            y_pred = nca.classify(x.to(nca.device), steps, softmax=True)
-            y_logits = nca.classify(x.to(nca.device), steps, softmax=False)
-
-            metric = MulticlassAccuracy(average="macro", num_classes=nca.num_classes)
-            metric.update(y_pred, target.flatten().to(nca.device))
-            accuracy_macro = metric.compute()
-
-            metric = MulticlassAccuracy(average="micro", num_classes=nca.num_classes)
-            metric.update(y_logits, target.flatten().to(nca.device))
-            accuracy_micro = metric.compute()
-
-            if summary_writer:
-                summary_writer.add_scalar(
-                    "Acc/val_macro", accuracy_macro, batch_iteration
-                )
-                summary_writer.add_scalar(
-                    "Acc/val_micro", accuracy_micro, batch_iteration
-                )
 
     # Main training/validation loop
     for iteration in tqdm(range(max_iterations)):
@@ -165,7 +136,7 @@ def train_basic_nca(
                 )
                 summary_writer.add_figure("Current Batch", figure, iteration)
 
-        if dataloader_val:
+        if dataloader_val and hasattr(nca, "validate"):
             sample = next(iter(dataloader_val))
             x, y = sample
             if x.shape[1] < nca.num_channels:
@@ -181,5 +152,4 @@ def train_basic_nca(
                 )
                 x = torch.from_numpy(x.astype(np.float32))
             x = x.float().transpose(1, 3)
-
-            val_iteration(x, y, 80, iteration)
+            nca.validate(x, y, steps_validation, iteration, summary_writer)

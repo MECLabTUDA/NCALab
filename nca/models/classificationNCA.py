@@ -1,6 +1,8 @@
 import torch
 import torch.nn.functional as F
 
+from torcheval.metrics import MulticlassAccuracy
+
 from .basicNCA import BasicNCAModel
 
 
@@ -125,3 +127,27 @@ class ClassificationNCAModel(BasicNCAModel):
             1 - self.lambda_activity
         ) * loss_ce + self.lambda_activity * loss_activity
         return loss
+
+    def validate(
+        self,
+        x: torch.Tensor,
+        target: torch.Tensor,
+        steps: int,
+        batch_iteration: int,
+        summary_writer=None,
+    ):
+        with torch.no_grad():
+            y_pred = self.classify(x.to(self.device), steps, softmax=True)
+            y_prob = self.classify(x.to(self.device), steps, softmax=False)
+
+            metric = MulticlassAccuracy(average="macro", num_classes=self.num_classes)
+            metric.update(y_pred, target.flatten().to(self.device))
+            accuracy_macro = metric.compute()
+
+            metric = MulticlassAccuracy(average="micro", num_classes=self.num_classes)
+            metric.update(y_prob, target.flatten().to(self.device))
+            accuracy_micro = metric.compute()
+
+            if summary_writer:
+                summary_writer.add_scalar("Acc/val_macro", accuracy_macro, batch_iteration)
+                summary_writer.add_scalar("Acc/val_micro", accuracy_micro, batch_iteration)
