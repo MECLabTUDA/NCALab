@@ -13,12 +13,16 @@ class GrowingNCADataset(Dataset):
         use_pattern_pool: bool = False,
         damage: bool = False,
     ):
-        """_summary_
+        """Dedicated dataset for "growing" tasks, like growing emoji.
+
+        The idea is to train a model solely for the purpose to generate ("grow")
+        a fixed image. Hence, this Dataset class only stores multiple copies of the
+        same image.
 
         Args:
             image (np.ndarray): _description_
             num_channels (int): _description_
-            batch_size (int, optional): _description_. Defaults to 8.
+            batch_size (int, optional): Output batch size. Defaults to 8.
         """
         super(GrowingNCADataset, self).__init__()
         self.batch_size = batch_size
@@ -31,4 +35,6 @@ class GrowingNCADataset(Dataset):
         return self.batch_size
 
     def __getitem__(self, idx):
-        return self.seed, self.image
+        seed = self.seed.copy()
+        image = self.image.copy()
+        return seed, image

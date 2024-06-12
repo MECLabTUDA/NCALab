@@ -7,6 +7,7 @@ import torch
 import torch.optim as optim
 import torch.nn.functional as F
 from torch.utils.data import DataLoader  # for type hint
+from torch.utils.tensorboard import SummaryWriter  # for type hint
 
 from matplotlib.figure import Figure  # for type hint
 
@@ -28,7 +29,7 @@ def train_basic_nca(
     lr: float = 2e-3,
     lr_gamma: float = 0.9999,
     adam_betas=(0.5, 0.5),
-    summary_writer=None,
+    summary_writer: SummaryWriter = None,
     plot_function: (
         Callable[[np.ndarray, np.ndarray, np.ndarray, BasicNCAModel], Figure] | None
     ) = None,
@@ -37,8 +38,8 @@ def train_basic_nca(
     """Execute basic NCA training loop with a single function call.
 
     Args:
-        nca (BasicNCAModel): _description_
-        model_path (str | PosixPath): _description_
+        nca (BasicNCAModel): Model instance to train. Should be based on BasicNCAModel.
+        model_path (str | PosixPath): File path to store model weights during training.
         dataloader_train (DataLoader): Training DataLoader
         dataloader_val (DataLoader): Validation DataLoader
         max_iterations (int, optional): _description_. Defaults to 50000.
@@ -49,7 +50,7 @@ def train_basic_nca(
         lr (float, optional): Start learning rate. Defaults to 2e-3.
         lr_gamma (float, optional): _description_. Defaults to 0.9999.
         adam_betas (tuple, optional): _description_. Defaults to (0.5, 0.5).
-        summary_writer (_type_, optional): _description_. Defaults to None.
+        summary_writer (SummaryWriter, optional): Tensorboard SummaryWriter. Defaults to None.
         plot_function (Callable[ [np.ndarray, np.ndarray, np.ndarray, BasicNCAModel], Figure ], optional): _description_. Defaults to None.
         batch_multiplier (int, optional): How often a batch should be repeated, minimum is 1. Batch duplication can stabelize the training. Defaults to 2.
     """
