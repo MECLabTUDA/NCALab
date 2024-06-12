@@ -163,3 +163,5 @@ cython_debug/
 #weights/
 mnist/
 runs/
+data/
+kvasir_seg.zip

@@ -56,7 +56,12 @@ def train_basic_nca(
     """
 
     assert batch_repeat >= 1
+    assert lr > 0
+    assert steps_range[0] < steps_range[1]
+    assert save_every > 0
+    assert max_iterations > 0
 
+    # Use default plot function for NCA flavor if none is explicitly given
     if not plot_function:
         if nca.plot_function:
             plot_function = nca.plot_function
@@ -64,7 +69,20 @@ def train_basic_nca(
     optimizer = optim.Adam(nca.parameters(), lr=lr, betas=adam_betas)
     scheduler = optim.lr_scheduler.ExponentialLR(optimizer, lr_gamma)
 
-    def train_iteration(x, target, steps, optimizer, scheduler, batch_iteration):
+    def train_iteration(x, target, steps: int, optimizer, scheduler, batch_iteration: int):
+        """_summary_
+
+        Args:
+            x (_type_): _description_
+            target (_type_): _description_
+            steps (_type_): _description_
+            optimizer (_type_): _description_
+            scheduler (_type_): _description_
+            batch_iteration (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
         optimizer.zero_grad()
         x_pred = x.clone().to(nca.device)
         x_pred = nca(x_pred, steps=steps)
@@ -80,7 +98,15 @@ def train_basic_nca(
             summary_writer.add_scalar("Loss/train", loss, batch_iteration)
         return x_pred
 
-    def val_iteration(x, target, steps, batch_iteration):
+    def val_iteration(x, target, steps: int, batch_iteration: int):
+        """_summary_
+
+        Args:
+            x (_type_): _description_
+            target (_type_): _description_
+            steps (_type_): _description_
+            batch_iteration (_type_): _description_
+        """
         with torch.no_grad():
             y_pred = nca.classify(x.to(nca.device), steps, softmax=True)
             y_logits = nca.classify(x.to(nca.device), steps, softmax=False)
@@ -97,6 +123,7 @@ def train_basic_nca(
                 summary_writer.add_scalar("Acc/val_macro", accuracy_macro, batch_iteration)
                 summary_writer.add_scalar("Acc/val_micro", accuracy_micro, batch_iteration)
 
+    # Main training/validation loop
     for iteration in tqdm(range(max_iterations)):
         sample = next(iter(dataloader_train))
         x, y = sample
@@ -127,10 +154,10 @@ def train_basic_nca(
                 figure = plot_function(
                     x.detach().cpu().numpy(),
                     x_pred.detach().cpu().numpy(),
-                    y.detach().cpu().numpy(),
+                    y.transpose(1, 2).detach().cpu().numpy(),
                     nca,
                 )
-            summary_writer.add_figure("Current Batch", figure, iteration)
+                summary_writer.add_figure("Current Batch", figure, iteration)
 
         if dataloader_val:
             sample = next(iter(dataloader_val))
@@ -148,4 +175,5 @@ def train_basic_nca(
                 )
                 x = torch.from_numpy(x.astype(np.float32))
             x = x.float().transpose(1, 3)
+
             val_iteration(x, y, 80, iteration)
