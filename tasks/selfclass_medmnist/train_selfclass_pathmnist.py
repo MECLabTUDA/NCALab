@@ -77,7 +77,7 @@ def train_selfclass_pathmnist(
 @click.option(
     "--gpu-index", type=int, default=0, help="Index of GPU to use, if --gpu in use."
 )
-def main(batch_size, hidden_channels, gpu, gpu_index):
+def main(batch_size, hidden_channels, gpu: bool, gpu_index: int):
     train_selfclass_pathmnist(
         batch_size=batch_size,
         hidden_channels=hidden_channels,

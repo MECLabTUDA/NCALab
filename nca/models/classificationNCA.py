@@ -98,7 +98,7 @@ class ClassificationNCAModel(BasicNCAModel):
             # If softmax enabled, reduce to a single scalar.
             # Otherwise, return logits of all channels as a vector.
             if softmax:
-                y_pred = torch.argmax(F.softmax(y_pred, dim=-1), axis=1)
+                y_pred = torch.argmax(F.softmax(y_pred, dim=-1), dim=1)
                 return y_pred
             return y_pred
 

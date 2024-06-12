@@ -45,9 +45,9 @@ class KvasirSegDataset(Dataset):
         bbox = image.getbbox()
         image = image.crop(bbox)
         mask = mask.crop(bbox)
-        image = np.asarray(image, dtype=np.float32) / 255.0
-        mask = np.asarray(mask, dtype=np.float32) / 255.0
-        sample = {"image": image, "mask": mask}
+        image_arr = np.asarray(image, dtype=np.float32) / 255.0
+        mask_arr = np.asarray(mask, dtype=np.float32) / 255.0
+        sample = {"image": image_arr, "mask": mask_arr}
         sample = self.transform(**sample)
         return sample["image"], sample["mask"]
 
@@ -94,7 +94,7 @@ def train_segmentation_kvasir_seg(batch_size: int, hidden_channels: int):
         nca,
         WEIGHTS_PATH / "segmentation_kvasir_seg.pth",
         loader_train,
-        #loader_val,
+        # loader_val,
         summary_writer=writer,
     )
     writer.close()

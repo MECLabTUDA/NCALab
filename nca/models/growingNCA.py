@@ -48,8 +48,8 @@ class GrowingNCAModel(BasicNCAModel):
 
     def validate(
         self,
-        x: F.Tensor,
-        target: F.Tensor,
+        x: torch.Tensor,
+        target: torch.Tensor,
         steps: int,
         batch_iteration: int,
         summary_writer=None,

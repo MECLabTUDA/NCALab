@@ -25,8 +25,8 @@ from torch.utils.tensorboard import SummaryWriter
 def train_selfclass_bloodmnist(
     batch_size: int,
     hidden_channels: int,
-    gpu,
-    gpu_index,
+    gpu: bool,
+    gpu_index: int,
 ):
     writer = SummaryWriter()
 
