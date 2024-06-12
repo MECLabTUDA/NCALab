@@ -23,7 +23,7 @@ class ClassificationNCAModel(BasicNCAModel):
         """_summary_
 
         Args:
-            device (_type_): _description_
+            device (Pytorch device descriptor): _description_
             num_image_channels (int): _description_
             num_hidden_channels (int): _description_
             num_classes (int): _description_
@@ -48,20 +48,22 @@ class ClassificationNCAModel(BasicNCAModel):
             learned_filters,
         )
 
-    def forward(self, x, steps: int = 1):
+    def forward(self, x: torch.Tensor, steps: int = 1):
         x = super().forward(x, steps)
         return x
 
-    def classify(self, image, steps: int = 100, softmax: bool = False) -> torch.Tensor:
+    def classify(
+        self, image: torch.Tensor, steps: int = 100, softmax: bool = False
+    ) -> torch.Tensor:
         """_summary_
 
         Args:
-            image (_type_): _description_
-            steps (int, optional): _description_. Defaults to 100.
-            softmax (bool, optional): Return vector of logits after softmax. Defaults to False.
+            image (torch.Tensor): Input image.
+            steps (int, optional): Inference steps. Defaults to 100.
+            softmax (bool, optional): Return a single softmax probability. Defaults to False.
 
         Returns:
-            (torch.Tensor): Single class index or vector of softmax probabilities.
+            (torch.Tensor): Single class index or vector of logits.
         """
         with torch.no_grad():
             x = image.clone()
@@ -89,8 +91,12 @@ class ClassificationNCAModel(BasicNCAModel):
                     for c in range(self.num_classes):
                         class_channels[i, :, :, c] *= mask
 
+            # Average over all pixels
             y_pred = torch.mean(class_channels, 1)
             y_pred = torch.mean(y_pred, 1)
+
+            # If softmax enabled, reduce to a single scalar.
+            # Otherwise, return logits of all channels as a vector.
             if softmax:
                 y_pred = torch.argmax(F.softmax(y_pred, dim=-1), axis=1)
                 return y_pred
@@ -136,6 +142,15 @@ class ClassificationNCAModel(BasicNCAModel):
         batch_iteration: int,
         summary_writer=None,
     ):
+        """_summary_
+
+        Args:
+            x (torch.Tensor): _description_
+            target (torch.Tensor): _description_
+            steps (int): _description_
+            batch_iteration (int): _description_
+            summary_writer (_type_, optional): _description_. Defaults to None.
+        """
         with torch.no_grad():
             y_pred = self.classify(x.to(self.device), steps, softmax=True)
             y_prob = self.classify(x.to(self.device), steps, softmax=False)
@@ -149,5 +164,9 @@ class ClassificationNCAModel(BasicNCAModel):
             accuracy_micro = metric.compute()
 
             if summary_writer:
-                summary_writer.add_scalar("Acc/val_macro", accuracy_macro, batch_iteration)
-                summary_writer.add_scalar("Acc/val_micro", accuracy_micro, batch_iteration)
+                summary_writer.add_scalar(
+                    "Acc/val_macro", accuracy_macro, batch_iteration
+                )
+                summary_writer.add_scalar(
+                    "Acc/val_micro", accuracy_micro, batch_iteration
+                )
