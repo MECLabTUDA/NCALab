@@ -14,8 +14,14 @@ import matplotlib.pyplot as plt
 
 
 @click.command()
-def eval_growing_emoji():
-    device = get_compute_device("cuda:0")
+@click.option(
+    "--gpu/no-gpu", is_flag=True, default=True, help="Try using the GPU if available."
+)
+@click.option(
+    "--gpu-index", type=int, default=0, help="Index of GPU to use, if --gpu in use."
+)
+def eval_growing_emoji(gpu: bool, gpu_index: int):
+    device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
     nca = GrowingNCAModel(
         device,

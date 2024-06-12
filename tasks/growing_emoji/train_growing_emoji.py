@@ -14,7 +14,6 @@ from nca import (
 
 import click
 
-import torch
 from torch.utils.data import DataLoader
 
 from torch.utils.tensorboard import SummaryWriter
@@ -44,7 +43,9 @@ def get_emoji_image(emoji: str = "🦎", padding: int = 2, size: int = 24):
         return image
 
 
-def train_growing_emoji(batch_size: int, hidden_channels: int):
+def train_growing_emoji(
+    batch_size: int, hidden_channels: int, gpu: bool, gpu_index: int
+):
     """_summary_
 
     Args:
@@ -53,7 +54,7 @@ def train_growing_emoji(batch_size: int, hidden_channels: int):
     """
     writer = SummaryWriter()
 
-    device = get_compute_device("cuda:0")
+    device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
     nca = GrowingNCAModel(
         device,
@@ -75,8 +76,19 @@ def train_growing_emoji(batch_size: int, hidden_channels: int):
 @click.command()
 @click.option("--batch-size", "-b", default=8, type=int)
 @click.option("--hidden-channels", "-H", default=12, type=int)
-def main(batch_size, hidden_channels):
-    train_growing_emoji(batch_size=batch_size, hidden_channels=hidden_channels)
+@click.option(
+    "--gpu/no-gpu", is_flag=True, default=True, help="Try using the GPU if available."
+)
+@click.option(
+    "--gpu-index", type=int, default=0, help="Index of GPU to use, if --gpu in use."
+)
+def main(batch_size, hidden_channels, gpu, gpu_index):
+    train_growing_emoji(
+        batch_size=batch_size,
+        hidden_channels=hidden_channels,
+        gpu=gpu,
+        gpu_index=gpu_index,
+    )
 
 
 if __name__ == "__main__":
