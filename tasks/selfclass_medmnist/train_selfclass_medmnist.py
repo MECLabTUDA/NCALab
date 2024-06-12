@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import click
 
 from .train_selfclass_bloodmnist import train_selfclass_bloodmnist
