@@ -3,10 +3,13 @@ import sys, os
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from nca.models.classificationNCA import ClassificationNCAModel
-from nca.training import train_basic_nca
-from nca.paths import WEIGHTS_PATH
-from nca.visualization import show_batch_classification
+from nca import (
+    ClassificationNCAModel,
+    train_basic_nca,
+    WEIGHTS_PATH,
+    show_batch_classification,
+    get_compute_device,
+)
 
 import click
 
@@ -21,21 +24,25 @@ from torch.utils.tensorboard import SummaryWriter
 def train_selfclass_bloodmnist(batch_size: int, hidden_channels: int):
     writer = SummaryWriter()
 
-    device = torch.device("cuda:0")
+    device = get_compute_device("cuda:0")
 
     dataset_train = BloodMNIST(
         split="train",
         download=True,
         transform=transforms.Compose([transforms.ToTensor()]),
     )
-    loader_train = torch.utils.data.DataLoader(dataset_train, shuffle=True, batch_size=batch_size)
+    loader_train = torch.utils.data.DataLoader(
+        dataset_train, shuffle=True, batch_size=batch_size
+    )
 
     dataset_val = BloodMNIST(
         split="val",
         download=True,
         transform=transforms.Compose([transforms.ToTensor()]),
     )
-    loader_val = torch.utils.data.DataLoader(dataset_val, shuffle=True, batch_size=batch_size)
+    loader_val = torch.utils.data.DataLoader(
+        dataset_val, shuffle=True, batch_size=batch_size
+    )
 
     nca = ClassificationNCAModel(
         device,

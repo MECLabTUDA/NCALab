@@ -5,9 +5,7 @@ sys.path.append(root_dir)
 
 from typing import Any
 
-from nca.models.segmentationNCA import SegmentationNCAModel
-from nca.training import train_basic_nca
-from nca.paths import WEIGHTS_PATH
+from nca import SegmentationNCAModel, train_basic_nca, WEIGHTS_PATH, get_compute_device
 
 from download_kvasir_seg import download_and_extract
 
@@ -56,7 +54,7 @@ class KvasirSegDataset(Dataset):
 def train_segmentation_kvasir_seg(batch_size: int, hidden_channels: int):
     writer = SummaryWriter()
 
-    device = torch.device("cuda:0")
+    device = get_compute_device("cuda:0")
 
     nca = SegmentationNCAModel(
         device,

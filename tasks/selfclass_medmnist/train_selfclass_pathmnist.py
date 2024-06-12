@@ -3,10 +3,13 @@ import sys, os
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from nca.models.classificationNCA import ClassificationNCAModel
-from nca.training import train_basic_nca
-from nca.paths import WEIGHTS_PATH
-from nca.visualization import show_batch_classification
+from nca import (
+    ClassificationNCAModel,
+    train_basic_nca,
+    WEIGHTS_PATH,
+    show_batch_classification,
+    get_compute_device,
+)
 
 import click
 
@@ -21,7 +24,7 @@ from torch.utils.tensorboard import SummaryWriter
 def train_selfclass_pathmnist(batch_size: int, hidden_channels: int):
     writer = SummaryWriter()
 
-    device = torch.device("cuda:0")
+    device = get_compute_device("cuda:0")
 
     dataset_train = PathMNIST(
         split="train",
