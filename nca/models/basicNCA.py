@@ -16,7 +16,7 @@ class BasicNCAModel(nn.Module):
         hidden_size=128,
         use_alive_mask=False,
         immutable_image_channels=True,
-        learned_filters=2
+        learned_filters=2,
     ):
         """_summary_
 
@@ -65,6 +65,7 @@ class BasicNCAModel(nn.Module):
                         bias=False,
                     ).to(self.device)
                 )
+                self.filters = nn.ModuleList(self.filters)
         else:
             self.num_filters = 2
             self.filters.append(np.outer([1, 2, 1], [-1, 0, 1]) / 8.0)
@@ -73,7 +74,7 @@ class BasicNCAModel(nn.Module):
         self.network = nn.Sequential(
             nn.Linear(self.num_channels * (self.num_filters + 1), hidden_size),
             nn.ReLU(),
-            nn.Linear(hidden_size, self.num_channels, bias=False)
+            nn.Linear(hidden_size, self.num_channels, bias=False),
         ).to(device)
 
         # initialize final layer with 0
@@ -81,7 +82,12 @@ class BasicNCAModel(nn.Module):
             self.network[-1].weight.zero_()
 
     def alive(self, x):
-        mask = F.max_pool2d(x[:, self.num_image_channels, :, :], kernel_size=3, stride=1, padding=1) > 0.1
+        mask = (
+            F.max_pool2d(
+                x[:, self.num_image_channels, :, :], kernel_size=3, stride=1, padding=1
+            )
+            > 0.1
+        )
         return mask
 
     def perceive(self, x):
@@ -123,14 +129,14 @@ class BasicNCAModel(nn.Module):
             dx[..., : self.num_image_channels] *= 0
 
         # Alive masking
-        x = x + dx.transpose(1, 3) # B W H C --> B C W H
+        x = x + dx.transpose(1, 3)  # B W H C --> B C W H
         # FIXME: Something is wrong in the state of Denmark
         if self.use_alive_mask:
             x = x.transpose(0, 1)
             life_mask = self.alive(x) & pre_life_mask
             x = x * life_mask.float()
             x = x.transpose(1, 0)
-        x = x.transpose(1, 3) # B C W H --> B W H C
+        x = x.transpose(1, 3)  # B C W H --> B W H C
         return x
 
     def forward(self, x, steps: int = 1):
@@ -139,4 +145,35 @@ class BasicNCAModel(nn.Module):
         return x
 
     def loss(self, x, target):
+        """_summary_
+
+        Args:
+            x (_type_): _description_
+            target (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
+        return NotImplemented
+
+    def validate(
+        self,
+        x: torch.Tensor,
+        target: torch.Tensor,
+        steps: int,
+        batch_iteration: int,
+        summary_writer=None,
+    ):
+        """_summary_
+
+        Args:
+            x (torch.Tensor): _description_
+            target (torch.Tensor): _description_
+            steps (int): _description_
+            batch_iteration (int): _description_
+            summary_writer (_type_, optional): _description_. Defaults to None.
+
+        Returns:
+            _type_: _description_
+        """
         return NotImplemented
