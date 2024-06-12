@@ -76,6 +76,7 @@ class BasicNCAModel(nn.Module):
             nn.Linear(hidden_size, self.num_channels, bias=False)
         ).to(device)
 
+        # initialize final layer with 0
         with torch.no_grad():
             self.network[-1].weight.zero_()
 
@@ -105,10 +106,14 @@ class BasicNCAModel(nn.Module):
         x = x.transpose(1, 3)
         pre_life_mask = self.alive(x)
 
+        # Perception
         dx = self.perceive(x)
+
+        # Compute delta from FFNN network
         dx = dx.transpose(1, 3)
         dx = self.network(dx)
 
+        # Stochastic weight update
         stochastic = (
             torch.rand([dx.size(0), dx.size(1), dx.size(2), 1]) > self.fire_rate
         )
@@ -117,8 +122,9 @@ class BasicNCAModel(nn.Module):
         if self.immutable_image_channels:
             dx[..., : self.num_image_channels] *= 0
 
+        # Alive masking
         x = x + dx.transpose(1, 3) # B W H C --> B C W H
-        # FIXME: Something is wrong with the alive masking
+        # FIXME: Something is wrong in the state of Denmark
         if self.use_alive_mask:
             x = x.transpose(0, 1)
             life_mask = self.alive(x) & pre_life_mask
@@ -127,7 +133,7 @@ class BasicNCAModel(nn.Module):
         x = x.transpose(1, 3) # B C W H --> B W H C
         return x
 
-    def forward(self, x, steps=1):
+    def forward(self, x, steps: int = 1):
         for _ in range(steps):
             x = self.update(x)
         return x
