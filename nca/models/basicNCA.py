@@ -16,7 +16,7 @@ class BasicNCAModel(nn.Module):
         hidden_size=128,
         use_alive_mask=False,
         immutable_image_channels=True,
-        learned_filters=2
+        learned_filters=2,
     ):
         """_summary_
 
@@ -65,30 +65,38 @@ class BasicNCAModel(nn.Module):
                         bias=False,
                     ).to(self.device)
                 )
+                self.filters = nn.ModuleList(self.filters)
         else:
             self.num_filters = 2
             self.filters.append(np.outer([1, 2, 1], [-1, 0, 1]) / 8.0)
             self.filters.append((np.outer([1, 2, 1], [-1, 0, 1]) / 8.0).T)
 
-        self.hidden_layer = nn.Linear(
-            self.num_channels * (self.num_filters + 1), hidden_size
+        self.network = nn.Sequential(
+            nn.Linear(self.num_channels * (self.num_filters + 1), hidden_size),
+            nn.ReLU(),
+            nn.Linear(hidden_size, self.num_channels, bias=False),
         ).to(device)
-        self.activation = nn.ReLU().to(device)
-        self.final_layer = nn.Linear(hidden_size, self.num_channels, bias=False).to(
-            device
-        )
+
+        # initialize final layer with 0
         with torch.no_grad():
-            self.final_layer.weight.zero_()
+            self.network[-1].weight.zero_()
 
     def alive(self, x):
-        mask = F.max_pool2d(x[:, self.num_image_channels, :, :], kernel_size=3, stride=1, padding=1) > 0.1
+        mask = (
+            F.max_pool2d(
+                x[:, self.num_image_channels, :, :], kernel_size=3, stride=1, padding=1
+            )
+            > 0.1
+        )
         return mask
 
     def perceive(self, x):
         def _perceive_with(x, weight):
             if type(weight) == nn.Conv2d:
                 return weight(x)
-            # hard coded filter matrix:
+            # if using a hard coded filter matrix.
+            # this is done in the original Growing NCA paper, but learned filters typically
+            # work better.
             conv_weights = torch.from_numpy(weight.astype(np.float32)).to(self.device)
             conv_weights = conv_weights.view(1, 1, 3, 3).repeat(
                 self.num_channels, 1, 1, 1
@@ -104,12 +112,14 @@ class BasicNCAModel(nn.Module):
         x = x.transpose(1, 3)
         pre_life_mask = self.alive(x)
 
+        # Perception
         dx = self.perceive(x)
-        dx = dx.transpose(1, 3)
-        dx = self.hidden_layer(dx)
-        dx = self.activation(dx)
-        dx = self.final_layer(dx)
 
+        # Compute delta from FFNN network
+        dx = dx.transpose(1, 3)
+        dx = self.network(dx)
+
+        # Stochastic weight update
         stochastic = (
             torch.rand([dx.size(0), dx.size(1), dx.size(2), 1]) > self.fire_rate
         )
@@ -118,19 +128,52 @@ class BasicNCAModel(nn.Module):
         if self.immutable_image_channels:
             dx[..., : self.num_image_channels] *= 0
 
-        x = x + dx.transpose(1, 3)
+        # Alive masking
+        x = x + dx.transpose(1, 3)  # B W H C --> B C W H
+        # FIXME: Something is wrong in the state of Denmark
         if self.use_alive_mask:
             x = x.transpose(0, 1)
             life_mask = self.alive(x) & pre_life_mask
             x = x * life_mask.float()
             x = x.transpose(1, 0)
-        x = x.transpose(1, 3) # B C W H --> B W H C
+        x = x.transpose(1, 3)  # B C W H --> B W H C
         return x
 
-    def forward(self, x, steps=1):
+    def forward(self, x, steps: int = 1):
         for _ in range(steps):
             x = self.update(x)
         return x
 
     def loss(self, x, target):
+        """_summary_
+
+        Args:
+            x (_type_): _description_
+            target (_type_): _description_
+
+        Returns:
+            _type_: _description_
+        """
+        return NotImplemented
+
+    def validate(
+        self,
+        x: torch.Tensor,
+        target: torch.Tensor,
+        steps: int,
+        batch_iteration: int,
+        summary_writer=None,
+    ):
+        """_summary_
+
+        Args:
+            x (torch.Tensor): _description_
+            target (torch.Tensor): _description_
+            steps (int): _description_
+            batch_iteration (int): _description_
+            summary_writer (_type_, optional): _description_. Defaults to None.
+
+        Returns:
+            _type_: _description_
+        """
         return NotImplemented

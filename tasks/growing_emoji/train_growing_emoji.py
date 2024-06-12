@@ -40,12 +40,12 @@ def get_emoji_image(emoji: str = "🦎", padding: int = 2, size: int = 24):
         return image
 
 
-def train_growing_emoji(batch_size: int = 8, hidden_channels: int = 12):
+def train_growing_emoji(batch_size: int, hidden_channels: int):
     """_summary_
 
     Args:
-        batch_size (int, optional): _description_. Defaults to 8.
-        hidden_channels (int, optional): _description_. Defaults to 12.
+        batch_size (int, optional): _description_.
+        hidden_channels (int, optional): _description_.
     """
     writer = SummaryWriter()
 
@@ -55,7 +55,7 @@ def train_growing_emoji(batch_size: int = 8, hidden_channels: int = 12):
         device,
         num_image_channels=4,
         num_hidden_channels=hidden_channels,
-        use_alive_mask=True,
+        use_alive_mask=False,
     )
 
     image = np.asarray(get_emoji_image())

@@ -159,12 +159,15 @@ cython_debug/
 #  option (not recommended) you can uncomment the following to ignore the entire idea folder.
 #.idea/
 
+# Nix specific
+/result
+
 # Project specific
-weights/
+#weights/
 mnist/
 runs/
 
 .venv*
 
-# Nix specific
-/result
+data/
+kvasir_seg.zip

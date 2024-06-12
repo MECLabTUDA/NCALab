@@ -93,14 +93,32 @@ def show_batch_classification(x_seed, x_pred, y_true, nca):
     return figure
 
 
-def show_batch_segmentation(x_seed, x_pred, y_true, nca):
-    pass
+def show_batch_binary_segmentation(x_seed, x_pred, y_true, nca):
+    batch_size = x_pred.shape[0]
+
+    figure, ax = plt.subplots(
+        3, batch_size, figsize=[batch_size * 3, 5], tight_layout=True
+    )
+
+    # 1st row: true image
+    images = x_seed[..., : nca.num_image_channels]
+    show_image_row(ax[0], np.clip(images, 0.0, 1.0))
+
+    # 2nd row: prediction
+    images = y_true.transpose(1, 2)
+    show_image_row(ax[1], np.clip(images, 0.0, 1.0), cmap="gray")
+
+    # 3rd row: prediction
+    images = x_pred[..., -nca.num_classes:]
+    show_image_row(ax[2], np.clip(images, 0.0, 1.0), cmap="gray")
+
+    plt.tight_layout()
+
+    return figure
 
 
 def show_batch_growing(x_seed, x_pred, y_true, nca):
     batch_size = x_pred.shape[0]
-    image_width = x_pred.shape[1]
-    image_height = x_pred.shape[2]
 
     figure, ax = plt.subplots(
         2, batch_size, figsize=[batch_size * 2, 5], tight_layout=True
