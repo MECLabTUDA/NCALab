@@ -50,16 +50,16 @@ class ClassificationNCAModel(BasicNCAModel):
         x = super().forward(x, steps)
         return x
 
-    def classify(self, image, steps: int = 100, softmax: bool = False):
+    def classify(self, image, steps: int = 100, softmax: bool = False) -> torch.Tensor:
         """_summary_
 
         Args:
             image (_type_): _description_
             steps (int, optional): _description_. Defaults to 100.
-            softmax (bool, optional): _description_. Defaults to False.
+            softmax (bool, optional): Return vector of logits after softmax. Defaults to False.
 
         Returns:
-            _type_: _description_
+            (torch.Tensor): Single class index or vector of softmax probabilities.
         """
         with torch.no_grad():
             x = image.clone()

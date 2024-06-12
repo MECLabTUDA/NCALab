@@ -69,7 +69,9 @@ def train_basic_nca(
     optimizer = optim.Adam(nca.parameters(), lr=lr, betas=adam_betas)
     scheduler = optim.lr_scheduler.ExponentialLR(optimizer, lr_gamma)
 
-    def train_iteration(x, target, steps: int, optimizer, scheduler, batch_iteration: int):
+    def train_iteration(
+        x, target, steps: int, optimizer, scheduler, batch_iteration: int
+    ):
         """_summary_
 
         Args:
@@ -120,8 +122,12 @@ def train_basic_nca(
             accuracy_micro = metric.compute()
 
             if summary_writer:
-                summary_writer.add_scalar("Acc/val_macro", accuracy_macro, batch_iteration)
-                summary_writer.add_scalar("Acc/val_micro", accuracy_micro, batch_iteration)
+                summary_writer.add_scalar(
+                    "Acc/val_macro", accuracy_macro, batch_iteration
+                )
+                summary_writer.add_scalar(
+                    "Acc/val_micro", accuracy_micro, batch_iteration
+                )
 
     # Main training/validation loop
     for iteration in tqdm(range(max_iterations)):
@@ -154,7 +160,7 @@ def train_basic_nca(
                 figure = plot_function(
                     x.detach().cpu().numpy(),
                     x_pred.detach().cpu().numpy(),
-                    y.transpose(1, 2).detach().cpu().numpy(),
+                    y.detach().cpu().numpy(),
                     nca,
                 )
                 summary_writer.add_figure("Current Batch", figure, iteration)
