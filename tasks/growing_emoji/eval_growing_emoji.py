@@ -4,10 +4,7 @@ import sys, os
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from nca.data import GrowingNCADataset
-from nca.models.growingNCA import GrowingNCAModel
-from nca.training import train_basic_nca
-from nca.paths import WEIGHTS_PATH
+from nca import GrowingNCAModel, WEIGHTS_PATH, get_compute_device
 
 import click
 
@@ -18,7 +15,7 @@ import matplotlib.pyplot as plt
 
 @click.command()
 def eval_growing_emoji():
-    device = torch.device("cuda:0")
+    device = get_compute_device("cuda:0")
 
     nca = GrowingNCAModel(
         device,

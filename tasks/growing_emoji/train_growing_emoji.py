@@ -3,10 +3,13 @@ import sys, os
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from nca.data import GrowingNCADataset
-from nca.models.growingNCA import GrowingNCAModel
-from nca.training import train_basic_nca
-from nca.paths import WEIGHTS_PATH
+from nca import (
+    GrowingNCADataset,
+    GrowingNCAModel,
+    train_basic_nca,
+    WEIGHTS_PATH,
+    get_compute_device,
+)
 
 import click
 
@@ -49,7 +52,7 @@ def train_growing_emoji(batch_size: int, hidden_channels: int):
     """
     writer = SummaryWriter()
 
-    device = torch.device("cuda:0")
+    device = get_compute_device("cuda:0")
 
     nca = GrowingNCAModel(
         device,
