@@ -8,7 +8,8 @@ Since NCAs are so small (less than 1 MB each), we include pre-trained weights fo
 
   * Growing NCA for emoji generation
   * Self-classifying MNIST digits
-  * Self-classifying MedMNIST images (PathMNIST)
+  * Self-classifying MedMNIST images (PathMNIST, BloodMNIST)
+  * Polyp Segmentation (Kvasir-SEG)
 
 
 ## Future tasks
@@ -44,3 +45,5 @@ Alternatively, you may use the tensorboard integration of your IDE.
 
 ## Cite this work
 
+```bibtex
+```
