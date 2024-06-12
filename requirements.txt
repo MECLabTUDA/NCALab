@@ -9,6 +9,6 @@ torch
 torchvision
 torcheval
 
-pilmoji
+pilmoji @ git+https://github.com/Lumabots/pilmoji
 emoji==1.7
 medmnist
