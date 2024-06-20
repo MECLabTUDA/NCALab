@@ -35,7 +35,14 @@ def train_selfclass_pathmnist(
     dataset_train = PathMNIST(
         split="train",
         download=True,
-        transform=transforms.Compose([transforms.ToTensor()]),
+        transform=transforms.Compose(
+            [
+                transforms.ToTensor(),  # automatic divide by 255
+                transforms.RandomErasing(),
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomVerticalFlip(),
+            ]
+        ),
     )
     loader_train = torch.utils.data.DataLoader(
         dataset_train, shuffle=True, batch_size=batch_size
@@ -44,9 +51,16 @@ def train_selfclass_pathmnist(
     dataset_val = PathMNIST(
         split="val",
         download=True,
-        transform=transforms.Compose([transforms.ToTensor()]),
+        transform=transforms.Compose(
+            [
+                transforms.ToTensor(),  # automatic divide by 255
+                transforms.RandomErasing(),
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomVerticalFlip(),
+            ]
+        ),
     )
-    loader_val = torch.utils.data.DataLoader(dataset_val, shuffle=True, batch_size=128)
+    loader_val = torch.utils.data.DataLoader(dataset_val, shuffle=True, batch_size=256)
 
     nca = ClassificationNCAModel(
         device,
@@ -54,6 +68,8 @@ def train_selfclass_pathmnist(
         num_hidden_channels=hidden_channels,
         hidden_size=128,
         num_classes=9,
+        use_alive_mask=False,
+        fire_rate=0.5,
     )
     train_basic_nca(
         nca,
@@ -63,14 +79,14 @@ def train_selfclass_pathmnist(
         summary_writer=writer,
         plot_function=show_batch_classification,
         batch_repeat=2,
-        gradient_clipping=False,
+        max_iterations=100000,
     )
     writer.close()
 
 
 @click.command()
 @click.option("--batch-size", "-b", default=8, type=int)
-@click.option("--hidden-channels", "-H", default=20, type=int)
+@click.option("--hidden-channels", "-H", default=16, type=int)
 @click.option(
     "--gpu/--no-gpu", is_flag=True, default=True, help="Try using the GPU if available."
 )
