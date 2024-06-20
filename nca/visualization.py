@@ -70,7 +70,7 @@ def show_batch_classification(x_seed, x_pred, y_true, nca):
     hidden_channels = x_pred[..., nca.num_image_channels : -nca.num_output_channels]
     class_channels = x_pred[..., nca.num_image_channels + nca.num_hidden_channels :]
     images = x_seed[:, :, :, : nca.num_image_channels]
-    show_image_row(ax[0], images)
+    show_image_row(ax[0], np.clip(images, 0, 1))
 
     for i in range(batch_size):
         mask = np.max(hidden_channels[i]) > 0.1
@@ -86,9 +86,15 @@ def show_batch_classification(x_seed, x_pred, y_true, nca):
         ax[1, j].text(0, 0.9, f"pred: {y_pred[j]}")
         ax[1, j].axis("off")
 
-    # 3rd row: activity
-    images = hidden_channels[..., 0]
-    show_image_row(ax[2], images)
+    # 3rd row: predicted classes per pixel
+    images = np.ones((batch_size, image_width, image_height))
+    class_channels = x_pred[..., nca.num_image_channels + nca.num_hidden_channels :]
+    y_pred = np.argmax(class_channels, axis=-1)
+    images = (x_seed[:, :, :, 0] > 0).astype(np.float32)
+    for i in range(batch_size):
+        images[i, :, :] *= y_pred[i] + 1
+    images -= 1
+    show_image_row(ax[2], images, vmin=-1, vmax=nca.num_classes, cmap="Set3")
 
     return figure
 
