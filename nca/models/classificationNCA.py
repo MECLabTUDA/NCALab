@@ -1,7 +1,9 @@
 import torch
+from torch import nn
 import torch.nn.functional as F
 
 from torcheval.metrics import MulticlassAccuracy
+from torcheval.metrics.aggregation.auc import AUC
 
 from .basicNCA import BasicNCAModel
 
@@ -18,7 +20,8 @@ class ClassificationNCAModel(BasicNCAModel):
         use_alive_mask: bool = False,
         immutable_image_channels: bool = True,
         learned_filters: int = 2,
-        lambda_activity: float = 0.005,
+        lambda_activity: float = 0.01,
+        pixel_wise_loss: bool = False
     ):
         """_summary_
 
@@ -32,10 +35,8 @@ class ClassificationNCAModel(BasicNCAModel):
             use_alive_mask (bool, optional): _description_. Defaults to False.
             immutable_image_channels (bool, optional): _description_. Defaults to True.
             learned_filters (int, optional): _description_. Defaults to 2.
-            lambda_activity (float, optional): Activity loss weight, penalizing high NCA activity. Defaults to 0.005.
+            lambda_activity (float, optional): Activity loss weight, penalizing high NCA activity. Defaults to 0.
         """
-        self.num_classes = num_classes
-        self.lambda_activity = lambda_activity
         super(ClassificationNCAModel, self).__init__(
             device,
             num_image_channels,
@@ -47,20 +48,23 @@ class ClassificationNCAModel(BasicNCAModel):
             immutable_image_channels,
             learned_filters,
         )
+        self.num_classes = num_classes
+        self.lambda_activity = lambda_activity
+        self.pixel_wise_loss = pixel_wise_loss
 
     def forward(self, x: torch.Tensor, steps: int = 1):
         x = super().forward(x, steps)
         return x
 
     def classify(
-        self, image: torch.Tensor, steps: int = 100, softmax: bool = False
+        self, image: torch.Tensor, steps: int = 100, reduce: bool = False
     ) -> torch.Tensor:
         """_summary_
 
         Args:
             image (torch.Tensor): Input image.
             steps (int, optional): Inference steps. Defaults to 100.
-            softmax (bool, optional): Return a single softmax probability. Defaults to False.
+            reduce (bool, optional): Return a single softmax probability. Defaults to False.
 
         Returns:
             (torch.Tensor): Single class index or vector of logits.
@@ -92,17 +96,18 @@ class ClassificationNCAModel(BasicNCAModel):
                         class_channels[i, :, :, c] *= mask
 
             # Average over all pixels
-            y_pred = torch.mean(class_channels, 1)
+            y_pred = F.softmax(class_channels, dim=-1)
+            y_pred = torch.mean(y_pred, 1)
             y_pred = torch.mean(y_pred, 1)
 
-            # If softmax enabled, reduce to a single scalar.
+            # If reduce enabled, reduce to a single scalar.
             # Otherwise, return logits of all channels as a vector.
-            if softmax:
-                y_pred = torch.argmax(F.softmax(y_pred, dim=-1), dim=1)
+            if reduce:
+                y_pred = torch.argmax(y_pred, dim=1)
                 return y_pred
             return y_pred
 
-    def loss(self, x, target):
+    def loss(self, x, target, pixel_wise=False):
         """_summary_
 
         Args:
@@ -112,15 +117,22 @@ class ClassificationNCAModel(BasicNCAModel):
         Returns:
             _type_: _description_
         """
-        y = torch.ones((x.shape[0], x.shape[1], x.shape[2])).to(self.device).long()
         hidden_channels = x[..., self.num_image_channels : -self.num_output_channels]
         class_channels = x[..., self.num_image_channels + self.num_hidden_channels :]
 
         # Create one-hot ground truth tensor, where all pixels of the predicted class are
         # active in the respective classification channel.
-        for i in range(x.shape[0]):
-            y[i] *= target[i]
-        loss_ce = F.cross_entropy(class_channels.transpose(3, 1), y.long())
+        if self.pixel_wise_loss:
+            y = torch.ones((x.shape[0], x.shape[1], x.shape[2])).to(self.device)
+            for i in range(x.shape[0]):
+                y[i] *= target[i]
+
+            loss_ce = F.cross_entropy(class_channels.transpose(3, 1), y.long())
+        else:
+            y_pred = F.softmax(class_channels, dim=-1)
+            y_pred = torch.mean(y_pred, dim=1)
+            y_pred = torch.mean(y_pred, dim=1)
+            loss_ce = F.cross_entropy(y_pred, target.squeeze().long())
 
         # Activity loss, mildly penalizes highly active NCAs.
         # We want to enforce the NCA model to "focus" on important areas for classification,
@@ -130,14 +142,15 @@ class ClassificationNCAModel(BasicNCAModel):
         )
 
         loss = (
-            1 - self.lambda_activity
-        ) * loss_ce + self.lambda_activity * loss_activity
+            (1 - self.lambda_activity) * loss_ce
+            + self.lambda_activity * loss_activity
+        )
         return loss
 
     def validate(
         self,
         x: torch.Tensor,
-        target: torch.Tensor,
+        y_true: torch.Tensor,
         steps: int,
         batch_iteration: int,
         summary_writer=None,
@@ -152,21 +165,28 @@ class ClassificationNCAModel(BasicNCAModel):
             summary_writer (_type_, optional): _description_. Defaults to None.
         """
         with torch.no_grad():
-            y_pred = self.classify(x.to(self.device), steps, softmax=True)
-            y_prob = self.classify(x.to(self.device), steps, softmax=False)
+            y_pred = self.classify(x.to(self.device), steps, reduce=True)
+            y_prob = self.classify(x.to(self.device), steps, reduce=False)
 
             metric = MulticlassAccuracy(average="macro", num_classes=self.num_classes)
-            metric.update(y_pred, target.flatten().to(self.device))
+            metric.update(y_pred, y_true.squeeze().to(self.device))
             accuracy_macro = metric.compute()
 
             metric = MulticlassAccuracy(average="micro", num_classes=self.num_classes)
-            metric.update(y_prob, target.flatten().to(self.device))
+            metric.update(y_prob, y_true.squeeze().to(self.device))
             accuracy_micro = metric.compute()
+
+            metric = AUC()
+            metric.update(y_pred, y_true.squeeze().to(self.device))
+            metric.compute()
 
             if summary_writer:
                 summary_writer.add_scalar(
-                    "Acc/val_macro", accuracy_macro, batch_iteration
+                    "Acc/val_acc_macro", accuracy_macro, batch_iteration
                 )
                 summary_writer.add_scalar(
-                    "Acc/val_micro", accuracy_micro, batch_iteration
+                    "Acc/val_acc_micro", accuracy_micro, batch_iteration
+                )
+                summary_writer.add_scalar(
+                    "Acc/val_AUC", accuracy_micro, batch_iteration
                 )
