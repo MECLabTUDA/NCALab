@@ -2,8 +2,7 @@ import torch
 from torch import nn
 import torch.nn.functional as F
 
-from torcheval.metrics import MulticlassAccuracy
-from torcheval.metrics.aggregation.auc import AUC
+from torcheval.metrics import MulticlassAccuracy, MulticlassAUROC
 
 from .basicNCA import BasicNCAModel
 
@@ -176,9 +175,9 @@ class ClassificationNCAModel(BasicNCAModel):
             metric.update(y_prob, y_true.squeeze().to(self.device))
             accuracy_micro = metric.compute()
 
-            metric = AUC()
-            metric.update(y_pred, y_true.squeeze().to(self.device))
-            metric.compute()
+            metric = MulticlassAUROC(num_classes=self.num_classes)
+            metric.update(y_prob, y_true.squeeze().to(self.device))
+            auroc = metric.compute()
 
             if summary_writer:
                 summary_writer.add_scalar(
@@ -188,5 +187,5 @@ class ClassificationNCAModel(BasicNCAModel):
                     "Acc/val_acc_micro", accuracy_micro, batch_iteration
                 )
                 summary_writer.add_scalar(
-                    "Acc/val_AUC", accuracy_micro, batch_iteration
+                    "Acc/val_AUC", auroc, batch_iteration
                 )
