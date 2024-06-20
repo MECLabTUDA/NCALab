@@ -1,4 +1,4 @@
-from pathlib import PosixPath  # for type hint
+from pathlib import Path, PosixPath  # for type hint
 from typing import Callable
 
 import numpy as np
@@ -18,7 +18,7 @@ from .models.basicNCA import BasicNCAModel  # for type hint
 
 def train_basic_nca(
     nca: BasicNCAModel,
-    model_path: str | PosixPath,
+    model_path: str | Path | PosixPath,
     dataloader_train: DataLoader,
     dataloader_val: DataLoader | None = None,
     max_iterations: int = 50000,
@@ -29,7 +29,7 @@ def train_basic_nca(
     lr: float = 2e-3,
     lr_gamma: float = 0.9999,
     adam_betas=(0.5, 0.5),
-    summary_writer: SummaryWriter = None,
+    summary_writer: SummaryWriter | None = None,
     plot_function: (
         Callable[[np.ndarray, np.ndarray, np.ndarray, BasicNCAModel], Figure] | None
     ) = None,
