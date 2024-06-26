@@ -38,7 +38,7 @@ class GrowingNCAModel(BasicNCAModel):
             hidden_size,
             use_alive_mask,
             immutable_image_channels=False,
-            learned_filters=learned_filters,
+            num_learned_filters=learned_filters,
         )
         self.plot_function = show_batch_growing
 
