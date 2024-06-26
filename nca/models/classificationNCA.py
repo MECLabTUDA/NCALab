@@ -1,8 +1,7 @@
 import torch
-from torch import nn
 import torch.nn.functional as F
 
-from torcheval.metrics import MulticlassAccuracy, MulticlassAUROC
+from torcheval.metrics import MulticlassAccuracy, MulticlassAUROC, MulticlassF1Score
 
 from .basicNCA import BasicNCAModel
 
@@ -19,8 +18,8 @@ class ClassificationNCAModel(BasicNCAModel):
         use_alive_mask: bool = False,
         immutable_image_channels: bool = True,
         learned_filters: int = 2,
-        lambda_activity: float = 0.01,
-        pixel_wise_loss: bool = False
+        lambda_activity: float = 0.0,
+        pixel_wise_loss: bool = False,
     ):
         """_summary_
 
@@ -34,7 +33,8 @@ class ClassificationNCAModel(BasicNCAModel):
             use_alive_mask (bool, optional): _description_. Defaults to False.
             immutable_image_channels (bool, optional): _description_. Defaults to True.
             learned_filters (int, optional): _description_. Defaults to 2.
-            lambda_activity (float, optional): Activity loss weight, penalizing high NCA activity. Defaults to 0.
+            lambda_activity (float, optional): Activity loss weight, penalizing high NCA activity. Defaults to 0.01.
+            pixel_wise_loss (bool, optional): Whether a prediction per pixel is desired, like in self classifying MNIST. Defaults to False.
         """
         super(ClassificationNCAModel, self).__init__(
             device,
@@ -94,19 +94,22 @@ class ClassificationNCAModel(BasicNCAModel):
                     for c in range(self.num_classes):
                         class_channels[i, :, :, c] *= mask
 
-            # Average over all pixels
+            # Average over all pixels if a single categorial prediction is desired
             y_pred = F.softmax(class_channels, dim=-1)
-            y_pred = torch.mean(y_pred, 1)
-            y_pred = torch.mean(y_pred, 1)
+            if self.pixel_wise_loss:
+                pass
+            else:
+                y_pred = torch.mean(y_pred, dim=1)
+                y_pred = torch.mean(y_pred, dim=1)
 
             # If reduce enabled, reduce to a single scalar.
             # Otherwise, return logits of all channels as a vector.
             if reduce:
-                y_pred = torch.argmax(y_pred, dim=1)
+                y_pred = torch.argmax(y_pred, dim=-1)
                 return y_pred
             return y_pred
 
-    def loss(self, x, target, pixel_wise=False):
+    def loss(self, x, target):
         """_summary_
 
         Args:
@@ -125,13 +128,16 @@ class ClassificationNCAModel(BasicNCAModel):
             y = torch.ones((x.shape[0], x.shape[1], x.shape[2])).to(self.device)
             for i in range(x.shape[0]):
                 y[i] *= target[i]
-
             loss_ce = F.cross_entropy(class_channels.transpose(3, 1), y.long())
         else:
             y_pred = F.softmax(class_channels, dim=-1)
             y_pred = torch.mean(y_pred, dim=1)
             y_pred = torch.mean(y_pred, dim=1)
-            loss_ce = F.cross_entropy(y_pred, target.squeeze().long())
+            # loss_classification = F.cross_entropy(y_pred, target.squeeze().long())
+            loss_classification = F.mse_loss(
+                y_pred.float(),
+                F.one_hot(target.squeeze(), num_classes=self.num_classes).float(),
+            )
 
         # Activity loss, mildly penalizes highly active NCAs.
         # We want to enforce the NCA model to "focus" on important areas for classification,
@@ -141,9 +147,8 @@ class ClassificationNCAModel(BasicNCAModel):
         )
 
         loss = (
-            (1 - self.lambda_activity) * loss_ce
-            + self.lambda_activity * loss_activity
-        )
+            1 - self.lambda_activity
+        ) * loss_classification + self.lambda_activity * loss_activity
         return loss
 
     def validate(
@@ -163,29 +168,42 @@ class ClassificationNCAModel(BasicNCAModel):
             batch_iteration (int): _description_
             summary_writer (_type_, optional): _description_. Defaults to None.
         """
-        with torch.no_grad():
-            y_pred = self.classify(x.to(self.device), steps, reduce=True)
-            y_prob = self.classify(x.to(self.device), steps, reduce=False)
+        y_pred = self.classify(x, steps, reduce=True)
+        y_prob = self.classify(x, steps, reduce=False)
 
-            metric = MulticlassAccuracy(average="macro", num_classes=self.num_classes)
-            metric.update(y_pred, y_true.squeeze().to(self.device))
-            accuracy_macro = metric.compute()
+        metric = MulticlassAccuracy(average="macro", num_classes=self.num_classes)
+        metric.update(y_pred, y_true.squeeze())
+        accuracy_macro = metric.compute()
 
-            metric = MulticlassAccuracy(average="micro", num_classes=self.num_classes)
-            metric.update(y_prob, y_true.squeeze().to(self.device))
-            accuracy_micro = metric.compute()
+        metric = MulticlassAccuracy(average="micro", num_classes=self.num_classes)
+        metric.update(y_prob, y_true.squeeze())
+        accuracy_micro = metric.compute()
 
-            metric = MulticlassAUROC(num_classes=self.num_classes)
-            metric.update(y_prob, y_true.squeeze().to(self.device))
-            auroc = metric.compute()
+        metric = MulticlassAUROC(num_classes=self.num_classes)
+        metric.update(y_prob, y_true.squeeze())
+        auroc = metric.compute()
 
-            if summary_writer:
-                summary_writer.add_scalar(
-                    "Acc/val_acc_macro", accuracy_macro, batch_iteration
-                )
-                summary_writer.add_scalar(
-                    "Acc/val_acc_micro", accuracy_micro, batch_iteration
-                )
-                summary_writer.add_scalar(
-                    "Acc/val_AUC", auroc, batch_iteration
-                )
+        metric = MulticlassF1Score(num_classes=self.num_classes)
+        metric.update(y_prob, y_true.squeeze())
+        f1 = metric.compute()
+
+        if summary_writer:
+            summary_writer.add_scalar(
+                "Acc/val_acc_macro", accuracy_macro, batch_iteration
+            )
+            summary_writer.add_scalar(
+                "Acc/val_acc_micro", accuracy_micro, batch_iteration
+            )
+            summary_writer.add_scalar("Acc/val_AUC", auroc, batch_iteration)
+            summary_writer.add_scalar("Acc/val_F1", f1, batch_iteration)
+        return f1
+
+    def get_meta_dict(self) -> dict:
+        meta = super().get_meta_dict()
+        meta.update(
+            dict(
+                num_classes=self.num_classes,
+                lambda_activity=self.lambda_activity,
+                pixel_wise_loss=self.pixel_wise_loss,
+            )
+        )
