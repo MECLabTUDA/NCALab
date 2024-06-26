@@ -14,6 +14,7 @@ from matplotlib.figure import Figure  # for type hint
 from tqdm import tqdm
 
 from .models.basicNCA import BasicNCAModel  # for type hint
+from .utils import pad_input
 
 
 def train_basic_nca(
@@ -114,27 +115,8 @@ def train_basic_nca(
         # Typically, our dataloader supplies a binary, grayscale, RGB or RGBA image.
         # But out NCA operates on multiple hidden channels and output channels, so we
         # need to pad the input image with zeros.
-        if x.shape[1] < nca.num_channels:
-            x = np.pad(
-                x,
-                [
-                    (0, 0),  # batch
-                    (0, nca.num_channels - x.shape[1]),  # channels
-                    (0, 0),  # width
-                    (0, 0),  # height
-                ],
-                mode="constant",
-            )
-            x[
-                :,
-                nca.num_image_channels : nca.num_image_channels
-                + nca.num_hidden_channels,
-                :,
-                :,
-            ] = np.random.normal(
-                size=(x.shape[0], nca.num_hidden_channels, x.shape[2], x.shape[3])
-            )
-            x = torch.from_numpy(x.astype(np.float32))
+        x = pad_input(x, nca, noise=True)
+        x = torch.from_numpy(x.astype(np.float32))
         x = x.float().transpose(1, 3)
 
         # batch duplication
@@ -162,27 +144,8 @@ def train_basic_nca(
                 for _ in range(3):
                     sample = next(iter(dataloader_val))
                     x, y = sample
-                    if x.shape[1] < nca.num_channels:
-                        x = np.pad(
-                            x,
-                            [
-                                (0, 0),  # batch
-                                (0, nca.num_channels - x.shape[1]),  # channels
-                                (0, 0),  # width
-                                (0, 0),  # height
-                            ],
-                            mode="constant",
-                        )
-                        x[
-                            :,
-                            nca.num_image_channels : nca.num_image_channels
-                            + nca.num_hidden_channels,
-                            :,
-                            :,
-                        ] = np.random.normal(
-                            size=(x.shape[0], nca.num_hidden_channels, x.shape[2], x.shape[3])
-                        )
-                        x = torch.from_numpy(x.astype(np.float32))
+                    x = pad_input(x, nca, noise=True)
+                    x = torch.from_numpy(x.astype(np.float32))
                     x = x.float().transpose(1, 3).to(nca.device)
                     y = y.to(nca.device)
                     val_acc += nca.validate(x, y, steps_validation, iteration, summary_writer)
