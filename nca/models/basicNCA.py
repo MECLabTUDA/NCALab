@@ -16,7 +16,7 @@ class BasicNCAModel(nn.Module):
         hidden_size: int = 128,
         use_alive_mask: bool = False,
         immutable_image_channels: bool = True,
-        learned_filters: int = 2,
+        num_learned_filters: int = 2,
     ):
         """Basic abstract class for NCA models.
 
@@ -46,14 +46,16 @@ class BasicNCAModel(nn.Module):
         self.fire_rate = fire_rate
         self.use_alive_mask = use_alive_mask
         self.immutable_image_channels = immutable_image_channels
-        self.learned_filters = learned_filters
+        self.num_learned_filters = num_learned_filters
         self.filters = []
+
+        self.hidden_size = hidden_size
 
         self.plot_function = None
 
-        if learned_filters > 0:
-            self.num_filters = learned_filters
-            for _ in range(learned_filters):
+        if num_learned_filters > 0:
+            self.num_filters = num_learned_filters
+            for _ in range(num_learned_filters):
                 self.filters.append(
                     nn.Conv2d(
                         self.num_channels,
@@ -75,12 +77,14 @@ class BasicNCAModel(nn.Module):
         self.network = nn.Sequential(
             nn.Linear(self.num_channels * (self.num_filters + 1), hidden_size),
             nn.ReLU(),
-            nn.Linear(hidden_size, self.num_channels, bias=False),
+            nn.Linear(self.hidden_size, self.num_channels, bias=False),
         ).to(device)
 
         # initialize final layer with 0
         with torch.no_grad():
             self.network[-1].weight.zero_()
+
+        self.meta = {}
 
     def alive(self, x):
         mask = (
@@ -199,3 +203,17 @@ class BasicNCAModel(nn.Module):
             _type_: _description_
         """
         return NotImplemented
+
+    def get_meta_dict(self) -> dict:
+        return dict(
+            device=str(self.device),
+            num_image_channels=self.num_image_channels,
+            num_hidden_channels=self.num_hidden_channels,
+            num_output_channels=self.num_output_channels,
+            fire_rate=self.fire_rate,
+            hidden_size=self.hidden_size,
+            use_alive_mask=self.use_alive_mask,
+            immutable_image_channels=self.immutable_image_channels,
+            num_learned_filters=self.num_learned_filters,
+            **self.meta
+        )
