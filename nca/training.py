@@ -68,6 +68,7 @@ def train_basic_nca(
 
     optimizer = optim.Adam(nca.parameters(), lr=lr, betas=adam_betas)
     scheduler = optim.lr_scheduler.ExponentialLR(optimizer, lr_gamma)
+    best_acc = 0
 
     def train_iteration(
         x: torch.Tensor,
@@ -124,6 +125,15 @@ def train_basic_nca(
                 ],
                 mode="constant",
             )
+            x[
+                :,
+                nca.num_image_channels : nca.num_image_channels
+                + nca.num_hidden_channels,
+                :,
+                :,
+            ] = np.random.normal(
+                size=(x.shape[0], nca.num_hidden_channels, x.shape[2], x.shape[3])
+            )
             x = torch.from_numpy(x.astype(np.float32))
         x = x.float().transpose(1, 3)
 
@@ -145,20 +155,41 @@ def train_basic_nca(
                 )
                 summary_writer.add_figure("Current Batch", figure, iteration)
 
-        if dataloader_val:
-            sample = next(iter(dataloader_val))
-            x, y = sample
-            if x.shape[1] < nca.num_channels:
-                x = np.pad(
-                    x,
-                    [
-                        (0, 0),  # batch
-                        (0, nca.num_channels - x.shape[1]),  # channels
-                        (0, 0),  # width
-                        (0, 0),  # height
-                    ],
-                    mode="constant",
-                )
-                x = torch.from_numpy(x.astype(np.float32))
-            x = x.float().transpose(1, 3)
-            nca.validate(x, y, steps_validation, iteration, summary_writer)
+        with torch.no_grad():
+            if dataloader_val:
+                N = 0
+                val_acc = 0
+                for _ in range(3):
+                    sample = next(iter(dataloader_val))
+                    x, y = sample
+                    if x.shape[1] < nca.num_channels:
+                        x = np.pad(
+                            x,
+                            [
+                                (0, 0),  # batch
+                                (0, nca.num_channels - x.shape[1]),  # channels
+                                (0, 0),  # width
+                                (0, 0),  # height
+                            ],
+                            mode="constant",
+                        )
+                        x[
+                            :,
+                            nca.num_image_channels : nca.num_image_channels
+                            + nca.num_hidden_channels,
+                            :,
+                            :,
+                        ] = np.random.normal(
+                            size=(x.shape[0], nca.num_hidden_channels, x.shape[2], x.shape[3])
+                        )
+                        x = torch.from_numpy(x.astype(np.float32))
+                    x = x.float().transpose(1, 3).to(nca.device)
+                    y = y.to(nca.device)
+                    val_acc += nca.validate(x, y, steps_validation, iteration, summary_writer)
+                    N += len(x)
+                val_acc /= N
+                if val_acc > best_acc:
+                    print(f"improved: {best_acc} --> {val_acc}")
+                    best_path = model_path.with_suffix(".best.pth")
+                    torch.save(nca.state_dict(), best_path)
+                    best_acc = val_acc
