@@ -2,7 +2,7 @@ import torch
 import torch.nn.functional as F
 
 from .basicNCA import BasicNCAModel
-from ..losses import DiceBCELoss
+from ..losses import DiceBCELoss, DiceScore
 from ..visualization import show_batch_binary_segmentation
 
 
@@ -89,4 +89,11 @@ class SegmentationNCAModel(BasicNCAModel):
         batch_iteration: int,
         summary_writer=None,
     ):
-        pass
+        y_pred = self.segment(x, steps)
+        metric = DiceScore()
+        dice = metric(y_pred, target)
+        if summary_writer:
+            summary_writer.add_scalar(
+                "Acc/val_dice_score", dice, batch_iteration
+            )
+        return dice
