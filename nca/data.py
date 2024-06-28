@@ -2,6 +2,7 @@
 # TODO implement damage
 from torch.utils.data import Dataset
 import numpy as np
+import torch
 
 
 class GrowingNCADataset(Dataset):
@@ -37,4 +38,6 @@ class GrowingNCADataset(Dataset):
     def __getitem__(self, idx):
         seed = self.seed.copy()
         image = self.image.copy()
+        seed = torch.from_numpy(seed).float()
+        image = torch.from_numpy(image).float()
         return seed, image
