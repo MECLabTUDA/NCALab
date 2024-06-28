@@ -4,13 +4,7 @@ import sys, os
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from nca import (
-    ClassificationNCAModel,
-    train_basic_nca,
-    WEIGHTS_PATH,
-    show_batch_classification,
-    get_compute_device,
-)
+from nca import ClassificationNCAModel, WEIGHTS_PATH, get_compute_device, pad_input
 
 import click
 
@@ -19,11 +13,15 @@ import torch
 from medmnist import PathMNIST
 
 from torchvision import transforms
+from torchvision.transforms import v2
+
 from torch.utils.tensorboard import SummaryWriter
 
 import numpy as np
 
-from torcheval.metrics import MulticlassAccuracy, MulticlassAUROC
+from torcheval.metrics import MulticlassAccuracy, MulticlassAUROC, MulticlassF1Score
+
+from tqdm import tqdm
 
 
 def eval_selfclass_pathmnist(
@@ -38,12 +36,18 @@ def eval_selfclass_pathmnist(
         download=True,
         transform=transforms.Compose(
             [
-                transforms.ToTensor(),  # automatic divide by 255
+                v2.ToImageTensor(),
+                v2.ConvertImageDtype(dtype=torch.float32),
+                # transforms.Normalize(
+                #    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+                # ),
+                transforms.RandomHorizontalFlip(),
+                transforms.RandomVerticalFlip(),
             ]
         ),
     )
     loader_test = torch.utils.data.DataLoader(
-        dataset_test, shuffle=False, batch_size=256
+        dataset_test, shuffle=False, batch_size=32
     )
 
     nca = ClassificationNCAModel(
@@ -55,7 +59,13 @@ def eval_selfclass_pathmnist(
         use_alive_mask=False,
         fire_rate=0.5,
     )
-    nca.load_state_dict(torch.load(WEIGHTS_PATH / "selfclass_pathmnist.pth"))
+    nca.load_state_dict(torch.load(WEIGHTS_PATH / "selfclass_pathmnist.best.pth"))
+
+    model_parameters = filter(lambda p: p.requires_grad, nca.parameters())
+    params = sum([np.prod(p.size()) for p in model_parameters])
+    print(f"Trainable parameters: {params}")
+    print(f"That is {4 * params / 1000} kB")
+
     nca = nca.to(device)
 
     macro_acc = MulticlassAccuracy(average="macro", num_classes=9)
@@ -64,38 +74,28 @@ def eval_selfclass_pathmnist(
         average="macro",
         num_classes=9,
     )
-    #micro_auc = MulticlassAUROC(
-    #    average="micro",
-    #    num_classes=9,
-    #)
-    for sample in iter(loader_test):
+    micro_f1 = MulticlassF1Score(average="micro", num_classes=9)
+    for sample in tqdm(iter(loader_test)):
         x, y = sample
         if x.shape[1] < nca.num_channels:
-            x = np.pad(
-                x,
-                [
-                    (0, 0),  # batch
-                    (0, nca.num_channels - x.shape[1]),  # channels
-                    (0, 0),  # width
-                    (0, 0),  # height
-                ],
-                mode="constant",
-            )
-            x = torch.from_numpy(x.astype(np.float32))
+            x = pad_input(x, nca)
         x = x.float().transpose(1, 3)
-        y_pred = nca.classify(x.to(device), 100, reduce=True)
-        y_prob = nca.classify(x.to(device), 100, reduce=False)
+        steps = 90
+        y_prob = torch.stack(
+            [nca.classify(x.to(device), steps, reduce=False) for _ in range(1)]
+        ).mean(dim=0)
 
-        macro_acc.update(y_pred, y.squeeze().to(device))
-        micro_acc.update(y_prob, y.squeeze().to(device))
-        macro_auc.update(y_prob, y.squeeze().to(device))
-        #micro_auc.update(y_prob, y.squeeze().to(device))
+        y = y.squeeze().to(device)
+        macro_acc.update(y_prob, y)
+        micro_acc.update(y_prob, y)
+        macro_auc.update(y_prob, y)
+        micro_f1.update(y_prob, y)
     macro_acc_ = macro_acc.compute().item()
     micro_acc_ = micro_acc.compute().item()
     macro_auc_ = macro_auc.compute().item()
-    #micro_auc_ = micro_auc.compute().item()
+    micro_f1_ = micro_f1.compute().item()
     print(
-        f"ACC macro: {macro_acc_:.3f}  ACC micro: {micro_acc_:.3f}  AUC macro: {macro_auc_:.3f}"
+        f"ACC macro: {macro_acc_:.3f}  ACC micro: {micro_acc_:.3f}  AUC macro: {macro_auc_:.3f}  F1 micro: {micro_f1_:.3f}"
     )
 
 

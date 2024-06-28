@@ -19,48 +19,46 @@ import torch
 from medmnist import PathMNIST
 
 from torchvision import transforms
+from torchvision.transforms import v2
 from torch.utils.tensorboard import SummaryWriter
 
 
 def train_selfclass_pathmnist(
     batch_size: int,
     hidden_channels: int,
-    gpu,
-    gpu_index,
+    gpu: bool,
+    gpu_index: int,
+    lambda_activity: float,
 ):
-    writer = SummaryWriter()
+    writer = SummaryWriter(
+        comment=f"Lambda.activity_{lambda_activity}_channels.hidden_{hidden_channels}"
+    )
 
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
-    dataset_train = PathMNIST(
-        split="train",
-        download=True,
-        transform=transforms.Compose(
-            [
-                transforms.ToTensor(),  # automatic divide by 255
-                transforms.RandomErasing(),
-                transforms.RandomHorizontalFlip(),
-                transforms.RandomVerticalFlip(),
-            ]
-        ),
+    T = transforms.Compose(
+        [
+            v2.ToImageTensor(),
+            v2.ConvertImageDtype(dtype=torch.float32),
+            # transforms.Normalize(
+            #    mean=[0.485, 0.456, 0.406], std=[0.229, 0.224, 0.225]
+            # ),
+            transforms.RandomHorizontalFlip(),
+            transforms.RandomVerticalFlip(),
+        ]
     )
+
+    dataset_train = PathMNIST(split="train", download=True, transform=T)
     loader_train = torch.utils.data.DataLoader(
         dataset_train, shuffle=True, batch_size=batch_size
     )
 
-    dataset_val = PathMNIST(
-        split="val",
-        download=True,
-        transform=transforms.Compose(
-            [
-                transforms.ToTensor(),  # automatic divide by 255
-                transforms.RandomErasing(),
-                transforms.RandomHorizontalFlip(),
-                transforms.RandomVerticalFlip(),
-            ]
-        ),
+    dataset_val = PathMNIST(split="val", download=True, transform=T)
+    loader_val = torch.utils.data.DataLoader(
+        dataset_val,
+        shuffle=False,
+        batch_size=32,
     )
-    loader_val = torch.utils.data.DataLoader(dataset_val, shuffle=True, batch_size=256)
 
     nca = ClassificationNCAModel(
         device,
@@ -70,6 +68,7 @@ def train_selfclass_pathmnist(
         num_classes=9,
         use_alive_mask=False,
         fire_rate=0.5,
+        lambda_activity=lambda_activity,
     )
     train_basic_nca(
         nca,
@@ -80,6 +79,7 @@ def train_selfclass_pathmnist(
         plot_function=show_batch_classification,
         batch_repeat=2,
         max_iterations=100000,
+        gradient_clipping=False,
     )
     writer.close()
 
@@ -93,12 +93,16 @@ def train_selfclass_pathmnist(
 @click.option(
     "--gpu-index", type=int, default=0, help="Index of GPU to use, if --gpu in use."
 )
-def main(batch_size, hidden_channels, gpu: bool, gpu_index: int):
+@click.option("--lambda-activity", type=float, default=0.0)
+def main(
+    batch_size, hidden_channels, gpu: bool, gpu_index: int, lambda_activity: float
+):
     train_selfclass_pathmnist(
         batch_size=batch_size,
         hidden_channels=hidden_channels,
         gpu=gpu,
         gpu_index=gpu_index,
+        lambda_activity=lambda_activity,
     )
 
 
