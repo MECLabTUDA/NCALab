@@ -26,7 +26,7 @@ def train_basic_nca(
     gradient_clipping: bool = True,
     steps_range: tuple = (64, 96),
     steps_validation: int = 80,
-    save_every: int = 100,
+    save_every: int = 500,
     lr: float = 2e-3,
     lr_gamma: float = 0.9999,
     adam_betas=(0.5, 0.5),
@@ -43,17 +43,17 @@ def train_basic_nca(
         model_path (str | PosixPath): File path to store model weights during training.
         dataloader_train (DataLoader): Training DataLoader
         dataloader_val (DataLoader): Validation DataLoader
-        max_iterations (int, optional): _description_. Defaults to 50000.
-        gradient_clipping (bool, optional): _description_. Defaults to True.
-        steps_range (tuple, optional): _description_. Defaults to (64, 96).
+        max_iterations (int, optional): Maximum number of batch iterations. Defaults to 50000.
+        gradient_clipping (bool, optional): Whether to clip gradients to 1.0 during training. Defaults to True.
+        steps_range (tuple, optional): Exclusive range from which to uniformly sample number of steps. Defaults to (64, 96).
         steps_validation (int, optional): Forward passes during validation. Defaults to 80.
-        save_every (int, optional): _description_. Defaults to 100.
+        save_every (int, optional): Save every N iterations. Defaults to 100.
         lr (float, optional): Start learning rate. Defaults to 2e-3.
-        lr_gamma (float, optional): _description_. Defaults to 0.9999.
+        lr_gamma (float, optional): Learning rate decay over time. Defaults to 0.9999.
         adam_betas (tuple, optional): _description_. Defaults to (0.5, 0.5).
         summary_writer (SummaryWriter, optional): Tensorboard SummaryWriter. Defaults to None.
         plot_function (Callable[ [np.ndarray, np.ndarray, np.ndarray, BasicNCAModel], Figure ], optional): _description_. Defaults to None.
-        batch_multiplier (int, optional): How often a batch should be repeated, minimum is 1. Batch duplication can stabelize the training. Defaults to 2.
+        batch_repeat (int, optional): How often a batch should be repeated, minimum is 1. Batch duplication can stabelize the training. Defaults to 2.
     """
 
     assert batch_repeat >= 1
@@ -94,8 +94,10 @@ def train_basic_nca(
         """
         optimizer.zero_grad()
         x_pred = x.clone().to(nca.device)
-        x_pred = nca(x_pred, steps=steps)
-
+        for step in range(steps):
+            x_pred = nca(x_pred, steps=1)
+            if step < steps - 10:
+                x_pred.detach()
         loss = nca.loss(x_pred, y.to(nca.device))
         loss.backward()
 
@@ -109,50 +111,51 @@ def train_basic_nca(
 
     # Main training/validation loop
     for iteration in tqdm(range(max_iterations)):
-        sample = next(iter(dataloader_train))
-        x, y = sample
+        # disable tqdm progress bar if dataset has only one sample, e.g. in the growing task
+        gen = iter(dataloader_train)
+        if len(dataloader_train.dataset) > 1:
+            gen = tqdm(gen)
+        for sample in gen:
+            x, y = sample
 
-        # Typically, our dataloader supplies a binary, grayscale, RGB or RGBA image.
-        # But out NCA operates on multiple hidden channels and output channels, so we
-        # need to pad the input image with zeros.
-        x = pad_input(x, nca, noise=True)
-        x = torch.from_numpy(x.astype(np.float32))
-        x = x.float().transpose(1, 3)
+            # Typically, our dataloader supplies a binary, grayscale, RGB or RGBA image.
+            # But out NCA operates on multiple hidden channels and output channels, so we
+            # need to pad the input image with zeros.
+            x = pad_input(x, nca, noise=True)
+            x = x.transpose(1, 3) # B W H C
 
-        # batch duplication
-        x = torch.cat(batch_repeat * [x])
-        y = torch.cat(batch_repeat * [y])
+            # batch duplication, slightly stabelizes the training
+            x = torch.cat(batch_repeat * [x])
+            y = torch.cat(batch_repeat * [y])
 
-        steps = np.random.randint(*steps_range)
-        x_pred = train_iteration(x, y, steps, optimizer, scheduler, iteration)
-
-        if iteration % save_every == 0:
-            torch.save(nca.state_dict(), model_path)
-            if plot_function:
-                figure = plot_function(
-                    x.detach().cpu().numpy(),
-                    x_pred.detach().cpu().numpy(),
-                    y.detach().cpu().numpy(),
-                    nca,
-                )
-                summary_writer.add_figure("Current Batch", figure, iteration)
+            steps = np.random.randint(*steps_range)
+            x_pred = train_iteration(x, y, steps, optimizer, scheduler, iteration)
 
         with torch.no_grad():
+            if iteration % save_every == 0:
+                torch.save(nca.state_dict(), model_path)
+                if plot_function:
+                    figure = plot_function(
+                        x.detach().cpu().numpy(),
+                        x_pred.detach().cpu().numpy(),
+                        y.detach().cpu().numpy(),
+                        nca,
+                    )
+                    summary_writer.add_figure("Current Batch", figure, iteration)
+
             if dataloader_val:
-                N = 0
                 val_acc = 0
-                for _ in range(3):
-                    sample = next(iter(dataloader_val))
+                N = 0
+                for sample in tqdm(iter(dataloader_val)):
                     x, y = sample
                     x = pad_input(x, nca, noise=True)
-                    x = torch.from_numpy(x.astype(np.float32))
-                    x = x.float().transpose(1, 3).to(nca.device)
+                    x = x.transpose(1, 3).to(nca.device)
                     y = y.to(nca.device)
                     val_acc += nca.validate(x, y, steps_validation, iteration, summary_writer)
-                    N += len(x)
+                    N += 1
                 val_acc /= N
                 if val_acc > best_acc:
-                    print(f"improved: {best_acc} --> {val_acc}")
+                    print(f"improved: {best_acc:.5f} --> {val_acc:.5f}")
                     best_path = model_path.with_suffix(".best.pth")
                     torch.save(nca.state_dict(), best_path)
                     best_acc = val_acc
