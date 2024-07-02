@@ -45,6 +45,7 @@ def train_selfclass_pathmnist(
             # ),
             transforms.RandomHorizontalFlip(),
             transforms.RandomVerticalFlip(),
+            transforms.RandomErasing(scale=(0.02, 0.25))
         ]
     )
 
@@ -78,8 +79,8 @@ def train_selfclass_pathmnist(
         summary_writer=writer,
         plot_function=show_batch_classification,
         batch_repeat=2,
-        max_iterations=100000,
-        gradient_clipping=False,
+        max_iterations=100,
+        gradient_clipping=True,
     )
     writer.close()
 

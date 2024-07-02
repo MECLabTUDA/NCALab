@@ -17,6 +17,7 @@ class BasicNCAModel(nn.Module):
         use_alive_mask: bool = False,
         immutable_image_channels: bool = True,
         num_learned_filters: int = 2,
+        dx_noise: float = 0.02
     ):
         """Basic abstract class for NCA models.
 
@@ -30,7 +31,8 @@ class BasicNCAModel(nn.Module):
             use_alive_mask (bool, optional): Whether to use alive masking during training. Defaults to False.
             immutable_image_channels (bool, optional): If image channels should be fixed during inference,
                 which is the case for most segmentation or classification problems. Defaults to True.
-            learned_filters (int, optional): Number of learned filters. If zero, use two sobel filters instead. Defaults to 2.
+            num_learned_filters (int, optional): Number of learned filters. If zero, use two sobel filters instead. Defaults to 2.
+            dx_noise (float)
         """
         super(BasicNCAModel, self).__init__()
 
@@ -48,6 +50,7 @@ class BasicNCAModel(nn.Module):
         self.immutable_image_channels = immutable_image_channels
         self.num_learned_filters = num_learned_filters
         self.filters = []
+        self.dx_noise = dx_noise
 
         self.hidden_size = hidden_size
 
@@ -152,13 +155,13 @@ class BasicNCAModel(nn.Module):
         if self.immutable_image_channels:
             dx[..., : self.num_image_channels] *= 0
 
+        dx += self.dx_noise * torch.randn([dx.size(0), dx.size(1), dx.size(2), 1]).to(self.device)
         x = x + dx.transpose(1, 3)  # B W H C --> B C W H
 
         # Alive masking
-        life_mask = self.alive(hidden_channels)
-        life_mask = life_mask & pre_life_mask
-
         if self.use_alive_mask:
+            life_mask = self.alive(hidden_channels)
+            life_mask = life_mask & pre_life_mask
             x = x.transpose(0, 1)  # B C W H --> C B W H
             x = x * life_mask.float()
             x = x.transpose(1, 0)  # C B W H --> B C W H
@@ -215,5 +218,6 @@ class BasicNCAModel(nn.Module):
             use_alive_mask=self.use_alive_mask,
             immutable_image_channels=self.immutable_image_channels,
             num_learned_filters=self.num_learned_filters,
+            dx_noise=self.dx_noise,
             **self.meta
         )

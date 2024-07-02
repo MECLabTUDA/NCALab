@@ -3,7 +3,11 @@ import torch.nn.functional as F
 
 from torcheval.metrics import MulticlassAccuracy, MulticlassAUROC, MulticlassF1Score
 
+from tqdm import tqdm
+
 from .basicNCA import BasicNCAModel
+
+from ..utils import pad_input
 
 
 class ClassificationNCAModel(BasicNCAModel):
@@ -82,9 +86,9 @@ class ClassificationNCAModel(BasicNCAModel):
             ]
 
             # mask inactive pixels
-            for i in range(image.shape[0]):
-                mask = torch.max(hidden_channels[i]) > 0.1
-                class_channels[i] *= mask
+            #for i in range(image.shape[0]):
+            #    mask = torch.max(hidden_channels[i]) > 0.1
+            #    class_channels[i] *= mask
 
             # if binary classification (e.g. self classifying MNIST),
             # mask away pixels with the binary image used as a mask
@@ -96,9 +100,7 @@ class ClassificationNCAModel(BasicNCAModel):
 
             # Average over all pixels if a single categorial prediction is desired
             y_pred = F.softmax(class_channels, dim=-1)
-            if self.pixel_wise_loss:
-                pass
-            else:
+            if not self.pixel_wise_loss:
                 y_pred = torch.mean(y_pred, dim=1)
                 y_pred = torch.mean(y_pred, dim=1)
 
@@ -133,11 +135,12 @@ class ClassificationNCAModel(BasicNCAModel):
             y_pred = F.softmax(class_channels, dim=-1)
             y_pred = torch.mean(y_pred, dim=1)
             y_pred = torch.mean(y_pred, dim=1)
-            # loss_classification = F.cross_entropy(y_pred, target.squeeze().long())
-            loss_classification = F.mse_loss(
+            #loss_ce = F.cross_entropy(y_pred, target.squeeze().long())
+            loss_mse = F.mse_loss(
                 y_pred.float(),
                 F.one_hot(target.squeeze(), num_classes=self.num_classes).float(),
             )
+            loss_classification = loss_mse
 
         # Activity loss, mildly penalizes highly active NCAs.
         # We want to enforce the NCA model to "focus" on important areas for classification,
@@ -153,8 +156,7 @@ class ClassificationNCAModel(BasicNCAModel):
 
     def validate(
         self,
-        x: torch.Tensor,
-        y_true: torch.Tensor,
+        dataloader_val,
         steps: int,
         batch_iteration: int,
         summary_writer=None,
@@ -168,24 +170,27 @@ class ClassificationNCAModel(BasicNCAModel):
             batch_iteration (int): _description_
             summary_writer (_type_, optional): _description_. Defaults to None.
         """
-        y_pred = self.classify(x, steps, reduce=True)
-        y_prob = self.classify(x, steps, reduce=False)
+        accuracy_macro_metric = MulticlassAccuracy(average="macro", num_classes=self.num_classes)
+        accuracy_micro_metric = MulticlassAccuracy(average="micro", num_classes=self.num_classes)
+        auroc_metric = MulticlassAUROC(num_classes=self.num_classes)
+        f1_metric = MulticlassF1Score(num_classes=self.num_classes)
 
-        metric = MulticlassAccuracy(average="macro", num_classes=self.num_classes)
-        metric.update(y_pred, y_true.squeeze())
-        accuracy_macro = metric.compute()
+        for sample in tqdm(iter(dataloader_val)):
+            x, y = sample
+            x = pad_input(x, self, noise=True)
+            x = x.transpose(1, 3).to(self.device)
+            y = y.to(self.device)
+            y_prob = self.classify(x, steps, reduce=False)
+            y_true = y.squeeze()
+            accuracy_macro_metric.update(y_prob, y_true)
+            accuracy_micro_metric.update(y_prob, y_true)
+            auroc_metric.update(y_prob, y_true)
+            f1_metric.update(y_prob, y_true)
 
-        metric = MulticlassAccuracy(average="micro", num_classes=self.num_classes)
-        metric.update(y_prob, y_true.squeeze())
-        accuracy_micro = metric.compute()
-
-        metric = MulticlassAUROC(num_classes=self.num_classes)
-        metric.update(y_prob, y_true.squeeze())
-        auroc = metric.compute()
-
-        metric = MulticlassF1Score(num_classes=self.num_classes)
-        metric.update(y_prob, y_true.squeeze())
-        f1 = metric.compute()
+        accuracy_macro = accuracy_macro_metric.compute()
+        accuracy_micro = accuracy_micro_metric.compute()
+        auroc = auroc_metric.compute()
+        f1 = f1_metric.compute()
 
         if summary_writer:
             summary_writer.add_scalar(

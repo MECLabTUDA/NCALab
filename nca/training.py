@@ -70,6 +70,7 @@ def train_basic_nca(
     optimizer = optim.Adam(nca.parameters(), lr=lr, betas=adam_betas)
     scheduler = optim.lr_scheduler.ExponentialLR(optimizer, lr_gamma)
     best_acc = 0
+    best_path = Path(model_path).with_suffix(".best.pth")
 
     def train_iteration(
         x: torch.Tensor,
@@ -129,33 +130,24 @@ def train_basic_nca(
             y = torch.cat(batch_repeat * [y])
 
             steps = np.random.randint(*steps_range)
+            nca.train()
             x_pred = train_iteration(x, y, steps, optimizer, scheduler, iteration)
 
         with torch.no_grad():
-            if iteration % save_every == 0:
-                torch.save(nca.state_dict(), model_path)
-                if plot_function:
-                    figure = plot_function(
-                        x.detach().cpu().numpy(),
-                        x_pred.detach().cpu().numpy(),
-                        y.detach().cpu().numpy(),
-                        nca,
-                    )
-                    summary_writer.add_figure("Current Batch", figure, iteration)
+            nca.eval()
+            torch.save(nca.state_dict(), model_path)
+            if plot_function:
+                figure = plot_function(
+                    x.detach().cpu().numpy(),
+                    x_pred.detach().cpu().numpy(),
+                    y.detach().cpu().numpy(),
+                    nca,
+                )
+                summary_writer.add_figure("Current Batch", figure, iteration)
 
             if dataloader_val:
-                val_acc = 0
-                N = 0
-                for sample in tqdm(iter(dataloader_val)):
-                    x, y = sample
-                    x = pad_input(x, nca, noise=True)
-                    x = x.transpose(1, 3).to(nca.device)
-                    y = y.to(nca.device)
-                    val_acc += nca.validate(x, y, steps_validation, iteration, summary_writer)
-                    N += 1
-                val_acc /= N
+                val_acc = nca.validate(dataloader_val, steps, iteration, summary_writer)
                 if val_acc > best_acc:
                     print(f"improved: {best_acc:.5f} --> {val_acc:.5f}")
-                    best_path = model_path.with_suffix(".best.pth")
                     torch.save(nca.state_dict(), best_path)
                     best_acc = val_acc

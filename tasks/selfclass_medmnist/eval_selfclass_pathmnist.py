@@ -67,6 +67,7 @@ def eval_selfclass_pathmnist(
     print(f"That is {4 * params / 1000} kB")
 
     nca = nca.to(device)
+    nca.eval()
 
     macro_acc = MulticlassAccuracy(average="macro", num_classes=9)
     micro_acc = MulticlassAccuracy(average="micro", num_classes=9)
@@ -77,12 +78,11 @@ def eval_selfclass_pathmnist(
     micro_f1 = MulticlassF1Score(average="micro", num_classes=9)
     for sample in tqdm(iter(loader_test)):
         x, y = sample
-        if x.shape[1] < nca.num_channels:
-            x = pad_input(x, nca)
-        x = x.float().transpose(1, 3)
-        steps = 90
+        x = pad_input(x, nca, noise=True)
+        x = x.float().transpose(1, 3).to(device)
+        steps = 70#np.random.randint(64, 96)
         y_prob = torch.stack(
-            [nca.classify(x.to(device), steps, reduce=False) for _ in range(1)]
+            [nca.classify(x, steps, reduce=False) for _ in range(1)]
         ).mean(dim=0)
 
         y = y.squeeze().to(device)
