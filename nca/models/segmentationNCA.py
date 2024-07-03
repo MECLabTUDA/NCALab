@@ -4,6 +4,9 @@ import torch.nn.functional as F
 from .basicNCA import BasicNCAModel
 from ..losses import DiceBCELoss, DiceScore
 from ..visualization import show_batch_binary_segmentation
+from ..utils import pad_input
+
+from tqdm import tqdm
 
 
 class SegmentationNCAModel(BasicNCAModel):
@@ -69,7 +72,7 @@ class SegmentationNCAModel(BasicNCAModel):
 
         loss_segmentation_function = DiceBCELoss()
         loss_segmentation = loss_segmentation_function(
-            class_channels.transpose(3, 1), y  # B, W, H, C --> B, C, W, H
+            class_channels.transpose(3, 1), y.transpose(2, 1)  # B, W, H, C --> B, C, W, H
         )
 
         loss_activity = torch.sum(torch.square(hidden_channels)) / (
@@ -83,15 +86,20 @@ class SegmentationNCAModel(BasicNCAModel):
 
     def validate(
         self,
-        x: torch.Tensor,
-        target: torch.Tensor,
+        dataloader_val,
         steps: int,
         batch_iteration: int,
         summary_writer=None,
     ):
-        y_pred = self.segment(x, steps)
         metric = DiceScore()
-        dice = metric(y_pred, target)
+        for sample in tqdm(iter(dataloader_val)):
+            x, y = sample
+            x = pad_input(x, self, noise=True)
+            x = x.transpose(1, 3).to(self.device)
+            y = y.to(self.device)
+            y_pred = self.segment(x, steps)
+            dice = metric(y_pred, y)
+        # TODO accumulate dice
         if summary_writer:
             summary_writer.add_scalar(
                 "Acc/val_dice_score", dice, batch_iteration

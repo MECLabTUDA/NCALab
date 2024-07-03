@@ -124,6 +124,8 @@ def train_basic_nca(
             # need to pad the input image with zeros.
             x = pad_input(x, nca, noise=True)
             x = x.transpose(1, 3) # B W H C
+            if len(y.shape) == 3:
+                y = y.transpose(1, 2)
 
             # batch duplication, slightly stabelizes the training
             x = torch.cat(batch_repeat * [x])
