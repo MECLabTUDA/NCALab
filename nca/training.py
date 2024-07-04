@@ -145,7 +145,7 @@ def train_basic_nca(
                     y.detach().cpu().numpy(),
                     nca,
                 )
-                summary_writer.add_figure("Current Batch", figure, iteration)
+                summary_writer.add_figure("Training Batch", figure, iteration)
 
             if dataloader_val:
                 val_acc = nca.validate(dataloader_val, steps, iteration, summary_writer)
