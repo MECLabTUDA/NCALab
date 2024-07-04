@@ -23,7 +23,7 @@ from PIL import Image
 
 from sklearn.model_selection import train_test_split
 
-from .config import KID_DATASET_PATH
+from config import KID_DATASET_PATH
 
 
 class KIDDataset(Dataset):
@@ -39,7 +39,7 @@ class KIDDataset(Dataset):
     def __getitem__(self, index) -> Any:
         filename = self.image_filenames[index]
         image_filename = self.path / "vascular" / filename
-        mask_filename = filename[:-len(".png")] + "m" + ".png"
+        mask_filename = filename[: -len(".png")] + "m" + ".png"
         mask_filename = self.path / "vascular-annotations" / mask_filename
         image = Image.open(image_filename).convert("RGB")
         mask = Image.open(mask_filename).convert("L")
@@ -85,10 +85,10 @@ def train_segmentation_KID(batch_size: int, hidden_channels: int):
     val_split = Subset(dataset, val_indices)
 
     loader_train = torch.utils.data.DataLoader(
-        train_split, shuffle=True, batch_size=batch_size
+        train_split, shuffle=True, batch_size=batch_size, drop_last=True
     )
     loader_val = torch.utils.data.DataLoader(
-        val_split, shuffle=True, batch_size=batch_size
+        val_split, shuffle=True, batch_size=batch_size, drop_last=True
     )
 
     train_basic_nca(
@@ -105,9 +105,7 @@ def train_segmentation_KID(batch_size: int, hidden_channels: int):
 @click.option("--batch-size", "-b", default=8, type=int)
 @click.option("--hidden-channels", "-H", default=14, type=int)
 def main(batch_size, hidden_channels):
-    train_segmentation_KID(
-        batch_size=batch_size, hidden_channels=hidden_channels
-    )
+    train_segmentation_KID(batch_size=batch_size, hidden_channels=hidden_channels)
 
 
 if __name__ == "__main__":

@@ -21,7 +21,7 @@ class SegmentationNCAModel(BasicNCAModel):
         use_alive_mask: bool = False,
         immutable_image_channels: bool = True,
         learned_filters: int = 2,
-        lambda_activity: float = 0.005,
+        lambda_activity: float = 0.0,
     ):
         """_summary_
 
@@ -64,7 +64,7 @@ class SegmentationNCAModel(BasicNCAModel):
             class_channels = x[
                 ..., self.num_image_channels + self.num_hidden_channels :
             ]
-            return class_channels
+            return class_channels > 0.1
 
     def loss(self, x, y):
         hidden_channels = x[..., self.num_image_channels : -self.num_output_channels]
@@ -72,7 +72,8 @@ class SegmentationNCAModel(BasicNCAModel):
 
         loss_segmentation_function = DiceBCELoss()
         loss_segmentation = loss_segmentation_function(
-            class_channels.transpose(3, 1), y.transpose(2, 1)  # B, W, H, C --> B, C, W, H
+            class_channels.transpose(3, 1),
+            y.transpose(2, 1),  # B, W, H, C --> B, C, W, H
         )
 
         loss_activity = torch.sum(torch.square(hidden_channels)) / (
@@ -97,11 +98,17 @@ class SegmentationNCAModel(BasicNCAModel):
             x = pad_input(x, self, noise=True)
             x = x.transpose(1, 3).to(self.device)
             y = y.to(self.device)
-            y_pred = self.segment(x, steps)
-            dice = metric(y_pred, y)
+            x_pred = self.segment(x, steps)
+            dice = metric(x_pred, y)
         # TODO accumulate dice
         if summary_writer:
-            summary_writer.add_scalar(
-                "Acc/val_dice_score", dice, batch_iteration
+            summary_writer.add_scalar("Acc/val_dice_score", dice, batch_iteration)
+        if self.plot_function:
+            figure = self.plot_function(
+                x.detach().cpu().numpy(),
+                x_pred.detach().cpu().numpy(),
+                y.detach().cpu().numpy(),
+                self,
             )
+            summary_writer.add_figure("Validation Batch", figure, batch_iteration)
         return dice
