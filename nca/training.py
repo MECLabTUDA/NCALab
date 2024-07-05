@@ -148,7 +148,7 @@ def train_basic_nca(
                 summary_writer.add_figure("Training Batch", figure, iteration)
 
             if dataloader_val:
-                val_acc = nca.validate(dataloader_val, steps, iteration, summary_writer)
+                val_acc = nca.validate(dataloader_val, steps_validation, iteration, summary_writer)
                 if val_acc > best_acc:
                     print(f"improved: {best_acc:.5f} --> {val_acc:.5f}")
                     torch.save(nca.state_dict(), best_path)
