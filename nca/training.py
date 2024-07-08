@@ -22,8 +22,8 @@ def train_basic_nca(
     model_path: str | Path | PosixPath,
     dataloader_train: DataLoader,
     dataloader_val: DataLoader | None = None,
-    max_iterations: int = 50000,
-    gradient_clipping: bool = True,
+    max_iterations: int = 5000,
+    gradient_clipping: bool = False,
     steps_range: tuple = (64, 96),
     steps_validation: int = 80,
     save_every: int = 500,
@@ -35,6 +35,8 @@ def train_basic_nca(
         Callable[[np.ndarray, np.ndarray, np.ndarray, BasicNCAModel], Figure] | None
     ) = None,
     batch_repeat: int = 2,
+    truncate_backprop: bool = False,
+    pad_noise: bool = False,
 ):
     """Execute basic NCA training loop with a single function call.
 
@@ -93,12 +95,16 @@ def train_basic_nca(
         Returns:
             torch.Tensor: Predicted image.
         """
+        nca.train()
         optimizer.zero_grad()
         x_pred = x.clone().to(nca.device)
-        for step in range(steps):
-            x_pred = nca(x_pred, steps=1)
-            if step < steps - 10:
-                x_pred.detach()
+        if truncate_backprop:
+            for step in range(steps):
+                x_pred = nca(x_pred, steps=1)
+                if step < steps - 10:
+                    x_pred.detach()
+        else:
+            x_pred = nca(x_pred, steps=steps)
         loss = nca.loss(x_pred, y.to(nca.device))
         loss.backward()
 
@@ -116,14 +122,14 @@ def train_basic_nca(
         gen = iter(dataloader_train)
         if len(dataloader_train.dataset) > 1:
             gen = tqdm(gen)
-        for sample in gen:
+        for i, sample in enumerate(gen):
             x, y = sample
 
             # Typically, our dataloader supplies a binary, grayscale, RGB or RGBA image.
             # But out NCA operates on multiple hidden channels and output channels, so we
             # need to pad the input image with zeros.
-            x = pad_input(x, nca, noise=True)
-            x = x.transpose(1, 3) # B W H C
+            x = pad_input(x, nca, noise=pad_noise)
+            x = x.transpose(1, 3)  # B W H C
             if len(y.shape) == 3:
                 y = y.transpose(1, 2)
 
@@ -132,13 +138,9 @@ def train_basic_nca(
             y = torch.cat(batch_repeat * [y])
 
             steps = np.random.randint(*steps_range)
-            nca.train()
             x_pred = train_iteration(x, y, steps, optimizer, scheduler, iteration)
 
-        with torch.no_grad():
-            nca.eval()
-            torch.save(nca.state_dict(), model_path)
-            if plot_function:
+            if plot_function and (i + 1) % save_every == 0:
                 figure = plot_function(
                     x.detach().cpu().numpy(),
                     x_pred.detach().cpu().numpy(),
@@ -147,8 +149,18 @@ def train_basic_nca(
                 )
                 summary_writer.add_figure("Training Batch", figure, iteration)
 
+        with torch.no_grad():
+            nca.eval()
+            torch.save(nca.state_dict(), model_path)
+
             if dataloader_val:
-                val_acc = nca.validate(dataloader_val, steps_validation, iteration, summary_writer)
+                val_acc = nca.validate(
+                    dataloader_val,
+                    steps_validation,
+                    iteration,
+                    summary_writer,
+                    pad_noise,
+                )
                 if val_acc > best_acc:
                     print(f"improved: {best_acc:.5f} --> {val_acc:.5f}")
                     torch.save(nca.state_dict(), best_path)

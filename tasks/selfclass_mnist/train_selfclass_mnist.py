@@ -38,7 +38,7 @@ def train_selfclass_mnist(
         range(len(mnist_train)),
         mnist_train.targets,
         stratify=mnist_train.targets,
-        test_size=int(len(mnist_train) * 0.2), # TODO configure via CLI
+        test_size=int(len(mnist_train) * 0.2),  # TODO configure via CLI
     )
 
     train_split = Subset(mnist_train, train_indices)
@@ -58,15 +58,18 @@ def train_selfclass_mnist(
         num_image_channels=1,
         num_hidden_channels=hidden_channels,
         num_classes=10,
+        pixel_wise_loss=True,
     )
 
     train_basic_nca(
         nca,
         WEIGHTS_PATH / "selfclass_mnist.pth",
         loader_train,
-        loader_val,
+        #loader_val,
         summary_writer=writer,
         plot_function=show_batch_binary_image_classification,
+        steps_range=(40, 60),
+        steps_validation=50
     )
     writer.close()
 

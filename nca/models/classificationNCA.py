@@ -86,9 +86,9 @@ class ClassificationNCAModel(BasicNCAModel):
             ]
 
             # mask inactive pixels
-            #for i in range(image.shape[0]):
-            #    mask = torch.max(hidden_channels[i]) > 0.1
-            #    class_channels[i] *= mask
+            for i in range(image.shape[0]):
+                mask = torch.max(hidden_channels[i]) > 0.1
+                class_channels[i] *= mask
 
             # if binary classification (e.g. self classifying MNIST),
             # mask away pixels with the binary image used as a mask
@@ -128,14 +128,28 @@ class ClassificationNCAModel(BasicNCAModel):
         # active in the respective classification channel.
         if self.pixel_wise_loss:
             y = torch.ones((x.shape[0], x.shape[1], x.shape[2])).to(self.device)
+            # if binary images are classified: mask with first image channel
+            if self.num_image_channels == 1:
+                mask = x[..., 0] > 0
+            # TODO: mask alpha channel if available
+            else:
+                mask = 1
             for i in range(x.shape[0]):
                 y[i] *= target[i]
-            loss_ce = F.cross_entropy(class_channels.transpose(3, 1), y.long())
+            loss_ce = (
+                F.cross_entropy(
+                    class_channels.transpose(3, 1),
+                    y.transpose(2, 1).long(),
+                    reduction="none",
+                )
+                * mask
+            ).mean()
+            loss_classification = loss_ce
         else:
             y_pred = F.softmax(class_channels, dim=-1)
             y_pred = torch.mean(y_pred, dim=1)
             y_pred = torch.mean(y_pred, dim=1)
-            #loss_ce = F.cross_entropy(y_pred, target.squeeze().long())
+            # loss_ce = F.cross_entropy(y_pred, target.squeeze().long())
             loss_mse = F.mse_loss(
                 y_pred.float(),
                 F.one_hot(target.squeeze(), num_classes=self.num_classes).float(),
@@ -160,27 +174,24 @@ class ClassificationNCAModel(BasicNCAModel):
         steps: int,
         batch_iteration: int,
         summary_writer=None,
+        pad_noise: bool = False,
     ):
-        """_summary_
-
-        Args:
-            x (torch.Tensor): _description_
-            target (torch.Tensor): _description_
-            steps (int): _description_
-            batch_iteration (int): _description_
-            summary_writer (_type_, optional): _description_. Defaults to None.
-        """
-        accuracy_macro_metric = MulticlassAccuracy(average="macro", num_classes=self.num_classes)
-        accuracy_micro_metric = MulticlassAccuracy(average="micro", num_classes=self.num_classes)
+        accuracy_macro_metric = MulticlassAccuracy(
+            average="macro", num_classes=self.num_classes
+        )
+        accuracy_micro_metric = MulticlassAccuracy(
+            average="micro", num_classes=self.num_classes
+        )
         auroc_metric = MulticlassAUROC(num_classes=self.num_classes)
         f1_metric = MulticlassF1Score(num_classes=self.num_classes)
 
         for sample in tqdm(iter(dataloader_val)):
             x, y = sample
-            x = pad_input(x, self, noise=True)
+            x = pad_input(x, self, noise=pad_noise)
             x = x.transpose(1, 3).to(self.device)
             y = y.to(self.device)
             y_prob = self.classify(x, steps, reduce=False)
+            # TODO adjust for pixel-wise problems
             y_true = y.squeeze()
             accuracy_macro_metric.update(y_prob, y_true)
             accuracy_micro_metric.update(y_prob, y_true)
