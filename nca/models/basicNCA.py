@@ -221,3 +221,12 @@ class BasicNCAModel(nn.Module):
             dx_noise=self.dx_noise,
             **self.meta
         )
+
+    def finetune(self):
+        """Prepare model for fine tuning by freezing everything except the final layer.
+        """
+        self.train()
+        for filter in self.filters:
+            filter.requires_grad_ = False
+        for layer in self.network[:-1]:
+            layer.requires_grad_ = False
