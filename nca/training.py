@@ -26,7 +26,7 @@ def train_basic_nca(
     gradient_clipping: bool = False,
     steps_range: tuple = (64, 96),
     steps_validation: int = 80,
-    save_every: int = 500,
+    save_every: int = 5,
     lr: float = 2e-3,
     lr_gamma: float = 0.9999,
     adam_betas=(0.5, 0.5),
@@ -120,7 +120,7 @@ def train_basic_nca(
     for iteration in tqdm(range(max_iterations)):
         # disable tqdm progress bar if dataset has only one sample, e.g. in the growing task
         gen = iter(dataloader_train)
-        if len(dataloader_train.dataset) > 1:
+        if len(dataloader_train.dataset) > dataloader_train.batch_size:
             gen = tqdm(gen)
         for i, sample in enumerate(gen):
             x, y = sample
@@ -140,14 +140,14 @@ def train_basic_nca(
             steps = np.random.randint(*steps_range)
             x_pred = train_iteration(x, y, steps, optimizer, scheduler, iteration)
 
-            if plot_function and (i + 1) % save_every == 0:
-                figure = plot_function(
-                    x.detach().cpu().numpy(),
-                    x_pred.detach().cpu().numpy(),
-                    y.detach().cpu().numpy(),
-                    nca,
-                )
-                summary_writer.add_figure("Training Batch", figure, iteration)
+        if plot_function and (iteration + 1) % save_every == 0:
+            figure = plot_function(
+                x.detach().cpu().numpy(),
+                x_pred.detach().cpu().numpy(),
+                y.detach().cpu().numpy(),
+                nca,
+            )
+            summary_writer.add_figure("Training Batch", figure, iteration)
 
         with torch.no_grad():
             nca.eval()

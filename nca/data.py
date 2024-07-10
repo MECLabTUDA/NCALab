@@ -30,7 +30,6 @@ class GrowingNCADataset(Dataset):
         self.seed = np.zeros((num_channels, image.shape[0], image.shape[1]))
         self.seed[3:, :, :] = 1.0
         self.image = image.astype(np.float32) / 255.0
-        self.batch_size = batch_size
 
     def __len__(self):
         return self.batch_size
