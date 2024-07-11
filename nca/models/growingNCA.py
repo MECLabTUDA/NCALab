@@ -48,21 +48,9 @@ class GrowingNCAModel(BasicNCAModel):
 
     def validate(
         self,
-        x: torch.Tensor,
-        target: torch.Tensor,
-        steps: int,
-        batch_iteration: int,
-        summary_writer=None,
+        *args,
+        **kwargs
     ):
-        """Don't do anything.
-
-        Args:
-            x (F.Tensor): _description_
-            target (F.Tensor): _description_
-            steps (int): _description_
-            batch_iteration (int): _description_
-            summary_writer (_type_, optional): _description_. Defaults to None.
-        """
         pass
 
     def grow(self, width, height, steps: int = 100) -> np.ndarray:

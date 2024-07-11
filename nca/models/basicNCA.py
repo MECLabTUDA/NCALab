@@ -1,3 +1,4 @@
+from typing import Callable
 import numpy as np
 
 import torch
@@ -17,7 +18,7 @@ class BasicNCAModel(nn.Module):
         use_alive_mask: bool = False,
         immutable_image_channels: bool = True,
         num_learned_filters: int = 2,
-        dx_noise: float = 0.02
+        dx_noise: float = 0.02,
     ):
         """Basic abstract class for NCA models.
 
@@ -49,17 +50,19 @@ class BasicNCAModel(nn.Module):
         self.use_alive_mask = use_alive_mask
         self.immutable_image_channels = immutable_image_channels
         self.num_learned_filters = num_learned_filters
-        self.filters = []
         self.dx_noise = dx_noise
 
         self.hidden_size = hidden_size
 
-        self.plot_function = None
+        self.plot_function: Callable | None = None
+
+        self.filters: list | nn.ModuleList = []
 
         if num_learned_filters > 0:
             self.num_filters = num_learned_filters
+            filters = []
             for _ in range(num_learned_filters):
-                self.filters.append(
+                filters.append(
                     nn.Conv2d(
                         self.num_channels,
                         self.num_channels,
@@ -71,7 +74,7 @@ class BasicNCAModel(nn.Module):
                         bias=False,
                     ).to(self.device)
                 )
-                self.filters = nn.ModuleList(self.filters)
+            self.filters = nn.ModuleList(self.filters)
         else:
             self.num_filters = 2
             self.filters.append(np.outer([1, 2, 1], [-1, 0, 1]) / 8.0)
@@ -87,7 +90,7 @@ class BasicNCAModel(nn.Module):
         with torch.no_grad():
             self.network[-1].weight.zero_()
 
-        self.meta = {}
+        self.meta: dict = {}
 
     def alive(self, x):
         mask = (
@@ -142,21 +145,21 @@ class BasicNCAModel(nn.Module):
         dx = self.perceive(x)
 
         # Compute delta from FFNN network
-        dx = dx.permute(0, 2, 3, 1) # B C W H --> B W H C
+        dx = dx.permute(0, 2, 3, 1)  # B C W H --> B W H C
         dx = self.network(dx)
 
         # Stochastic weight update
         fire_rate = self.fire_rate
-        stochastic = (
-            torch.rand([dx.size(0), dx.size(1), dx.size(2), 1]) > fire_rate
-        )
+        stochastic = torch.rand([dx.size(0), dx.size(1), dx.size(2), 1]) > fire_rate
         stochastic = stochastic.float().to(self.device)
         dx = dx * stochastic
         if self.immutable_image_channels:
             dx[..., : self.num_image_channels] *= 0
 
-        dx += self.dx_noise * torch.randn([dx.size(0), dx.size(1), dx.size(2), 1]).to(self.device)
-        dx = dx.permute(0, 3, 1, 2) # B W H C --> B C W H
+        dx += self.dx_noise * torch.randn([dx.size(0), dx.size(1), dx.size(2), 1]).to(
+            self.device
+        )
+        dx = dx.permute(0, 3, 1, 2)  # B W H C --> B C W H
         x = x + dx
 
         # Alive masking
@@ -188,24 +191,12 @@ class BasicNCAModel(nn.Module):
 
     def validate(
         self,
-        x: torch.Tensor,
-        target: torch.Tensor,
+        dataloader_val,
         steps: int,
         batch_iteration: int,
         summary_writer=None,
+        pad_noise: bool = False,
     ):
-        """_summary_
-
-        Args:
-            x (torch.Tensor): _description_
-            target (torch.Tensor): _description_
-            steps (int): _description_
-            batch_iteration (int): _description_
-            summary_writer (_type_, optional): _description_. Defaults to None.
-
-        Returns:
-            _type_: _description_
-        """
         return NotImplemented
 
     def get_meta_dict(self) -> dict:
@@ -224,8 +215,7 @@ class BasicNCAModel(nn.Module):
         )
 
     def finetune(self):
-        """Prepare model for fine tuning by freezing everything except the final layer.
-        """
+        """Prepare model for fine tuning by freezing everything except the final layer."""
         self.train()
         for filter in self.filters:
             filter.requires_grad_ = False

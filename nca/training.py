@@ -9,7 +9,7 @@ import torch.nn.functional as F
 from torch.utils.data import DataLoader  # for type hint
 from torch.utils.tensorboard import SummaryWriter  # for type hint
 
-from matplotlib.figure import Figure  # for type hint
+from matplotlib.figure import Figure  # type: ignore[import-untyped]
 
 from tqdm import tqdm
 
@@ -81,7 +81,7 @@ class BasicNCATrainer:
         """
         if save_every is None:
             # for small datasets (e.g. growing), set a meaningful default value
-            if len(dataloader_train.dataset) <= dataloader_train.batch_size:
+            if len(dataloader_train) <= 3:
                 save_every = 100
             else:
                 save_every = 1
@@ -143,10 +143,10 @@ class BasicNCATrainer:
         # Main training/validation loop
         for iteration in tqdm(range(self.max_iterations)):
             # disable tqdm progress bar if dataset has only one sample, e.g. in the growing task
-            gen = iter(dataloader_train)
-            if len(dataloader_train.dataset) > dataloader_train.batch_size:
-                gen = tqdm(gen)
-            for i, sample in enumerate(gen):
+            gen = enumerate(iter(dataloader_train))
+            if len(dataloader_train) <= 3:
+                gen = enumerate(tqdm(gen))
+            for i, sample in gen:
                 x, y = sample
 
                 # Typically, our dataloader supplies a binary, grayscale, RGB or RGBA image.
@@ -162,7 +162,7 @@ class BasicNCATrainer:
                 steps = np.random.randint(*self.steps_range)
                 x_pred = train_iteration(x, y, steps, optimizer, scheduler, iteration)
 
-            if plot_function and (iteration + 1) % save_every == 0:
+            if plot_function and summary_writer and (iteration + 1) % save_every == 0:
                 figure = plot_function(
                     x.detach().cpu().numpy(),
                     x_pred.detach().cpu().numpy(),

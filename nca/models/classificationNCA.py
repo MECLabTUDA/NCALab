@@ -223,3 +223,4 @@ class ClassificationNCAModel(BasicNCAModel):
                 pixel_wise_loss=self.pixel_wise_loss,
             )
         )
+        return meta

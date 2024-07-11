@@ -91,11 +91,12 @@ class SegmentationNCAModel(BasicNCAModel):
         steps: int,
         batch_iteration: int,
         summary_writer=None,
+        pad_noise: bool = False,
     ):
         metric = DiceScore()
         for sample in tqdm(iter(dataloader_val)):
             x, y = sample
-            x = pad_input(x, self, noise=True)
+            x = pad_input(x, self, noise=pad_noise)
             x = x.permute(0, 2, 3, 1).to(self.device)
             y = y.to(self.device)
             x_pred = self.segment(x, steps)
