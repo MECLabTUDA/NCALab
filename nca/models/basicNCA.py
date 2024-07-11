@@ -127,7 +127,7 @@ class BasicNCAModel(nn.Module):
         return y
 
     def update(self, x, step=0):
-        x = x.transpose(1, 3)  # B W H C --> B C W H
+        x = x.permute(0, 3, 1, 2)  # B W H C --> B C W H
 
         hidden_channels = x[
             :,
@@ -142,7 +142,7 @@ class BasicNCAModel(nn.Module):
         dx = self.perceive(x)
 
         # Compute delta from FFNN network
-        dx = dx.transpose(1, 3)
+        dx = dx.permute(0, 2, 3, 1) # B C W H --> B W H C
         dx = self.network(dx)
 
         # Stochastic weight update
@@ -156,16 +156,17 @@ class BasicNCAModel(nn.Module):
             dx[..., : self.num_image_channels] *= 0
 
         dx += self.dx_noise * torch.randn([dx.size(0), dx.size(1), dx.size(2), 1]).to(self.device)
-        x = x + dx.transpose(1, 3)  # B W H C --> B C W H
+        dx = dx.permute(0, 3, 1, 2) # B W H C --> B C W H
+        x = x + dx
 
         # Alive masking
         if self.use_alive_mask:
             life_mask = self.alive(hidden_channels)
             life_mask = life_mask & pre_life_mask
-            x = x.transpose(0, 1)  # B C W H --> C B W H
+            x = x.permute(1, 0, 2, 3)  # B C W H --> C B W H
             x = x * life_mask.float()
-            x = x.transpose(1, 0)  # C B W H --> B C W H
-        x = x.transpose(1, 3)  # B C W H --> B W H C
+            x = x.permute(1, 0, 2, 3)  # C B W H --> B C W H
+        x = x.permute(0, 2, 3, 1)  # B C W H --> B W H C
         return x
 
     def forward(self, x, steps: int = 1):

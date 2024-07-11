@@ -81,7 +81,7 @@ class BasicNCATrainer:
         """
         if save_every is None:
             # for small datasets (e.g. growing), set a meaningful default value
-            if len(dataloader_train.dataset) > dataloader_train.batch_size:
+            if len(dataloader_train.dataset) <= dataloader_train.batch_size:
                 save_every = 100
             else:
                 save_every = 1
