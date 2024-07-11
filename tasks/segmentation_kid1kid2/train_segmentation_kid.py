@@ -7,7 +7,7 @@ sys.path.append(root_dir)
 from typing import Any
 from pathlib import Path, PosixPath
 
-from nca import SegmentationNCAModel, train_basic_nca, WEIGHTS_PATH, get_compute_device
+from nca import SegmentationNCAModel, BasicNCATrainer, WEIGHTS_PATH, get_compute_device
 
 import click
 
@@ -91,9 +91,8 @@ def train_segmentation_KID(batch_size: int, hidden_channels: int):
         val_split, shuffle=True, batch_size=batch_size, drop_last=True
     )
 
-    train_basic_nca(
-        nca,
-        WEIGHTS_PATH / "segmentation_KID2_vascular.pth",
+    trainer = BasicNCATrainer(nca, WEIGHTS_PATH / "segmentation_KID2_vascular.pth")
+    trainer.train_basic_nca(
         loader_train,
         # loader_val,
         summary_writer=writer,

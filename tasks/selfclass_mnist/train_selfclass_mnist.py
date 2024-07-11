@@ -5,7 +5,7 @@ sys.path.append(root_dir)
 
 from nca import (
     ClassificationNCAModel,
-    train_basic_nca,
+    BasicNCATrainer,
     WEIGHTS_PATH,
     show_batch_binary_image_classification,
     get_compute_device,
@@ -61,9 +61,8 @@ def train_selfclass_mnist(
         pixel_wise_loss=True,
     )
 
-    train_basic_nca(
-        nca,
-        WEIGHTS_PATH / "selfclass_mnist.pth",
+    trainer = BasicNCATrainer(nca, WEIGHTS_PATH / "selfclass_mnist.pth")
+    trainer.train_basic_nca(
         loader_train,
         #loader_val,
         summary_writer=writer,

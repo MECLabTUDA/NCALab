@@ -6,7 +6,7 @@ sys.path.append(root_dir)
 
 from nca import (
     ClassificationNCAModel,
-    train_basic_nca,
+    BasicNCATrainer,
     WEIGHTS_PATH,
     show_batch_classification,
     get_compute_device,
@@ -56,9 +56,8 @@ def train_selfclass_bloodmnist(
         num_hidden_channels=hidden_channels,
         num_classes=dataset_train.labels.shape[1],
     )
-    train_basic_nca(
-        nca,
-        WEIGHTS_PATH / "selfclass_bloodmnist.pth",
+    trainer = BasicNCATrainer(nca, WEIGHTS_PATH / "selfclass_bloodmnist.pth")
+    trainer.train_basic_nca(
         loader_train,
         loader_val,
         summary_writer=writer,

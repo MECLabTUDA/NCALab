@@ -29,6 +29,7 @@ def eval_growing_emoji(gpu: bool, gpu_index: int):
         num_hidden_channels=12,
         use_alive_mask=False,
     ).to(device)
+
     nca.load_state_dict(torch.load(WEIGHTS_PATH / "growing_emoji.pth"))
     nca.eval()
 

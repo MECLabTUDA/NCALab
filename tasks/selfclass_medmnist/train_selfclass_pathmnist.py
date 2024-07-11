@@ -6,7 +6,7 @@ sys.path.append(root_dir)
 
 from nca import (
     ClassificationNCAModel,
-    train_basic_nca,
+    BasicNCATrainer,
     WEIGHTS_PATH,
     show_batch_classification,
     get_compute_device,
@@ -45,7 +45,7 @@ def train_selfclass_pathmnist(
             # ),
             transforms.RandomHorizontalFlip(),
             transforms.RandomVerticalFlip(),
-            transforms.RandomErasing(scale=(0.02, 0.25))
+            transforms.RandomErasing(scale=(0.02, 0.25)),
         ]
     )
 
@@ -71,16 +71,18 @@ def train_selfclass_pathmnist(
         fire_rate=0.5,
         lambda_activity=lambda_activity,
     )
-    train_basic_nca(
+    trainer = BasicNCATrainer(
         nca,
         WEIGHTS_PATH / "selfclass_pathmnist.pth",
+        batch_repeat=2,
+        max_iterations=100,
+        gradient_clipping=True,
+    )
+    trainer.train_basic_nca(
         loader_train,
         loader_val,
         summary_writer=writer,
         plot_function=show_batch_classification,
-        batch_repeat=2,
-        max_iterations=100,
-        gradient_clipping=True,
     )
     writer.close()
 

@@ -7,7 +7,7 @@ sys.path.append(root_dir)
 from nca import (
     GrowingNCADataset,
     GrowingNCAModel,
-    train_basic_nca,
+    BasicNCATrainer,
     WEIGHTS_PATH,
     get_compute_device,
 )
@@ -71,14 +71,15 @@ def train_growing_emoji(
     dataset_dna = GrowingNCADataset(image_dna, nca.num_channels, batch_size=batch_size)
     loader_dna = DataLoader(dataset_dna, batch_size=batch_size, shuffle=False)
 
-    train_basic_nca(
-        nca, WEIGHTS_PATH / "growing_emoji_finetuned.pth", loader_lizard, summary_writer=writer, save_every=100
+    trainer = BasicNCATrainer(nca, WEIGHTS_PATH / "growing_emoji_finetuned.pth")
+    trainer.train_basic_nca(
+        loader_lizard, summary_writer=writer, save_every=100
     )
-    #nca.finetune()
+    nca.finetune()
 
     writer = SummaryWriter()
-    train_basic_nca(
-        nca, WEIGHTS_PATH / "growing_emoji_finetuned.pth", loader_dna, summary_writer=writer, save_every=100
+    trainer.train_basic_nca(
+        loader_dna, summary_writer=writer, save_every=100
     )
     writer.close()
 
