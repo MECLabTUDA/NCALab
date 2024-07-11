@@ -75,7 +75,7 @@ class BasicNCAModel(nn.Module):
                         bias=False,
                     ).to(self.device)
                 )
-            self.filters = nn.ModuleList(self.filters)
+            self.filters = nn.ModuleList(filters)
         else:
             self.num_filters = 2
             self.filters.append(np.outer([1, 2, 1], [-1, 0, 1]) / 8.0)

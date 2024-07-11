@@ -71,8 +71,8 @@ class SegmentationNCAModel(BasicNCAModel):
 
         loss_segmentation_function = DiceBCELoss()
         loss_segmentation = loss_segmentation_function(
-            class_channels.transpose(3, 1),
-            y.transpose(2, 1),  # B, W, H, C --> B, C, W, H
+            class_channels.permute(0, 3, 1, 2),
+            y,
         )
 
         loss_activity = torch.sum(torch.square(hidden_channels)) / (

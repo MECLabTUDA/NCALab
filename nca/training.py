@@ -143,10 +143,10 @@ class BasicNCATrainer:
         # Main training/validation loop
         for iteration in tqdm(range(self.max_iterations)):
             # disable tqdm progress bar if dataset has only one sample, e.g. in the growing task
-            gen = enumerate(iter(dataloader_train))
-            if len(dataloader_train) <= 3:
-                gen = enumerate(tqdm(gen))
-            for i, sample in gen:
+            gen = iter(dataloader_train)
+            if len(dataloader_train) > 3:
+                gen = tqdm(gen) # type: ignore[assignment]
+            for i, sample in enumerate(gen):
                 x, y = sample
 
                 # Typically, our dataloader supplies a binary, grayscale, RGB or RGBA image.
