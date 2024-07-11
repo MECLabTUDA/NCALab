@@ -1,4 +1,4 @@
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt # type: ignore[import-untyped]
 import numpy as np
 
 

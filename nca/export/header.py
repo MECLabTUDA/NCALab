@@ -1,6 +1,4 @@
-"""Exporting NCA weights to C headers.
-"""
-
+from __future__ import annotations
 import torch
 from pathlib import PosixPath, Path
 
