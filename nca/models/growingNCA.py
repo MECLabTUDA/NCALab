@@ -68,7 +68,7 @@ class GrowingNCAModel(BasicNCAModel):
     def grow(self, width, height, steps: int = 100) -> np.ndarray:
         seed = torch.zeros((1, self.num_channels, width, height)).to(self.device)
         seed[:, 3:, :, :] = 1.0
-        out = self.forward(seed.transpose(1, 3), steps=steps)
+        out = self.forward(seed.permute(0, 2, 3, 1), steps=steps)
         out = out[..., :3].detach().cpu().numpy()[0]
         out = np.clip(out, 0, 1)
         return out

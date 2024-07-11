@@ -138,8 +138,8 @@ class ClassificationNCAModel(BasicNCAModel):
                 y[i] *= target[i]
             loss_ce = (
                 F.cross_entropy(
-                    class_channels.transpose(3, 1),
-                    y.transpose(2, 1).long(),
+                    class_channels.permute(0, 2, 3, 1),
+                    y.long(),
                     reduction="none",
                 )
                 * mask
@@ -188,7 +188,7 @@ class ClassificationNCAModel(BasicNCAModel):
         for sample in tqdm(iter(dataloader_val)):
             x, y = sample
             x = pad_input(x, self, noise=pad_noise)
-            x = x.transpose(1, 3).to(self.device)
+            x = x.permute(0, 2, 3, 1).to(self.device)
             y = y.to(self.device)
             y_prob = self.classify(x, steps, reduce=False)
             # TODO adjust for pixel-wise problems
