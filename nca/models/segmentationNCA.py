@@ -1,5 +1,4 @@
 import torch
-import torch.nn.functional as F
 
 from .basicNCA import BasicNCAModel
 from ..losses import DiceBCELoss, DiceScore

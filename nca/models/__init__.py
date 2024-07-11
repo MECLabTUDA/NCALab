@@ -1,5 +1,5 @@
-from .basicNCA import BasicNCAModel
-from .classificationNCA import ClassificationNCAModel
-from .growingNCA import GrowingNCAModel
-from .segmentationNCA import SegmentationNCAModel
-from .taskNCA import TaskNCAModel
+from .basicNCA import BasicNCAModel  # noqa: F401
+from .classificationNCA import ClassificationNCAModel  # noqa: F401
+from .growingNCA import GrowingNCAModel  # noqa: F401
+from .segmentationNCA import SegmentationNCAModel  # noqa: F401
+from .taskNCA import TaskNCAModel  # noqa: F401

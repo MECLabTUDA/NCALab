@@ -1,3 +1,4 @@
+from __future__ import annotations
 from pathlib import Path, PosixPath  # for type hint
 from typing import Callable
 
@@ -5,7 +6,6 @@ import numpy as np
 
 import torch
 import torch.optim as optim
-import torch.nn.functional as F
 from torch.utils.data import DataLoader  # for type hint
 from torch.utils.tensorboard import SummaryWriter  # for type hint
 
