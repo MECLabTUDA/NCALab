@@ -166,6 +166,7 @@ cython_debug/
 #weights/
 mnist/
 runs/
+docs/build/
 
 .venv*
 
