@@ -7,6 +7,8 @@ from ..utils import pad_input
 
 from tqdm import tqdm
 
+import segmentation_models_pytorch as smp
+
 
 class SegmentationNCAModel(BasicNCAModel):
     def __init__(
@@ -50,9 +52,11 @@ class SegmentationNCAModel(BasicNCAModel):
         )
         self.plot_function = show_batch_binary_segmentation
 
-    def segment(self, image, steps=100):
+    def segment(self, image, steps=80, pad_noise=False):
         with torch.no_grad():
             x = image.clone()
+            x = pad_input(x, self, noise=pad_noise)
+            x = x.permute(0, 2, 3, 1)
             x = self(x, steps=steps)
             hidden_channels = x[
                 ...,
@@ -63,7 +67,8 @@ class SegmentationNCAModel(BasicNCAModel):
             class_channels = x[
                 ..., self.num_image_channels + self.num_hidden_channels :
             ]
-            return class_channels > 0.1
+            import torch.nn.functional as F
+            return F.sigmoid(class_channels)
 
     def loss(self, x, y):
         hidden_channels = x[..., self.num_image_channels : -self.num_output_channels]
@@ -92,23 +97,32 @@ class SegmentationNCAModel(BasicNCAModel):
         summary_writer=None,
         pad_noise: bool = False,
     ):
-        metric = DiceScore()
-        for sample in tqdm(iter(dataloader_val)):
-            x, y = sample
-            x = pad_input(x, self, noise=pad_noise)
-            x = x.permute(0, 2, 3, 1).to(self.device)
-            y = y.to(self.device)
-            x_pred = self.segment(x, steps)
-            dice = metric(x_pred, y)
-        # TODO accumulate dice
+        self.eval()
+        TP = []
+        FP = []
+        FN = []
+        TN = []
+        
+        dice = smp.losses.DiceLoss("binary", from_logits=False)
+        dice_scores = []
+
+        with torch.no_grad():
+            for images, labels in dataloader_val:
+                images, labels = images.to(self.device), labels.to(self.device)
+
+                outputs = self.segment(images, steps=steps, pad_noise=pad_noise).permute(0, 3, 1, 2)
+                dice_score = 1 - dice(labels, outputs)
+                dice_scores.append(dice_score.item())
+                tp, fp, fn, tn = smp.metrics.get_stats(
+                    outputs, labels[:, None, :, :].long(), mode="binary", threshold=0.5
+                )
+                TP.append(tp[:, 0])
+                FP.append(fp[:, 0])
+                FN.append(fn[:, 0])
+                TN.append(tn[:, 0])
+        f1_score = smp.metrics.f1_score(
+            torch.cat(TP), torch.cat(FP), torch.cat(FN), torch.cat(TN), reduction="micro"
+        )
         if summary_writer:
-            summary_writer.add_scalar("Acc/val_dice_score", dice, batch_iteration)
-        if self.plot_function:
-            figure = self.plot_function(
-                x.detach().cpu().numpy(),
-                x_pred.detach().cpu().numpy(),
-                y.detach().cpu().numpy(),
-                self,
-            )
-            summary_writer.add_figure("Validation Batch", figure, batch_iteration)
-        return dice
+            summary_writer.add_scalar("Acc/val_F1", f1_score.item(), batch_iteration)
+        return f1_score.item()
