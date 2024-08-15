@@ -24,6 +24,7 @@ class ClassificationNCAModel(BasicNCAModel):
         learned_filters: int = 2,
         lambda_activity: float = 0.0,
         pixel_wise_loss: bool = False,
+        filter_padding: str = "reflect",
     ):
         """_summary_
 
@@ -50,6 +51,7 @@ class ClassificationNCAModel(BasicNCAModel):
             use_alive_mask,
             immutable_image_channels,
             learned_filters,
+            filter_padding=filter_padding,
         )
         self.num_classes = num_classes
         self.lambda_activity = lambda_activity
@@ -121,6 +123,7 @@ class ClassificationNCAModel(BasicNCAModel):
         Returns:
             _type_: _description_
         """
+        # x: B W H C
         hidden_channels = x[..., self.num_image_channels : -self.num_output_channels]
         class_channels = x[..., self.num_image_channels + self.num_hidden_channels :]
 
@@ -138,7 +141,7 @@ class ClassificationNCAModel(BasicNCAModel):
                 y[i] *= target[i]
             loss_ce = (
                 F.cross_entropy(
-                    class_channels.permute(0, 2, 3, 1),
+                    class_channels.permute(0, 3, 1, 2),  # B W H C --> B C W H
                     y.long(),
                     reduction="none",
                 )
@@ -146,15 +149,19 @@ class ClassificationNCAModel(BasicNCAModel):
             ).mean()
             loss_classification = loss_ce
         else:
-            y_pred = F.softmax(class_channels, dim=-1)
-            y_pred = torch.mean(y_pred, dim=1)
-            y_pred = torch.mean(y_pred, dim=1)
+            y_pred = F.softmax(class_channels, dim=-1)  # softmax along channel dim
+            y_var = torch.var(y_pred.flatten(1, 2), dim=-1).mean()
+            y_pred = torch.mean(y_pred, dim=1)  # average W
+            y_pred = torch.mean(y_pred, dim=1)  # average H
             # loss_ce = F.cross_entropy(y_pred, target.squeeze().long())
-            loss_mse = F.mse_loss(
-                y_pred.float(),
-                F.one_hot(target.squeeze(), num_classes=self.num_classes).float(),
-            )
-            loss_classification = loss_mse
+            loss_mse = (
+                F.mse_loss(
+                    y_pred.float(),
+                    F.one_hot(target.squeeze(), num_classes=self.num_classes).float(),
+                    reduction="none",
+                )
+            ).mean()
+            loss_classification = loss_mse + 0.0 * y_var
 
         # Activity loss, mildly penalizes highly active NCAs.
         # We want to enforce the NCA model to "focus" on important areas for classification,
@@ -187,6 +194,7 @@ class ClassificationNCAModel(BasicNCAModel):
 
         for sample in tqdm(iter(dataloader_val)):
             x, y = sample
+            # x = (x - torch.min(x)) / (torch.max(x) - torch.min(x))
             x = pad_input(x, self, noise=pad_noise)
             x = x.permute(0, 2, 3, 1).to(self.device)
             y = y.to(self.device)
