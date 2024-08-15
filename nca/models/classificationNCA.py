@@ -57,10 +57,6 @@ class ClassificationNCAModel(BasicNCAModel):
         self.lambda_activity = lambda_activity
         self.pixel_wise_loss = pixel_wise_loss
 
-    def forward(self, x: torch.Tensor, steps: int = 1):
-        x = super().forward(x, steps)
-        return x
-
     def classify(
         self, image: torch.Tensor, steps: int = 100, reduce: bool = False
     ) -> torch.Tensor:

@@ -20,7 +20,7 @@ class BasicNCAModel(nn.Module):
         immutable_image_channels: bool = True,
         num_learned_filters: int = 2,
         dx_noise: float = 0.0,
-        filter_padding: str = "reflect"
+        filter_padding: str = "reflect",
     ):
         """Basic abstract class for NCA models.
 
@@ -174,7 +174,7 @@ class BasicNCAModel(nn.Module):
         x = x.permute(0, 2, 3, 1)  # B C W H --> B W H C
         return x
 
-    def forward(self, x, steps: int = 1, return_variance=False):
+    def forward(self, x, steps: int = 1, return_variance: bool = False):
         if return_variance:
             for step in range(steps):
                 x = self.update(x, step)
@@ -218,7 +218,7 @@ class BasicNCAModel(nn.Module):
             immutable_image_channels=self.immutable_image_channels,
             num_learned_filters=self.num_learned_filters,
             dx_noise=self.dx_noise,
-            **self.meta
+            **self.meta,
         )
 
     def finetune(self):

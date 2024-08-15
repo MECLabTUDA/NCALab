@@ -1,11 +1,9 @@
 import torch
 
 from .basicNCA import BasicNCAModel
-from ..losses import DiceBCELoss, DiceScore
+from ..losses import DiceBCELoss
 from ..visualization import show_batch_binary_segmentation
 from ..utils import pad_input
-
-from tqdm import tqdm
 
 import segmentation_models_pytorch as smp
 
@@ -68,6 +66,7 @@ class SegmentationNCAModel(BasicNCAModel):
                 ..., self.num_image_channels + self.num_hidden_channels :
             ]
             import torch.nn.functional as F
+
             return F.sigmoid(class_channels)
 
     def loss(self, x, y):
@@ -102,7 +101,7 @@ class SegmentationNCAModel(BasicNCAModel):
         FP = []
         FN = []
         TN = []
-        
+
         dice = smp.losses.DiceLoss("binary", from_logits=False)
         dice_scores = []
 
@@ -110,7 +109,9 @@ class SegmentationNCAModel(BasicNCAModel):
             for images, labels in dataloader_val:
                 images, labels = images.to(self.device), labels.to(self.device)
 
-                outputs = self.segment(images, steps=steps, pad_noise=pad_noise).permute(0, 3, 1, 2)
+                outputs = self.segment(
+                    images, steps=steps, pad_noise=pad_noise
+                ).permute(0, 3, 1, 2)
                 dice_score = 1 - dice(labels, outputs)
                 dice_scores.append(dice_score.item())
                 tp, fp, fn, tn = smp.metrics.get_stats(
@@ -121,7 +122,11 @@ class SegmentationNCAModel(BasicNCAModel):
                 FN.append(fn[:, 0])
                 TN.append(tn[:, 0])
         f1_score = smp.metrics.f1_score(
-            torch.cat(TP), torch.cat(FP), torch.cat(FN), torch.cat(TN), reduction="micro"
+            torch.cat(TP),
+            torch.cat(FP),
+            torch.cat(FN),
+            torch.cat(TN),
+            reduction="micro",
         )
         if summary_writer:
             summary_writer.add_scalar("Acc/val_F1", f1_score.item(), batch_iteration)
