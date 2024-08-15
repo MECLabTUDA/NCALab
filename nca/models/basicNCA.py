@@ -19,7 +19,8 @@ class BasicNCAModel(nn.Module):
         use_alive_mask: bool = False,
         immutable_image_channels: bool = True,
         num_learned_filters: int = 2,
-        dx_noise: float = 0.02,
+        dx_noise: float = 0.0,
+        filter_padding: str = "reflect"
     ):
         """Basic abstract class for NCA models.
 
@@ -70,7 +71,7 @@ class BasicNCAModel(nn.Module):
                         kernel_size=3,
                         stride=1,
                         padding=1,
-                        padding_mode="reflect",
+                        padding_mode=filter_padding,
                         groups=self.num_channels,
                         bias=False,
                     ).to(self.device)
@@ -82,8 +83,8 @@ class BasicNCAModel(nn.Module):
             self.filters.append((np.outer([1, 2, 1], [-1, 0, 1]) / 8.0).T)
 
         self.network = nn.Sequential(
-            nn.Linear(self.num_channels * (self.num_filters + 1), hidden_size),
-            nn.ReLU(),
+            nn.Linear(self.num_channels * (self.num_filters + 1), self.hidden_size),
+            nn.LeakyReLU(),
             nn.Linear(self.hidden_size, self.num_channels, bias=False),
         ).to(device)
 
@@ -173,10 +174,15 @@ class BasicNCAModel(nn.Module):
         x = x.permute(0, 2, 3, 1)  # B C W H --> B W H C
         return x
 
-    def forward(self, x, steps: int = 1):
-        for step in range(steps):
-            x = self.update(x, step)
-        return x
+    def forward(self, x, steps: int = 1, return_variance=False):
+        if return_variance:
+            for step in range(steps):
+                x = self.update(x, step)
+            return x
+        else:
+            for step in range(steps):
+                x = self.update(x, step)
+            return x
 
     def loss(self, x, target):
         """_summary_
