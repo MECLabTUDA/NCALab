@@ -18,10 +18,8 @@ import albumentations as A  # type: ignore[import-untyped]
 from albumentations.pytorch import ToTensorV2  # type: ignore[import-untyped]
 
 from torch.utils.tensorboard import SummaryWriter
-from torch.utils.data import Dataset, Subset
+from torch.utils.data import Dataset
 from PIL import Image
-
-from sklearn.model_selection import train_test_split  # type: ignore[import-untyped]
 
 from config import KID_DATASET_PATH
 

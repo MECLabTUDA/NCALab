@@ -5,7 +5,7 @@ from ..losses import DiceBCELoss
 from ..visualization import show_batch_binary_segmentation
 from ..utils import pad_input
 
-import segmentation_models_pytorch as smp
+import segmentation_models_pytorch as smp # type: ignore[import-untyped]
 
 
 class SegmentationNCAModel(BasicNCAModel):
