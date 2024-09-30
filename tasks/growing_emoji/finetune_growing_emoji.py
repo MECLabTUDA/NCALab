@@ -20,27 +20,7 @@ from torch.utils.tensorboard import SummaryWriter
 
 import numpy as np
 
-from pilmoji import Pilmoji
-from PIL import Image, ImageFont
-
-
-def get_emoji_image(emoji: str = "🦎", padding: int = 2, size: int = 24):
-    """_summary_
-
-    Args:
-        emoji (str, optional): String containing a single emoji character. Defaults to "🦎".
-        padding (int, optional): Number of pixels to pad to the sides. Defaults to 2.
-        size (int, optional): Total image size without padding. Defaults to 24.
-
-    Returns:
-        Image: Output PIL.Image containing an emoji on transparent background.
-    """
-    dims = (padding * 2 + size, padding * 2 + size)
-    with Image.new("RGBA", dims, (255, 255, 255, 0)) as image:
-        font = ImageFont.truetype("arial.ttf", size)
-        with Pilmoji(image) as pilmoji:
-            pilmoji.text((padding, padding), emoji.strip(), (0, 0, 0), font)
-        return image
+from growing_utils import get_emoji_image
 
 
 def train_growing_emoji(
@@ -64,7 +44,9 @@ def train_growing_emoji(
     )
 
     image_lizard = np.asarray(get_emoji_image("🦎"))
-    dataset_lizard = GrowingNCADataset(image_lizard, nca.num_channels, batch_size=batch_size)
+    dataset_lizard = GrowingNCADataset(
+        image_lizard, nca.num_channels, batch_size=batch_size
+    )
     loader_lizard = DataLoader(dataset_lizard, batch_size=batch_size, shuffle=False)
 
     image_dna = np.asarray(get_emoji_image("🧬"))
@@ -72,15 +54,12 @@ def train_growing_emoji(
     loader_dna = DataLoader(dataset_dna, batch_size=batch_size, shuffle=False)
 
     trainer = BasicNCATrainer(nca, WEIGHTS_PATH / "growing_emoji_finetuned.pth")
-    trainer.train_basic_nca(
-        loader_lizard, summary_writer=writer, save_every=100
-    )
+    trainer.train_basic_nca(loader_lizard, summary_writer=writer, save_every=100)
     nca.finetune()
 
     writer = SummaryWriter()
-    trainer.train_basic_nca(
-        loader_dna, summary_writer=writer, save_every=100
-    )
+    trainer.max_iterations = 1000
+    trainer.train_basic_nca(loader_dna, summary_writer=writer, save_every=100)
     writer.close()
 
 

@@ -10,6 +10,7 @@ from nca import (
     BasicNCATrainer,
     WEIGHTS_PATH,
     get_compute_device,
+    NCALab_banner,
 )
 
 import click
@@ -20,42 +21,30 @@ from torch.utils.tensorboard import SummaryWriter
 
 import numpy as np
 
-from pilmoji import Pilmoji
-from PIL import Image, ImageFont
-
-
-def get_emoji_image(emoji: str = "🦎", padding: int = 2, size: int = 24):
-    """_summary_
-
-    Args:
-        emoji (str, optional): String containing a single emoji character. Defaults to "🦎".
-        padding (int, optional): Number of pixels to pad to the sides. Defaults to 2.
-        size (int, optional): Total image size without padding. Defaults to 24.
-
-    Returns:
-        Image: Output PIL.Image containing an emoji on transparent background.
-    """
-    dims = (padding * 2 + size, padding * 2 + size)
-    with Image.new("RGBA", dims, (255, 255, 255, 0)) as image:
-        font = ImageFont.truetype("arial.ttf", size)
-        with Pilmoji(image) as pilmoji:
-            pilmoji.text((padding, padding), emoji.strip(), (0, 0, 0), font)
-        return image
+from growing_utils import get_emoji_image
 
 
 def train_growing_emoji(
     batch_size: int, hidden_channels: int, gpu: bool, gpu_index: int
 ):
-    """_summary_
+    """Main function to run the "growing emoji" example task.
 
     Args:
         batch_size (int, optional): _description_.
         hidden_channels (int, optional): _description_.
     """
+    # Display prologue
+    NCALab_banner()
+    print("Example task: Growing Emoji")
+    print()
+
+    # Create tensorboard summary writer
     writer = SummaryWriter()
 
+    # Select device, try to use GPU or fall back to CPU
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
+    # Create NCA model definition
     nca = GrowingNCAModel(
         device,
         num_image_channels=4,
@@ -63,10 +52,12 @@ def train_growing_emoji(
         use_alive_mask=False,
     )
 
+    # Create dataset containing a single growing emoji
     image = np.asarray(get_emoji_image())
     dataset = GrowingNCADataset(image, nca.num_channels, batch_size=batch_size)
     dataloader_train = DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
+    # Create Trainer and run training
     trainer = BasicNCATrainer(nca, WEIGHTS_PATH / "growing_emoji.pth")
     trainer.train_basic_nca(dataloader_train, summary_writer=writer, save_every=100)
     writer.close()

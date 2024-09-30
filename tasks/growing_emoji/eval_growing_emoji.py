@@ -10,7 +10,7 @@ import click
 
 import torch
 
-import matplotlib.pyplot as plt
+import matplotlib.pyplot as plt  # type: ignore[import-untyped]
 
 
 @click.command()
@@ -35,8 +35,8 @@ def eval_growing_emoji(gpu: bool, gpu_index: int):
 
     image = nca.grow(32, 32)
 
-    plt.imshow(image)
-    plt.axis("off")
+    plt.imshow(image)  # type: ignore[attr-defined]
+    plt.axis("off")  # type: ignore[attr-defined]
     plt.show()
 
 
