@@ -25,18 +25,18 @@ class BasicNCATrainer:
         gradient_clipping: bool = False,
         steps_range: tuple = (64, 96),
         steps_validation: int = 80,
-        lr: float = 2e-3,
+        lr: float = 16e-4,
         lr_gamma: float = 0.9999,
-        adam_betas=(0.5, 0.5),
+        adam_betas=(0.9, 0.99),
         batch_repeat: int = 2,
         truncate_backprop: bool = False,
         pad_noise: bool = False,
-        max_iterations: int = 5000,
+        max_epochs: int = 5000,
     ):
         assert batch_repeat >= 1
         assert lr > 0
         assert steps_range[0] < steps_range[1]
-        assert max_iterations > 0
+        assert max_epochs > 0
         self.nca = nca
         self.model_path = model_path
         self.gradient_clipping = gradient_clipping
@@ -48,7 +48,7 @@ class BasicNCATrainer:
         self.batch_repeat = batch_repeat
         self.truncate_backprop = truncate_backprop
         self.pad_noise = pad_noise
-        self.max_iterations = max_iterations
+        self.max_iterations = max_epochs
 
     def train_basic_nca(
         self,
@@ -145,7 +145,7 @@ class BasicNCATrainer:
             # disable tqdm progress bar if dataset has only one sample, e.g. in the growing task
             gen = iter(dataloader_train)
             if len(dataloader_train) > 3:
-                gen = tqdm(gen) # type: ignore[assignment]
+                gen = tqdm(gen)  # type: ignore[assignment]
             for i, sample in enumerate(gen):
                 x, y = sample
 
