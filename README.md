@@ -1,15 +1,15 @@
-# nca-models
+# NCALab
 
-Training code and pre-trained models for Neural Cellular Automata on different datasets and tasks.
-Since NCAs are so small (less than 1 MB each), we include pre-trained weights for all tasks in this repo.
+Neural Cellular Automata (NCA) implementations for various downstream tasks, with plenty of examples, eNCApsulated in a single module!
 
 
 ## Tasks and models included in this repo
 
   * Growing NCA for emoji generation
   * Self-classifying MNIST digits
-  * Self-classifying MedMNIST images (PathMNIST, BloodMNIST)
+  * MedMNIST image classification (PathMNIST, BloodMNIST)
   * Polyp Segmentation (Kvasir-SEG)
+  * Capsule endoscopic bleeding segmentation (KID2 dataset, proprietary)
 
 
 ## Future tasks

@@ -163,7 +163,7 @@ cython_debug/
 /result
 
 # Project specific
-#weights/
+weights/
 mnist/
 runs/
 docs/build/
