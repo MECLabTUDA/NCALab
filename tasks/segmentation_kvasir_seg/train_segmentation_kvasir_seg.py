@@ -6,24 +6,23 @@ sys.path.append(root_dir)
 
 from typing import Any
 
-from nca import SegmentationNCAModel, train_basic_nca, WEIGHTS_PATH, get_compute_device
+from nca import SegmentationNCAModel, BasicNCATrainer, WEIGHTS_PATH, get_compute_device
 
 from download_kvasir_seg import download_and_extract
 
 import click
 
-import torch
 import numpy as np
+
+from sklearn.model_selection import train_test_split
+
+import torch
+from torch.utils.tensorboard import SummaryWriter
+from torch.utils.data import Dataset, Subset
+from PIL import Image
 
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
-
-from torch.utils.tensorboard import SummaryWriter
-from torch.utils.data import Dataset, DataLoader
-from PIL import Image
-
-from torch.utils.data import DataLoader, Subset
-from sklearn.model_selection import train_test_split
 
 
 class KvasirSegDataset(Dataset):
@@ -84,15 +83,14 @@ def train_segmentation_kvasir_seg(batch_size: int, hidden_channels: int):
     val_split = Subset(dataset, val_indices)
 
     loader_train = torch.utils.data.DataLoader(
-        train_split, shuffle=True, batch_size=batch_size
+        train_split, shuffle=True, batch_size=batch_size, drop_last=True
     )
     loader_val = torch.utils.data.DataLoader(
-        val_split, shuffle=True, batch_size=batch_size
+        val_split, shuffle=True, batch_size=batch_size, drop_last=True
     )
 
-    train_basic_nca(
-        nca,
-        WEIGHTS_PATH / "segmentation_kvasir_seg.pth",
+    trainer = BasicNCATrainer(nca, WEIGHTS_PATH / "segmentation_kvasir_seg.pth")
+    trainer.train_basic_nca(
         loader_train,
         # loader_val,
         summary_writer=writer,
