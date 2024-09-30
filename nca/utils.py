@@ -25,3 +25,18 @@ def pad_input(x, nca, noise=True):
                 0, 1, size=(x.shape[0], nca.num_hidden_channels, x.shape[2], x.shape[3])
             )
     return x
+
+
+def NCALab_banner():
+    banner = """
+ _   _  _____          _           _     
+| \ | |/ ____|   /\   | |         | |    
+|  \| | |       /  \  | |     __ _| |__  
+| . ` | |      / /\ \ | |    / _` | '_ \ 
+| |\  | |____ / ____ \| |___| (_| | |_) |
+|_| \_|\_____/_/    \_\______\__,_|_.__/ 
+-----------------------------------------
+    Developed at MECLab - TU Darmstadt
+-----------------------------------------
+    """
+    print(banner)
