@@ -61,8 +61,6 @@ def show_batch_classification(x_seed, x_pred, y_true, nca):
     image_width = x_pred.shape[1]
     image_height = x_pred.shape[2]
 
-    print(batch_size, image_width, image_height)
-
     figure, ax = plt.subplots(
         3, batch_size, figsize=[batch_size * 2, 5], tight_layout=True
     )
