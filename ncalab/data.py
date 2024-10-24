@@ -1,8 +1,8 @@
 # TODO implement pattern pool
 # TODO implement damage
-from torch.utils.data import Dataset
 import numpy as np
-import torch
+import torch  # type: ignore[import-untyped]
+from torch.utils.data import Dataset  # type: ignore[import-untyped]
 
 
 class GrowingNCADataset(Dataset):

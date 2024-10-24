@@ -2,11 +2,11 @@ from .basicNCA import BasicNCAModel
 from ..visualization import show_batch_binary_segmentation
 from ..utils import pad_input
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+import torch  # type: ignore[import-untyped]
+import torch.nn as nn  # type: ignore[import-untyped]
+import torch.nn.functional as F  # type: ignore[import-untyped]
 
-from pytorch_msssim import ssim
+from pytorch_msssim import ssim  # type: ignore[import-untyped]
 
 
 class SmoothnessLoss(nn.Module):
@@ -156,7 +156,7 @@ class DepthNCAModel(BasicNCAModel):
     ):
         self.eval()
         total_ssim = 0
-        N = 0
+        N = 0.0
 
         with torch.no_grad():
             for images, labels in dataloader_val:
@@ -166,7 +166,7 @@ class DepthNCAModel(BasicNCAModel):
 
                 s = ssim(outputs, labels.unsqueeze(1), data_range=1.0)
                 total_ssim += s
-                N += 1
+                N += 1.0
         total_ssim /= N
         if summary_writer:
             summary_writer.add_scalar("Acc/val_MSE", total_ssim, batch_iteration)

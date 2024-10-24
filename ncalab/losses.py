@@ -1,6 +1,6 @@
-import torch
-from torch import nn
-import torch.nn.functional as F
+import torch  # type: ignore[import-untyped]
+import torch.nn as nn  # type: ignore[import-untyped]
+import torch.nn.functional as F  # type: ignore[import-untyped]
 
 
 class DiceScore(nn.Module):

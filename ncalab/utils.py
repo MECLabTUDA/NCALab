@@ -1,5 +1,5 @@
-import torch
-import torch.nn.functional as F
+import torch  # type: ignore[import-untyped]
+import torch.nn.functional as F  # type: ignore[import-untyped]
 
 
 def get_compute_device(device: str = "cuda:0") -> torch.device:

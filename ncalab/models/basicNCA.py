@@ -2,9 +2,9 @@ from __future__ import annotations
 from typing import Callable
 import numpy as np
 
-import torch
-import torch.nn as nn
-import torch.nn.functional as F
+import torch  # type: ignore[import-untyped]
+import torch.nn as nn  # type: ignore[import-untyped]
+import torch.nn.functional as F  # type: ignore[import-untyped]
 
 
 class BasicNCAModel(nn.Module):

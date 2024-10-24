@@ -1,7 +1,5 @@
-import logging
-
-import torch
-import torch.nn.functional as F
+import torch  # type: ignore[import-untyped]
+import torch.nn.functional as F  # type: ignore[import-untyped]
 
 import numpy as np
 

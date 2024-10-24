@@ -5,7 +5,7 @@ from ..losses import DiceBCELoss
 from ..visualization import show_batch_binary_segmentation
 from ..utils import pad_input
 
-import segmentation_models_pytorch as smp # type: ignore[import-untyped]
+import segmentation_models_pytorch as smp  # type: ignore[import-untyped]
 
 
 class SegmentationNCAModel(BasicNCAModel):
@@ -50,24 +50,29 @@ class SegmentationNCAModel(BasicNCAModel):
         )
         self.plot_function = show_batch_binary_segmentation
 
-    def segment(self, image, steps=80, pad_noise=False):
+    def segment(
+        self, image, return_all=False, pad_noise=False, return_steps=False, **kwargs
+    ):
+        if return_all:
+            return_steps = True
         with torch.no_grad():
             x = image.clone()
             x = pad_input(x, self, noise=pad_noise)
             x = x.permute(0, 2, 3, 1)
-            x = self(x, steps=steps)
-            hidden_channels = x[
-                ...,
-                self.num_image_channels : self.num_image_channels
-                + self.num_hidden_channels,
-            ]
+            x = self(x, **kwargs, return_steps=return_steps)
+            if return_steps:
+                steps = 0
+                x, steps = x
 
             class_channels = x[
                 ..., self.num_image_channels + self.num_hidden_channels :
             ]
-            import torch.nn.functional as F
 
-            return F.sigmoid(class_channels)
+            if return_all:
+                return class_channels, x, steps
+            if return_steps:
+                return x, steps
+            return class_channels
 
     def loss(self, x, y):
         hidden_channels = x[..., self.num_image_channels : -self.num_output_channels]

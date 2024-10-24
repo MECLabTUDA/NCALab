@@ -1,12 +1,11 @@
-import torch
-import torch.nn.functional as F
+import torch  # type: ignore[import-untyped]
+import torch.nn.functional as F  # type: ignore[import-untyped]
 
-from torcheval.metrics import MulticlassAccuracy, MulticlassAUROC, MulticlassF1Score
+from torcheval.metrics import MulticlassAccuracy, MulticlassAUROC, MulticlassF1Score  # type: ignore[import-untyped]
 
 from tqdm import tqdm
 
 from .basicNCA import BasicNCAModel
-
 from ..utils import pad_input
 
 

@@ -4,8 +4,8 @@ from typing import Callable
 
 import numpy as np
 
-import torch
-import torch.optim as optim
+import torch  # type: ignore[import-untyped]
+import torch.optim as optim  # type: ignore[import-untyped]
 from torch.utils.data import DataLoader  # for type hint
 from torch.utils.tensorboard import SummaryWriter  # for type hint
 
