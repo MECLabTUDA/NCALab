@@ -196,8 +196,9 @@ class BasicNCAModel(nn.Module):
             assert auto_plateau >= 1
             assert auto_max_steps > auto_min_steps
             cooldown = 0
-            hidden_i = None
-            hidden_i_1 = None
+            # invariant: auto_min_steps > 0, so both of these will be set when used
+            hidden_i: torch.Tensor | None = None
+            hidden_i_1: torch.Tensor | None = None
             for step in range(auto_max_steps):
                 with torch.no_grad():
                     if step >= auto_min_steps:
