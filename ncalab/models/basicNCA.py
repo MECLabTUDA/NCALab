@@ -21,6 +21,7 @@ class BasicNCAModel(nn.Module):
         num_learned_filters: int = 2,
         dx_noise: float = 0.0,
         filter_padding: str = "reflect",
+        kernel_size: int = 3,
     ):
         """Basic abstract class for NCA models.
 
@@ -68,9 +69,9 @@ class BasicNCAModel(nn.Module):
                     nn.Conv2d(
                         self.num_channels,
                         self.num_channels,
-                        kernel_size=3,
+                        kernel_size=kernel_size,
                         stride=1,
-                        padding=1,
+                        padding=(kernel_size // 2),
                         padding_mode=filter_padding,
                         groups=self.num_channels,
                         bias=False,
@@ -93,6 +94,9 @@ class BasicNCAModel(nn.Module):
             self.network[-1].weight.zero_()
 
         self.meta: dict = {}
+
+    def prepare_input(self, x):
+        return x
 
     def alive(self, x):
         mask = (
@@ -131,7 +135,7 @@ class BasicNCAModel(nn.Module):
         y = torch.cat(perception, 1)
         return y
 
-    def update(self, x, step=0):
+    def update(self, x):
         x = x.permute(0, 3, 1, 2)  # B W H C --> B C W H
 
         hidden_channels = x[
@@ -174,14 +178,66 @@ class BasicNCAModel(nn.Module):
         x = x.permute(0, 2, 3, 1)  # B C W H --> B W H C
         return x
 
-    def forward(self, x, steps: int = 1, return_variance: bool = False):
-        if return_variance:
-            for step in range(steps):
-                x = self.update(x, step)
+    def forward(
+        self,
+        x,
+        steps: int = 1,
+        auto_step: bool = False,
+        auto_max_steps: int = 100,
+        auto_min_steps: int = 10,
+        auto_plateau: int = 5,
+        auto_verbose: bool = False,
+        auto_threshold: float = 1e-2,
+        return_steps: bool = False,
+    ):
+        if auto_step:
+            # Assumption: min_steps >= 1; otherwise we cannot compute distance
+            assert auto_min_steps >= 1
+            assert auto_plateau >= 1
+            assert auto_max_steps > auto_min_steps
+            cooldown = 0
+            for step in range(auto_max_steps):
+                with torch.no_grad():
+                    if step >= auto_min_steps:
+                        # normalized absolute difference between two hidden states
+                        score = (hidden_i - hidden_i_1).abs().sum() / (
+                            hidden_i.shape[0]
+                            * hidden_i.shape[1]
+                            * hidden_i.shape[2]
+                            * hidden_i.shape[3]
+                        )
+                        if score >= auto_threshold:
+                            cooldown = 0
+                        else:
+                            cooldown += 1
+                        if cooldown >= auto_plateau:
+                            if auto_verbose:
+                                print(f"Breaking after {step} steps.")
+                            if return_steps:
+                                return x, step
+                            return x
+                # save previous hidden state
+                hidden_i_1 = x[
+                    ...,
+                    self.num_image_channels : self.num_image_channels
+                    + self.num_hidden_channels,
+                ]
+                # single inference time step
+                x = self.update(x)
+                # set current hidden state
+                hidden_i = x[
+                    ...,
+                    self.num_image_channels : self.num_image_channels
+                    + self.num_hidden_channels,
+                ]
+            if return_steps:
+                return x, auto_max_steps
             return x
         else:
             for step in range(steps):
-                x = self.update(x, step)
+                x = self.update(x)
+            if return_steps:
+                return x, steps
             return x
 
     def loss(self, x, target):
