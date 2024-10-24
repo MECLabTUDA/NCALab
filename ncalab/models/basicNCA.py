@@ -201,7 +201,11 @@ class BasicNCAModel(nn.Module):
             hidden_i_1: torch.Tensor | None = None
             for step in range(auto_max_steps):
                 with torch.no_grad():
-                    if step >= auto_min_steps:
+                    if (
+                        step >= auto_min_steps
+                        and hidden_i is not None
+                        and hidden_i_1 is not None
+                    ):
                         # normalized absolute difference between two hidden states
                         score = (hidden_i - hidden_i_1).abs().sum() / (
                             hidden_i.shape[0]
