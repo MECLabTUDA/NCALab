@@ -61,13 +61,8 @@ class GrowingNCAModel(BasicNCAModel):
         loss = F.mse_loss(x[..., : self.num_image_channels], y)
         return loss
 
-    def validate(
-        self,
-        *args,
-        **kwargs
-    ):
-        """We typically don't validate during training of Growing NCA.
-        """
+    def validate(self, *args, **kwargs):
+        """We typically don't validate during training of Growing NCA."""
         pass
 
     def grow(self, width: int, height: int, steps: int = 100) -> np.ndarray:
@@ -84,8 +79,7 @@ class GrowingNCAModel(BasicNCAModel):
         out = torch.zeros((1, self.num_channels, width, height)).to(self.device)
         out[:, 3:, :, :] = 1.0
         out = out.permute(0, 2, 3, 1)
-        for step in range(steps):
-            out = self.forward(out, steps=1)
-        out = out[..., :self.num_image_channels].detach().cpu().numpy()[0]
-        out = np.clip(out, 0, 1)
-        return out
+        out = self.forward(out, steps=steps)
+        out_np = out[..., : self.num_image_channels].detach().cpu().numpy()[0]
+        out_np = np.clip(out_np, 0, 1)
+        return out_np
