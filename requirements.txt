@@ -67,7 +67,7 @@ libclang==18.1.1
 Markdown==3.7
 markdown-it-py==3.0.0
 MarkupSafe==2.1.5
-matplotlib @ git+https://github.com/matplotlib/matplotlib@9f8eeba05f1d8e65467d7c539285a1dc925a79b3
+matplotlib==3.9.2
 matplotlib-inline==0.1.7
 mdurl==0.1.2
 ml-dtypes==0.4.1
@@ -91,7 +91,7 @@ nvidia-cusparse-cu12==12.1.0.106
 nvidia-nccl-cu12==2.20.5
 nvidia-nvjitlink-cu12==12.6.68
 nvidia-nvtx-cu12==12.1.105
-open3d-cpu @ file:///home/hjkrumb-local/Open3D/build/lib/python_package/pip_package/open3d_cpu-0.18.0%2B1a9885363-cp310-cp310-manylinux_2_39_x86_64.whl#sha256=e19234f80b8f87aeb180fbde6e9cbd0c481688b1f1b7c2465bf60665436f2b8d
+open3d-cpu==0.18.0
 opencv-python==4.10.0.84
 opencv-python-headless==4.10.0.84
 opt_einsum==3.4.0
