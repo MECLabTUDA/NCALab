@@ -1,15 +1,12 @@
-import torch
-
 from .basicNCA import BasicNCAModel
 from ..visualization import show_batch_binary_segmentation
 from ..utils import pad_input
 
 import torch
 import torch.nn as nn
-from pytorch_msssim import ssim
-
-
 import torch.nn.functional as F
+
+from pytorch_msssim import ssim
 
 
 class SmoothnessLoss(nn.Module):
