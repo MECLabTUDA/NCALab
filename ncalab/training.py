@@ -23,8 +23,8 @@ class BasicNCATrainer:
         nca: BasicNCAModel,
         model_path: str | Path | PosixPath,
         gradient_clipping: bool = False,
-        steps_range: tuple = (64, 96),
-        steps_validation: int = 80,
+        steps_range: tuple = (90, 110),
+        steps_validation: int = 100,
         lr: float = 16e-4,
         lr_gamma: float = 0.9999,
         adam_betas=(0.9, 0.99),
@@ -32,11 +32,13 @@ class BasicNCATrainer:
         truncate_backprop: bool = False,
         pad_noise: bool = False,
         max_epochs: int = 5000,
+        p_retain_pool: float = 0.0,
     ):
         assert batch_repeat >= 1
         assert lr > 0
         assert steps_range[0] < steps_range[1]
         assert max_epochs > 0
+        assert p_retain_pool >= 0.0 and p_retain_pool <= 1.0
         self.nca = nca
         self.model_path = model_path
         self.gradient_clipping = gradient_clipping
@@ -49,6 +51,7 @@ class BasicNCATrainer:
         self.truncate_backprop = truncate_backprop
         self.pad_noise = pad_noise
         self.max_iterations = max_epochs
+        self.p_retain_pool = p_retain_pool
 
     def train_basic_nca(
         self,
@@ -146,6 +149,10 @@ class BasicNCATrainer:
             gen = iter(dataloader_train)
             if len(dataloader_train) > 3:
                 gen = tqdm(gen)  # type: ignore[assignment]
+
+            # TRAINING
+            if self.p_retain_pool > 0.0:
+                x_previous = None
             for i, sample in enumerate(gen):
                 x, y = sample
 
@@ -153,7 +160,16 @@ class BasicNCATrainer:
                 # But out NCA operates on multiple hidden channels and output channels, so we
                 # need to pad the input image with zeros.
                 x = pad_input(x, self.nca, noise=self.pad_noise)
-                x = x.permute(0, 2, 3, 1)  # B W H C
+                x = self.nca.prepare_input(x)
+                x = x.permute(0, 2, 3, 1)  # --> B W H C
+                if (
+                    self.p_retain_pool > 0.0
+                    and x_previous is not None
+                    and np.random.random() <= self.p_retain_pool
+                ):
+                    # batch sizes might be incompatible if DataLoader has drop_last set to False (default)
+                    if x_previous.shape[0] == x.shape[0]:
+                        x[:, :, :, self.nca.num_image_channels :]
 
                 # batch duplication, slightly stabelizes the training
                 x = torch.cat(self.batch_repeat * [x])
@@ -161,7 +177,10 @@ class BasicNCATrainer:
 
                 steps = np.random.randint(*self.steps_range)
                 x_pred = train_iteration(x, y, steps, optimizer, scheduler, iteration)
+                if self.p_retain_pool > 0.0:
+                    x_previous = x_pred
 
+            # VISUALIZATION
             if plot_function and summary_writer and (iteration + 1) % save_every == 0:
                 figure = plot_function(
                     x.detach().cpu().numpy(),
@@ -171,6 +190,7 @@ class BasicNCATrainer:
                 )
                 summary_writer.add_figure("Training Batch", figure, iteration)
 
+            # VALIDATION
             with torch.no_grad():
                 self.nca.eval()
                 torch.save(self.nca.state_dict(), self.model_path)
