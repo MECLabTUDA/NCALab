@@ -119,7 +119,7 @@ class BasicNCAModel(nn.Module):
 
     def perceive(self, x):
         def _perceive_with(x, weight):
-            if type(weight) == nn.Conv2d:
+            if isinstance(weight, nn.Conv2d):
                 return weight(x)
             # if using a hard coded filter matrix.
             # this is done in the original Growing NCA paper, but learned filters typically
@@ -196,6 +196,8 @@ class BasicNCAModel(nn.Module):
             assert auto_plateau >= 1
             assert auto_max_steps > auto_min_steps
             cooldown = 0
+            hidden_i = None
+            hidden_i_1 = None
             for step in range(auto_max_steps):
                 with torch.no_grad():
                     if step >= auto_min_steps:
