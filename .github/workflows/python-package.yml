@@ -41,5 +41,5 @@ jobs:
         pytest
     - name: Type checking with mypy
       run: |
-        mypy nca
+        mypy ncalab
         mypy tests
