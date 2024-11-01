@@ -4,7 +4,7 @@ import sys, os
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from nca import GrowingNCAModel, WEIGHTS_PATH, get_compute_device
+from ncalab import GrowingNCAModel, WEIGHTS_PATH, get_compute_device
 
 import click
 
