@@ -3,29 +3,42 @@ import sys, os
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from nca import (
+from ncalab import (
     ClassificationNCAModel,
     BasicNCATrainer,
     WEIGHTS_PATH,
     show_batch_binary_image_classification,
     get_compute_device,
+    NCALab_banner,
+    print_mascot,
 )
 
 import click
 
+from sklearn.model_selection import train_test_split  # type: ignore[import-untyped]
+
 import torch
 
-from torchvision.datasets import MNIST
+from torchvision.datasets import MNIST  # type: ignore[import-untyped]
 from torch.utils.data import Subset
-from sklearn.model_selection import train_test_split
-from torchvision import transforms
+from torchvision import transforms  # type: ignore[import-untyped]
 from torch.utils.tensorboard import SummaryWriter
 
 
 def train_selfclass_mnist(
     batch_size: int, hidden_channels: int, gpu: bool, gpu_index: int
 ):
-    writer = SummaryWriter()
+    NCALab_banner()
+    print()
+    print_mascot(
+        "While this model is training, you may like to read the\n"
+        " original article about self-classifying MNIST digits:\n"
+        "\n"
+        "https://distill.pub/2020/selforg/mnist/\n"
+        "(Ctrl + click to open in browser)"
+    )
+
+    writer = SummaryWriter(comment="Selfclassifying MNIST")
 
     mnist_train = MNIST(
         "mnist",
@@ -34,6 +47,7 @@ def train_selfclass_mnist(
         transform=transforms.Compose([transforms.ToTensor()]),
     )
 
+    # Split MNIST dataset into training and validation
     train_indices, val_indices, _, _ = train_test_split(
         range(len(mnist_train)),
         mnist_train.targets,
@@ -61,14 +75,18 @@ def train_selfclass_mnist(
         pixel_wise_loss=True,
     )
 
-    trainer = BasicNCATrainer(nca, WEIGHTS_PATH / "selfclass_mnist.pth")
+    trainer = BasicNCATrainer(
+        nca,
+        WEIGHTS_PATH / "selfclass_mnist.pth",
+        steps_range=(40, 60),
+        steps_validation=50,
+        max_epochs=10,
+    )
     trainer.train_basic_nca(
         loader_train,
-        #loader_val,
+        # loader_val,
         summary_writer=writer,
         plot_function=show_batch_binary_image_classification,
-        steps_range=(40, 60),
-        steps_validation=50
     )
     writer.close()
 
