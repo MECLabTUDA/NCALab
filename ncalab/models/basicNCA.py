@@ -159,12 +159,14 @@ class BasicNCAModel(nn.Module):
         stochastic = torch.rand([dx.size(0), dx.size(1), dx.size(2), 1]) > fire_rate
         stochastic = stochastic.float().to(self.device)
         dx = dx * stochastic
-        if self.immutable_image_channels:
-            dx[..., : self.num_image_channels] *= 0
 
         dx += self.dx_noise * torch.randn([dx.size(0), dx.size(1), dx.size(2), 1]).to(
             self.device
         )
+        
+        if self.immutable_image_channels:
+            dx[..., : self.num_image_channels] *= 0
+
         dx = dx.permute(0, 3, 1, 2)  # B W H C --> B C W H
         x = x + dx
 
