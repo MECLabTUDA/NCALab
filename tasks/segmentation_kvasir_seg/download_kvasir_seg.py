@@ -1,5 +1,8 @@
 #!/usr/bin/env python3
-import os
+import sys, os
+
+root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+sys.path.append(root_dir)
 import hashlib
 import shutil
 
@@ -7,9 +10,15 @@ import click
 import requests
 import tqdm
 
+from pathlib import Path
+
 KVASIR_SEG_URL = "https://datasets.simula.no/downloads/kvasir-seg.zip"
 KVASIR_SEG_CHECKSUM = "03b30e21d584e04facf49397a2576738fd626815771afbbf788f74a7153478f7"
 RANDOM_STATE = 1337
+
+from ncalab.paths import ROOT_PATH
+
+KVASIR_SEG_PATH = ROOT_PATH / "data" / "kvasir_seg"
 
 
 def validate_checksum(filename: str):
@@ -93,9 +102,7 @@ def extract_archive(filename, destination=None):
 def download_and_extract():
     """_summary_
     """
-    os.makedirs("data", exist_ok=True)
-    if os.path.exists("data/kvasir_seg"):
-        return
+    KVASIR_SEG_PATH.mkdir(exist_ok=True)
     if os.path.exists("kvasir_seg.zip"):
         if not validate_checksum("kvasir_seg.zip"):
             download_kvasir_seg("kvasir_seg.zip")
@@ -103,8 +110,4 @@ def download_and_extract():
     else:
         download_kvasir_seg("kvasir_seg.zip")
         validate_checksum("kvasir_seg.zip")
-    extract_archive("kvasir_seg.zip", "data/kvasir_seg")
-
-
-if __name__ == "__main__":
-    download_and_extract()
+    extract_archive("kvasir_seg.zip", KVASIR_SEG_PATH)

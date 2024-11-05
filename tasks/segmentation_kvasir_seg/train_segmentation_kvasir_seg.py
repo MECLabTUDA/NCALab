@@ -6,9 +6,15 @@ sys.path.append(root_dir)
 
 from typing import Any
 
-from nca import SegmentationNCAModel, BasicNCATrainer, WEIGHTS_PATH, get_compute_device
+from ncalab import (
+    SegmentationNCAModel,
+    BasicNCATrainer,
+    WEIGHTS_PATH,
+    get_compute_device,
+    print_mascot,
+)
 
-from download_kvasir_seg import download_and_extract
+from download_kvasir_seg import download_and_extract, KVASIR_SEG_PATH
 
 import click
 
@@ -29,7 +35,7 @@ class KvasirSegDataset(Dataset):
     def __init__(self, path: str, transform=None) -> None:
         super().__init__()
         self.path = path
-        self.image_filenames = sorted(os.listdir(path + "/images"))
+        self.image_filenames = sorted((path / "Kvasir-SEG" / "images").glob("*.jpg"))
         self.transform = transform
 
     def __len__(self):
@@ -67,11 +73,12 @@ def train_segmentation_kvasir_seg(batch_size: int, hidden_channels: int):
         [
             A.RandomCrop(300, 300),
             A.Resize(64, 64),
-            A.Flip(),
+            A.RandomRotate90(),
+            A.HorizontalFlip(),
             ToTensorV2(),
         ]
     )
-    dataset = KvasirSegDataset("data/kvasir_seg/Kvasir-SEG", transform=T)
+    dataset = KvasirSegDataset(KVASIR_SEG_PATH, transform=T)
 
     train_indices, val_indices, _, _ = train_test_split(
         range(len(dataset)),
@@ -102,7 +109,22 @@ def train_segmentation_kvasir_seg(batch_size: int, hidden_channels: int):
 @click.option("--batch-size", "-b", default=8, type=int)
 @click.option("--hidden-channels", "-H", default=14, type=int)
 def main(batch_size, hidden_channels):
-    download_and_extract()
+    print_mascot(
+        "So you decided to run NCAs on a medical dataset.\n"
+        "Awesome, I love working on medical datasets!\n"
+        "\n"
+        "Let's see... Kvasir-SEG, this is an endoscopic dataset, right?\n"
+        "Polyp segmentation, that's super interesting!\n"
+        "\n"
+        "I'm excited to see how NCAs will perform on that."
+    )
+
+    if not KVASIR_SEG_PATH.exists():
+        print_mascot(
+            "I could not find the Kvasir-SEG dataset on your device.\n"
+            "Let me download it for you, it might take a minute."
+        )
+        download_and_extract()
 
     train_segmentation_kvasir_seg(
         batch_size=batch_size, hidden_channels=hidden_channels
