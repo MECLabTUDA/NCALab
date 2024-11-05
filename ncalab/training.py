@@ -21,7 +21,7 @@ class BasicNCATrainer:
     def __init__(
         self,
         nca: BasicNCAModel,
-        model_path: str | Path | PosixPath,
+        model_path: str | Path | PosixPath | None = None,
         gradient_clipping: bool = False,
         steps_range: tuple = (90, 110),
         steps_validation: int = 100,
@@ -98,7 +98,10 @@ class BasicNCATrainer:
         optimizer = optim.Adam(self.nca.parameters(), lr=self.lr, betas=self.adam_betas)
         scheduler = optim.lr_scheduler.ExponentialLR(optimizer, self.lr_gamma)
         best_acc = 0
-        best_path = Path(self.model_path).with_suffix(".best.pth")
+        if self.model_path:
+            best_path = Path(self.model_path).with_suffix(".best.pth")
+        else:
+            best_path = None
 
         def train_iteration(
             x: torch.Tensor,
@@ -144,11 +147,11 @@ class BasicNCATrainer:
             return x_pred
 
         # Main training/validation loop
-        for iteration in tqdm(range(self.max_iterations)):
+        for iteration in tqdm(range(self.max_iterations), desc="Epochs"):
             # disable tqdm progress bar if dataset has only one sample, e.g. in the growing task
             gen = iter(dataloader_train)
             if len(dataloader_train) > 3:
-                gen = tqdm(gen)  # type: ignore[assignment]
+                gen = tqdm(gen, desc="Batches")  # type: ignore[assignment]
 
             # TRAINING
             if self.p_retain_pool > 0.0:
@@ -193,7 +196,8 @@ class BasicNCATrainer:
             # VALIDATION
             with torch.no_grad():
                 self.nca.eval()
-                torch.save(self.nca.state_dict(), self.model_path)
+                if self.model_path:
+                    torch.save(self.nca.state_dict(), self.model_path)
 
                 if dataloader_val:
                     val_acc = self.nca.validate(
@@ -205,5 +209,6 @@ class BasicNCATrainer:
                     )
                     if val_acc > best_acc:
                         print(f"improved: {best_acc:.5f} --> {val_acc:.5f}")
-                        torch.save(self.nca.state_dict(), best_path)
+                        if best_path:
+                            torch.save(self.nca.state_dict(), best_path)
                         best_acc = val_acc
