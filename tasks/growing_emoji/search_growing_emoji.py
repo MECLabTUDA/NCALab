@@ -16,9 +16,7 @@ from ncalab import (
 )
 
 import click
-
 from torch.utils.data import DataLoader
-
 import numpy as np
 
 from growing_utils import get_emoji_image
@@ -55,20 +53,25 @@ def search_growing_emoji(
     dataset = GrowingNCADataset(image, hidden_channels + 4, batch_size=batch_size)
     dataloader_train = DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
+    # Set up parameter ranges for grid search
     model_params = ParameterSet(
         fire_rate=[0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
         learned_filters=[0, 2],
         num_image_channels=4,
         num_hidden_channels=hidden_channels,
     )
+    # No need to search trainer parameters, but we could do that
     trainer_params = ParameterSet(max_epochs=1000)
 
+    # Set up hyperparameter search (grid search)
     search = ParameterSearch(device, GrowingNCAModel, model_params, trainer_params)
+
+    # Print search metadata
     print(search.info())
     print()
-    search(
-        dataloader_train,
-    )
+
+    # Run the search!
+    search(dataloader_train)
 
 
 @click.command()
