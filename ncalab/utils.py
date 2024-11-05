@@ -22,7 +22,9 @@ def pad_input(x, nca, noise=True):
                 :,
                 :,
             ] = torch.normal(
-                0.5, 0.225, size=(x.shape[0], nca.num_hidden_channels, x.shape[2], x.shape[3])
+                0.5,
+                0.225,
+                size=(x.shape[0], nca.num_hidden_channels, x.shape[2], x.shape[3]),
             )
     return x
 
@@ -40,3 +42,21 @@ def NCALab_banner():
 -----------------------------------------
     """
     print(banner)
+
+
+def print_mascot(message):
+    if not message:
+        return
+    h = len(message.splitlines())
+    w = max([len(L) for L in message.splitlines()])
+    print("  " + "-" * w)
+    for L in message.splitlines():
+        print(f"| {L}" + " " * (w - len(L)) + " |")
+    print("  " + "=" * w)
+    print(" " * w + "   \\")
+    print(" " * w + "    \\")
+
+    try:
+        print(" " * (w + 3) + "\N{Microscope}\N{rat}")
+    except UnicodeEncodeError:
+        print(" " * (w + 5) + ":3")
