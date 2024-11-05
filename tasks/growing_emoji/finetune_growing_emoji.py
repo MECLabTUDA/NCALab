@@ -4,12 +4,13 @@ import sys, os
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from nca import (
+from ncalab import (
     GrowingNCADataset,
     GrowingNCAModel,
     BasicNCATrainer,
     WEIGHTS_PATH,
     get_compute_device,
+    print_mascot,
 )
 
 import click
@@ -23,7 +24,7 @@ import numpy as np
 from growing_utils import get_emoji_image
 
 
-def train_growing_emoji(
+def finetune_growing_emoji(
     batch_size: int, hidden_channels: int, gpu: bool, gpu_index: int
 ):
     """_summary_
@@ -32,7 +33,14 @@ def train_growing_emoji(
         batch_size (int, optional): _description_.
         hidden_channels (int, optional): _description_.
     """
-    writer = SummaryWriter()
+    print_mascot(
+        "Things are getting really exciting now!\n"
+        "You're about to finetune a pre-trained NCA\n"
+        "by adjusting only its final layer.\n"
+        "\n"
+        "That's pretty cool, isn't it?"
+    )
+    print()
 
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
@@ -43,22 +51,31 @@ def train_growing_emoji(
         use_alive_mask=False,
     )
 
+    # Create emoji dataset for initial training
     image_lizard = np.asarray(get_emoji_image("🦎"))
     dataset_lizard = GrowingNCADataset(
         image_lizard, nca.num_channels, batch_size=batch_size
     )
     loader_lizard = DataLoader(dataset_lizard, batch_size=batch_size, shuffle=False)
 
+    # Run initial training
+    writer = SummaryWriter(comment="Growing Emoji: Pre-Training")
+    trainer = BasicNCATrainer(nca, WEIGHTS_PATH / "growing_emoji_finetuned.pth")
+    trainer.train_basic_nca(loader_lizard, summary_writer=writer, save_every=100)
+    writer.close()
+
+    # So far so good.
+    # Now we will freeze the first layer, and only train the linear layer! :)
+
+    # Create emoji dataset for finetuning
     image_dna = np.asarray(get_emoji_image("🧬"))
     dataset_dna = GrowingNCADataset(image_dna, nca.num_channels, batch_size=batch_size)
     loader_dna = DataLoader(dataset_dna, batch_size=batch_size, shuffle=False)
 
-    trainer = BasicNCATrainer(nca, WEIGHTS_PATH / "growing_emoji_finetuned.pth")
-    trainer.train_basic_nca(loader_lizard, summary_writer=writer, save_every=100)
+    # Re-train with frozen final layer
     nca.finetune()
-
-    writer = SummaryWriter()
-    trainer.max_iterations = 1000
+    writer = SummaryWriter(comment="Growing Emoji: Finetuning")
+    trainer.max_iterations = 1000  # we don't need as many iterations now
     trainer.train_basic_nca(loader_dna, summary_writer=writer, save_every=100)
     writer.close()
 
@@ -73,7 +90,7 @@ def train_growing_emoji(
     "--gpu-index", type=int, default=0, help="Index of GPU to use, if --gpu in use."
 )
 def main(batch_size, hidden_channels, gpu, gpu_index):
-    train_growing_emoji(
+    finetune_growing_emoji(
         batch_size=batch_size,
         hidden_channels=hidden_channels,
         gpu=gpu,
