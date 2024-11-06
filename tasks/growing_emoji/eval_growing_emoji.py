@@ -37,6 +37,7 @@ def eval_growing_emoji(gpu: bool, gpu_index: int):
     images = nca.grow(32, 32, save_steps=True)
 
     fig, ax = plt.subplots()
+    fig.set_size_inches(2, 2)
     im = ax.imshow(images[0], animated=True)
     ax.set_axis_off()
 
