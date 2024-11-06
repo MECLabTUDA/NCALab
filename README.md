@@ -3,30 +3,29 @@
 Neural Cellular Automata (NCA) implementations for various downstream tasks, with plenty of examples, eNCApsulated in a single module!
 
 
+![NCALab Logo](artwork/ncalab_logo.png)
+
+
 ## Tasks and models included in this repo
 
   * Growing NCA for emoji generation
   * Self-classifying MNIST digits
   * MedMNIST image classification (PathMNIST, BloodMNIST)
-  * Polyp Segmentation (Kvasir-SEG)
+  * Polyp segmentation on endoscopic images (Kvasir-SEG, public)
   * Capsule endoscopic bleeding segmentation (KID2 dataset, proprietary)
-
-
-## Future tasks
-
-Tasks we want to include in the future:
-
-  * Other MedMNIST tasks
-  * FashionMNIST
-  * Detection tasks
-
-Feel free to open an issue if there is a particular task or dataset you're interested in.
-However, we will only provide weights for public data.
 
 
 ## Getting started
 
 You can find some example tasks inside the `tasks/` directory and its subfolders.
+
+```bash
+python3 tasks/growing_emoji/train_growing_emoji.py
+```
+
+```bash
+python3 tasks/growing_emoji/eval_growing_emoji.py
+```
 
 
 ## Tensorboard integration
@@ -46,4 +45,5 @@ Alternatively, you may use the tensorboard integration of your IDE.
 ## Cite this work
 
 ```bibtex
+TBA
 ```
