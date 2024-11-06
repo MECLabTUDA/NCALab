@@ -16,7 +16,7 @@ class GrowingNCAModel(BasicNCAModel):
         fire_rate: float = 0.5,
         hidden_size: int = 128,
         use_alive_mask: bool = False,
-        learned_filters: int = 2,
+        **kwargs,
     ):
         """NCA Model class for "growing" tasks.
 
@@ -42,7 +42,7 @@ class GrowingNCAModel(BasicNCAModel):
             hidden_size,
             use_alive_mask,
             immutable_image_channels=False,
-            num_learned_filters=learned_filters,
+            **kwargs,
         )
         self.plot_function = show_batch_growing
 
@@ -63,7 +63,9 @@ class GrowingNCAModel(BasicNCAModel):
         """We typically don't validate during training of Growing NCA."""
         pass
 
-    def grow(self, width: int, height: int, steps: int = 100) -> np.ndarray:
+    def grow(
+        self, width: int, height: int, steps: int = 100, save_steps=False
+    ) -> np.ndarray:
         """Run the growth process and return the resulting output image.
 
         Args:
@@ -77,7 +79,17 @@ class GrowingNCAModel(BasicNCAModel):
         out = torch.zeros((1, self.num_channels, width, height)).to(self.device)
         out[:, 3:, :, :] = 1.0
         out = out.permute(0, 2, 3, 1)
-        out = self.forward(out, steps=steps)
+
+        if save_steps:
+            step_outs = []
+            for _ in range(steps):
+                out = self.forward(out, steps=1)
+                step_outs.append(
+                    np.clip(out[..., : self.num_image_channels].squeeze().detach().cpu().numpy(), 0, 1)
+                )
+            return step_outs
+        else:
+            out = self.forward(out, steps=steps)
         out_np = out[..., : self.num_image_channels].detach().cpu().numpy()[0]
         out_np = np.clip(out_np, 0, 1)
         return out_np
