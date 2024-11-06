@@ -1,3 +1,5 @@
+from typing import List
+
 import torch  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
 
@@ -65,7 +67,7 @@ class GrowingNCAModel(BasicNCAModel):
 
     def grow(
         self, width: int, height: int, steps: int = 100, save_steps=False
-    ) -> np.ndarray:
+    ) -> np.ndarray | List[np.ndarray]:
         """Run the growth process and return the resulting output image.
 
         Args:
