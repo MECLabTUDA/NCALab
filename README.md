@@ -5,6 +5,7 @@ Neural Cellular Automata (NCA) implementations for various downstream tasks, wit
 
 ![docs](https://github.com/MECLabTUDA/NCAlab/actions/workflows/docs.yml/badge.svg)
 ![python-package](https://github.com/MECLabTUDA/NCAlab/actions/workflows/python-package.yml/badge.svg)
+![manuscript](https://github.com/MECLabTUDA/NCAlab/actions/workflows/draft-pdf.yml/badge.svg)
 
 ![NCALab Logo](artwork/ncalab_logo.png)
 
