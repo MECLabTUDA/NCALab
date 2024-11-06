@@ -11,7 +11,7 @@ from torch.utils.tensorboard import SummaryWriter  # for type hint
 
 from matplotlib.figure import Figure  # type: ignore[import-untyped]
 
-from tqdm import tqdm
+from tqdm import tqdm  # type: ignore[import-untyped]
 
 from .models.basicNCA import BasicNCAModel  # for type hint
 from .utils import pad_input

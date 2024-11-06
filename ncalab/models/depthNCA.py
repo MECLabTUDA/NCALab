@@ -155,7 +155,7 @@ class DepthNCAModel(BasicNCAModel):
         pad_noise: bool = False,
     ):
         self.eval()
-        total_ssim = 0
+        total_ssim = 0.0
         N = 0.0
 
         with torch.no_grad():

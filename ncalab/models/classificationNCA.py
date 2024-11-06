@@ -3,7 +3,7 @@ import torch.nn.functional as F  # type: ignore[import-untyped]
 
 from torcheval.metrics import MulticlassAccuracy, MulticlassAUROC, MulticlassF1Score  # type: ignore[import-untyped]
 
-from tqdm import tqdm
+from tqdm import tqdm  # type: ignore[import-untyped]
 
 from .basicNCA import BasicNCAModel
 from ..utils import pad_input
