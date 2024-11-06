@@ -1,6 +1,6 @@
 import torch
 
-from nca import get_compute_device, pad_input, GrowingNCAModel
+from ncalab import get_compute_device, pad_input, GrowingNCAModel
 
 
 def test_pad_input():
@@ -20,6 +20,8 @@ def test_pad_input():
     X_padded_noise = pad_input(X, nca, noise=True)
     assert X_padded_noise.shape == (batch_size, total_channels, W, H)
     assert (
-        torch.std(X_padded_noise[:, image_channels:, :, :], dim=None, keepdim=False).float()
+        torch.std(
+            X_padded_noise[:, image_channels:, :, :], dim=None, keepdim=False
+        ).float()
         != 0
     )
