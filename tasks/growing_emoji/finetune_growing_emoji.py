@@ -10,6 +10,7 @@ from ncalab import (
     BasicNCATrainer,
     WEIGHTS_PATH,
     get_compute_device,
+    NCALab_banner,
     print_mascot,
 )
 
@@ -33,6 +34,7 @@ def finetune_growing_emoji(
         batch_size (int, optional): _description_.
         hidden_channels (int, optional): _description_.
     """
+    NCALab_banner()
     print_mascot(
         "Things are getting really exciting now!\n"
         "You're about to finetune a pre-trained NCA\n"
@@ -52,7 +54,7 @@ def finetune_growing_emoji(
     )
 
     # Create emoji dataset for initial training
-    image_lizard = np.asarray(get_emoji_image("🦎"))
+    image_lizard = np.asarray(get_emoji_image("\N{lizard}"))
     dataset_lizard = GrowingNCADataset(
         image_lizard, nca.num_channels, batch_size=batch_size
     )
@@ -68,7 +70,7 @@ def finetune_growing_emoji(
     # Now we will freeze the first layer, and only train the linear layer! :)
 
     # Create emoji dataset for finetuning
-    image_dna = np.asarray(get_emoji_image("🧬"))
+    image_dna = np.asarray(get_emoji_image("\N{rat}"))
     dataset_dna = GrowingNCADataset(image_dna, nca.num_channels, batch_size=batch_size)
     loader_dna = DataLoader(dataset_dna, batch_size=batch_size, shuffle=False)
 

@@ -49,7 +49,7 @@ def train_growing_emoji(
     print()
 
     # Create tensorboard summary writer
-    writer = SummaryWriter()
+    writer = SummaryWriter("Growing Emoji")
 
     # Select device, try to use GPU or fall back to CPU
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")

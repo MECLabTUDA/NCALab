@@ -11,6 +11,7 @@ import click
 import torch
 
 import matplotlib.pyplot as plt  # type: ignore[import-untyped]
+import matplotlib.animation as animation  # type: ignore[import-untyped]
 
 
 @click.command()
@@ -33,11 +34,26 @@ def eval_growing_emoji(gpu: bool, gpu_index: int):
     nca.load_state_dict(torch.load(WEIGHTS_PATH / "growing_emoji.pth"))
     nca.eval()
 
-    image = nca.grow(32, 32)
+    images = nca.grow(32, 32, save_steps=True)
 
-    plt.imshow(image)  # type: ignore[attr-defined]
-    plt.axis("off")  # type: ignore[attr-defined]
-    plt.show()
+    fig, ax = plt.subplots()
+    im = ax.imshow(images[0], animated=True)
+    ax.set_axis_off()
+
+    def update(i):
+        im.set_array(images[i])
+        return (im,)
+
+    animation_fig = animation.FuncAnimation(
+        fig,
+        update,
+        frames=len(images),
+        interval=100,
+        blit=True,
+        repeat=True,
+        repeat_delay=3000,
+    )
+    animation_fig.save("artwork/growing_emoji.gif")
 
 
 if __name__ == "__main__":

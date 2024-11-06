@@ -31,6 +31,9 @@ python3 tasks/growing_emoji/train_growing_emoji.py
 python3 tasks/growing_emoji/eval_growing_emoji.py
 ```
 
+![NCALab Logo](artwork/growing_emoji.gif)
+
+
 
 ## Tensorboard integration
 
