@@ -50,7 +50,7 @@ def print_MNIST_digit(image, prediction):
 
 
 def eval_selfclass_mnist(
-    hidden_channels: int, gpu: bool, gpu_index: int
+    hidden_channels: int, gpu: bool, gpu_index: int, num_digits: int = 3
 ):
     mnist_test = MNIST(
         "mnist",
@@ -75,7 +75,7 @@ def eval_selfclass_mnist(
     nca.load_state_dict(torch.load(WEIGHTS_PATH / "selfclass_mnist.pth", weights_only=True))
     nca.eval()
 
-    i = 1
+    i = num_digits
     for image, _ in loader_test:
         if i == 0:
             break
@@ -88,8 +88,15 @@ def eval_selfclass_mnist(
         print_MNIST_digit(image[0, 0], prediction)
 
         if i != 1:
-            click.secho("-" * 28 * 2)
+            click.secho("-" * 28)
         i -= 1
+
+    click.secho()
+    click.secho(f"You should see {num_digits} random downscaled (2x) pictures of\n" \
+                "handwritten digits (0-9) in the lines above.\n" \
+                "If they are correctly classified by the NCA, the numbers\n" \
+                "inside the blocks correspond to the written digit.\n")
+
 
 
 @click.command()
