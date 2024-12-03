@@ -84,6 +84,7 @@ def train_selfclass_mnist(
     )
     trainer.train_basic_nca(
         loader_train,
+        # Validation is broken here. We're working on it!
         # loader_val,
         summary_writer=writer,
         plot_function=show_batch_binary_image_classification,
