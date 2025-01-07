@@ -1,6 +1,6 @@
 # NCALab
 
-Neural Cellular Automata (NCA) implementations for different downstream tasks, with multiple examples, eNCApsulated in a single Python module.
+Neural Cellular Automata (NCA) implementations for different downstream tasks, featuring multiple usage examples, eNCApsulated in a single Python module.
 
 
 
@@ -11,9 +11,14 @@ Neural Cellular Automata (NCA) implementations for different downstream tasks, w
 ![NCALab Logo](artwork/ncalab_logo.png)
 
 
-## Example
 
-So far, the following example tasks are implemented:
+## Getting started
+
+
+
+### Usage Examples
+
+So far, the following example tasks are implemented in NCALab:
 
   * Image Generation:
     * Growing NCA for emoji generation
@@ -28,9 +33,7 @@ So far, the following example tasks are implemented:
     * Capsule endoscopic bleeding segmentation (KID2 dataset, proprietary)
 
 
-## Getting started
-
-You can find some example tasks inside the `tasks/` directory and its subfolders.
+You can find those example tasks inside the `tasks/` directory and its subfolders.
 
 A good starting point to get started with NCAs is the famous Growing Lizard emoji example.
 
@@ -48,6 +51,17 @@ python3 tasks/growing_emoji/eval_growing_emoji.py
 
 ![NCALab Logo](artwork/growing_emoji.gif)
 
+
+### Installation
+
+Run
+
+```bash
+pip install git+https://github.com/MECLabTUDA/NCAlab
+```
+
+to install the most recent version of NCALab.
+We recommend to install NCALab in a virtual environment.
 
 
 ## Tensorboard integration
