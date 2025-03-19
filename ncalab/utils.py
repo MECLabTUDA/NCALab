@@ -1,3 +1,8 @@
+import os
+import random
+
+import numpy as np
+
 import torch  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
 
@@ -60,3 +65,29 @@ def print_mascot(message):
         print(" " * (w + 3) + "\N{Microscope}\N{rat}")
     except UnicodeEncodeError:
         print(" " * (w + 5) + ":3")
+
+
+DEFAULT_RANDOM_SEED = 1337
+
+
+def fix_random_seed(seed=DEFAULT_RANDOM_SEED):
+    random.seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+
+
+def generate_Kfold_idx(data, K):
+    N_fold = len(data) // K
+    idx = np.arange(len(data))
+    folds = []
+    for i in range(K):
+        val_idx = idx[i * N_fold : (i + 1) * N_fold]
+        train_idx = np.concatenate(
+            [idx[: i * N_fold], idx[(i + 1) * N_fold :]]
+        )
+        folds.append((train_idx, val_idx))
+    return folds
