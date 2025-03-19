@@ -80,8 +80,10 @@ class BasicNCAModel(nn.Module):
             self.filters = nn.ModuleList(filters)
         else:
             self.num_filters = 2
-            self.filters.append(np.outer([1, 2, 1], [-1, 0, 1]) / 8.0)
-            self.filters.append((np.outer([1, 2, 1], [-1, 0, 1]) / 8.0).T)
+            sobel_x = np.outer([1, 2, 1], [-1, 0, 1]) / 8.0
+            sobel_y = sobel_x.T
+            self.filters.append(sobel_x)
+            self.filters.append(sobel_y)
 
         self.network = nn.Sequential(
             nn.Linear(self.num_channels * (self.num_filters + 1), self.hidden_size),
