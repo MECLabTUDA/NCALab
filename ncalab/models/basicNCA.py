@@ -22,6 +22,14 @@ class BasicNCAModel(nn.Module):
         dx_noise: float = 0.0,
         filter_padding: str = "reflect",
         kernel_size: int = 3,
+        auto_step: bool = False,
+        auto_max_steps: int = 100,
+        auto_min_steps: int = 10,
+        auto_plateau: int = 5,
+        auto_verbose: bool = False,
+        auto_threshold: float = 1e-2,
+        pad_noise: bool = False,
+        scales: List | None = None,
     ):
         """Basic abstract class for NCA models.
 
@@ -54,6 +62,16 @@ class BasicNCAModel(nn.Module):
         self.immutable_image_channels = immutable_image_channels
         self.num_learned_filters = num_learned_filters
         self.dx_noise = dx_noise
+        self.auto_step = auto_step
+        self.auto_max_steps = auto_max_steps
+        self.auto_min_steps = auto_min_steps
+        self.auto_plateau = auto_plateau
+        self.auto_verbose = auto_verbose
+        self.auto_threshold = auto_threshold
+        self.pad_noise = pad_noise
+        self.scales = scales
+        if scales is None:
+            self.scales = (1,)
 
         self.hidden_size = hidden_size
 
@@ -186,27 +204,22 @@ class BasicNCAModel(nn.Module):
         self,
         x,
         steps: int = 1,
-        auto_step: bool = False,
-        auto_max_steps: int = 100,
-        auto_min_steps: int = 10,
-        auto_plateau: int = 5,
-        auto_verbose: bool = False,
-        auto_threshold: float = 1e-2,
         return_steps: bool = False,
     ):
-        if auto_step:
+        if self.auto_step:
             # Assumption: min_steps >= 1; otherwise we cannot compute distance
-            assert auto_min_steps >= 1
-            assert auto_plateau >= 1
-            assert auto_max_steps > auto_min_steps
+            assert self.auto_min_steps >= 1
+            assert self.auto_plateau >= 1
+            assert self.auto_max_steps > self.auto_min_steps
+
             cooldown = 0
             # invariant: auto_min_steps > 0, so both of these will be set when used
             hidden_i: torch.Tensor | None = None
             hidden_i_1: torch.Tensor | None = None
-            for step in range(auto_max_steps):
+            for step in range(self.auto_max_steps):
                 with torch.no_grad():
                     if (
-                        step >= auto_min_steps
+                        step >= self.auto_min_steps
                         and hidden_i is not None
                         and hidden_i_1 is not None
                     ):
@@ -217,12 +230,12 @@ class BasicNCAModel(nn.Module):
                             * hidden_i.shape[2]
                             * hidden_i.shape[3]
                         )
-                        if score >= auto_threshold:
+                        if score >= self.auto_threshold:
                             cooldown = 0
                         else:
                             cooldown += 1
-                        if cooldown >= auto_plateau:
-                            if auto_verbose:
+                        if cooldown >= self.auto_plateau:
+                            if self.auto_verbose:
                                 print(f"Breaking after {step} steps.")
                             if return_steps:
                                 return x, step
@@ -242,7 +255,7 @@ class BasicNCAModel(nn.Module):
                     + self.num_hidden_channels,
                 ]
             if return_steps:
-                return x, auto_max_steps
+                return x, self.auto_max_steps
             return x
         else:
             for step in range(steps):
