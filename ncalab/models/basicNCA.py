@@ -282,7 +282,6 @@ class BasicNCAModel(nn.Module):
         steps: int,
         batch_iteration: int,
         summary_writer=None,
-        pad_noise: bool = False,
     ):
         return NotImplemented
 
@@ -309,3 +308,6 @@ class BasicNCAModel(nn.Module):
                 filter.requires_grad_ = False
         for layer in self.network[:-1]:
             layer.requires_grad_ = False
+
+    def metrics(self, dataloader_test, steps: int):
+        return {}

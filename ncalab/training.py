@@ -17,6 +17,20 @@ from .models.basicNCA import BasicNCAModel  # for type hint
 from .utils import pad_input
 
 
+class TrainingSummary:
+    def __init__(self, best_acc, best_path, metrics):
+        self.best_acc = best_acc
+        self.best_path = best_path
+        self.metrics = metrics
+
+    def to_dict(self):
+        return dict(
+            best_acc=self.best_acc,
+            best_path=self.best_path,
+            **self.metrics
+        )
+
+
 class BasicNCATrainer:
     def __init__(
         self,
@@ -57,12 +71,13 @@ class BasicNCATrainer:
         self,
         dataloader_train: DataLoader,
         dataloader_val: DataLoader | None = None,
+        dataloader_test: DataLoader | None = None,
         save_every: int | None = None,
         summary_writer: SummaryWriter | None = None,
         plot_function: (
             Callable[[np.ndarray, np.ndarray, np.ndarray, BasicNCAModel], Figure] | None
         ) = None,
-    ):
+    ) -> TrainingSummary:
         """Execute basic NCA training loop with a single function call.
 
         Args:
@@ -212,3 +227,8 @@ class BasicNCATrainer:
                         if best_path:
                             torch.save(self.nca.state_dict(), best_path)
                         best_acc = val_acc
+
+        metrics = {}
+        if dataloader_test is not None:
+            metrics = best_model.metrics(dataloader_test, self.steps_validation)
+        return TrainingSummary(best_acc, best_path, metrics)
