@@ -1,4 +1,5 @@
 from __future__ import annotations
+import copy
 from pathlib import Path, PosixPath  # for type hint
 from typing import Callable
 
@@ -44,8 +45,7 @@ class BasicNCATrainer:
         adam_betas=(0.9, 0.99),
         batch_repeat: int = 2,
         truncate_backprop: bool = False,
-        pad_noise: bool = False,
-        max_epochs: int = 5000,
+        max_epochs: int = 200,
         p_retain_pool: float = 0.0,
     ):
         assert batch_repeat >= 1
@@ -85,24 +85,13 @@ class BasicNCATrainer:
             model_path (str | PosixPath): File path to store model weights during training.
             dataloader_train (DataLoader): Training DataLoader
             dataloader_val (DataLoader): Validation DataLoader
-            max_iterations (int, optional): Maximum number of batch iterations. Defaults to 50000.
-            gradient_clipping (bool, optional): Whether to clip gradients to 1.0 during training. Defaults to True.
-            steps_range (tuple, optional): Exclusive range from which to uniformly sample number of steps. Defaults to (64, 96).
-            steps_validation (int, optional): Forward passes during validation. Defaults to 80.
-            save_every (int, optional): Save every N iterations. Defaults to 100.
-            lr (float, optional): Start learning rate. Defaults to 2e-3.
-            lr_gamma (float, optional): Learning rate decay over time. Defaults to 0.9999.
-            adam_betas (tuple, optional): _description_. Defaults to (0.5, 0.5).
+            save_every (int):
             summary_writer (SummaryWriter, optional): Tensorboard SummaryWriter. Defaults to None.
             plot_function (Callable[ [np.ndarray, np.ndarray, np.ndarray, BasicNCAModel], Figure ], optional): _description_. Defaults to None.
             batch_repeat (int, optional): How often a batch should be repeated, minimum is 1. Batch duplication can stabelize the training. Defaults to 2.
         """
         if save_every is None:
-            # for small datasets (e.g. growing), set a meaningful default value
-            if len(dataloader_train) <= 3:
-                save_every = 100
-            else:
-                save_every = 1
+            save_every = 100
         assert save_every > 0
 
         # Use default plot function for NCA flavor if none is explicitly given
