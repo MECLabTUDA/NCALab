@@ -1,4 +1,4 @@
-import matplotlib.pyplot as plt # type: ignore[import-untyped]
+import matplotlib.pyplot as plt  # type: ignore[import-untyped]
 import numpy as np
 
 
@@ -12,10 +12,14 @@ def show_image_row(
     overlay_vmin=None,
     overlay_vmax=None,
     overlay_cmap=None,
+    label="",
+    colorbar=False,
 ):
     for j in range(len(images)):
         image = images[j]
-        ax[j].imshow(image, vmin=vmin, vmax=vmax, cmap=cmap)
+        im = ax[j].imshow(image, vmin=vmin, vmax=vmax, cmap=cmap)
+        if colorbar and j == len(images) - 1:
+            plt.colorbar(im, ax=ax[j])
         if overlays is not None:
             ax[j].imshow(
                 overlays[j],
@@ -26,6 +30,8 @@ def show_image_row(
                 colormap="jet",
             )
         ax[j].axis("off")
+        ax[j].set_aspect("auto")
+    ax[0].set_ylabel(label)
 
 
 def show_batch_binary_image_classification(x_seed, x_pred, y_true, nca):
@@ -53,6 +59,9 @@ def show_batch_binary_image_classification(x_seed, x_pred, y_true, nca):
         images[i, :, :] *= y_pred[i] + 1
     images -= 1
     show_image_row(ax[1], images, vmin=-1, vmax=nca.num_classes, cmap="Set3")
+
+    figure.subplots_adjust(wspace=-0.8, hspace=0)
+
     return figure
 
 
@@ -96,6 +105,8 @@ def show_batch_classification(x_seed, x_pred, y_true, nca):
     images -= 1
     show_image_row(ax[2], images, vmin=-1, vmax=nca.num_classes, cmap="Set3")
 
+    figure.subplots_adjust(wspace=-0.8, hspace=0)
+
     return figure
 
 
@@ -103,22 +114,50 @@ def show_batch_binary_segmentation(x_seed, x_pred, y_true, nca):
     batch_size = x_pred.shape[0]
 
     figure, ax = plt.subplots(
-        3, batch_size, figsize=[batch_size * 3, 5], tight_layout=True
+        3, batch_size, figsize=[batch_size * 2, 5], tight_layout=True
     )
 
-    # 1st row: true image
+    # 1st row: input image
     images = x_seed[..., : nca.num_image_channels]
-    show_image_row(ax[0], np.clip(images, 0.0, 1.0))
+    show_image_row(ax[0], np.clip(images, 0.0, 1.0), label="Image")
 
-    # 2nd row: prediction
+    # 2nd row: true segmentation
     images = y_true
-    show_image_row(ax[1], np.clip(images, 0.0, 1.0), cmap="gray")
+    show_image_row(ax[1], np.clip(images, 0.0, 1.0), cmap="gray", label="GT Mask")
 
     # 3rd row: prediction
-    images = x_pred[..., -nca.num_classes:]
-    show_image_row(ax[2], np.clip(images, 0.0, 1.0), cmap="gray")
+    images = x_pred[..., -nca.num_classes :]
+    show_image_row(ax[2], np.clip(images, 0.0, 1.0), cmap="gray", label="Pred.")
 
-    plt.tight_layout()
+    figure.subplots_adjust(wspace=-0.8, hspace=0)
+
+    return figure
+
+
+def show_batch_depth(x_seed, x_pred, y_true, nca):
+    batch_size = x_pred.shape[0]
+
+    figure, ax = plt.subplots(
+        3, batch_size, figsize=[batch_size * 2, 5], tight_layout=True
+    )
+
+    # 1st row: input image
+    images = x_seed[..., : nca.num_image_channels]
+    show_image_row(ax[0], np.clip(images, 0.0, 1.0), label="Image")
+
+    # 2nd row: true segmentation
+    images = y_true
+    show_image_row(
+        ax[1], np.clip(images, 0.0, 1.0), cmap="magma", label="GT Depth", colorbar=True
+    )
+
+    # 3rd row: prediction
+    images = x_pred[..., -nca.num_classes :]
+    show_image_row(
+        ax[2], np.clip(images, 0.0, 1.0), cmap="magma", label="Pred.", colorbar=True
+    )
+
+    figure.subplots_adjust(wspace=-0.8, hspace=0)
 
     return figure
 
@@ -137,5 +176,7 @@ def show_batch_growing(x_seed, x_pred, y_true, nca):
     # 2nd row: prediction
     images = x_pred[..., : nca.num_image_channels]
     show_image_row(ax[1], np.clip(images, 0.0, 1.0))
+
+    figure.subplots_adjust(wspace=-0.8, hspace=0)
 
     return figure
