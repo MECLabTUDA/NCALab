@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Callable, List, Dict
+from typing import Callable, List
 import numpy as np
 
 import torch  # type: ignore[import-untyped]
@@ -7,7 +7,7 @@ import torch.nn as nn  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
 
 
-class BasicNCAModel(nn.Module):
+class SplitNCAModel(nn.Module):
     def __init__(
         self,
         device: torch.device,
@@ -18,7 +18,7 @@ class BasicNCAModel(nn.Module):
         hidden_size: int = 128,
         use_alive_mask: bool = False,
         immutable_image_channels: bool = True,
-        num_learned_filters: int = 2,
+        num_learned_filters: int = 0,
         dx_noise: float = 0.0,
         filter_padding: str = "reflect",
         kernel_size: int = 3,
@@ -30,7 +30,7 @@ class BasicNCAModel(nn.Module):
         auto_threshold: float = 1e-2,
         pad_noise: bool = False,
     ):
-        """Basic abstract class for NCA models.
+        """Abstract class for Split NCA models.
 
         Args:
             device (device): Pytorch device descriptor.
@@ -45,7 +45,7 @@ class BasicNCAModel(nn.Module):
             num_learned_filters (int, optional): Number of learned filters. If zero, use two sobel filters instead. Defaults to 2.
             dx_noise (float)
         """
-        super(BasicNCAModel, self).__init__()
+        super(SplitNCAModel, self).__init__()
 
         self.device = device
         self.to(device)
@@ -96,21 +96,37 @@ class BasicNCAModel(nn.Module):
             self.num_filters = 2
             sobel_x = np.outer([1, 2, 1], [-1, 0, 1]) / 8.0
             sobel_y = sobel_x.T
+
             self.filters.append(sobel_x)
             self.filters.append(sobel_y)
 
-        self.network = nn.Sequential(
+        self.network_identity = nn.Sequential(
+            nn.Linear(self.num_channels, self.hidden_size // 2, bias=True),
+            nn.LazyBatchNorm2d(),
+            nn.ReLU()
+        ).to(device)
+
+        self.network_filters = nn.Sequential(
             nn.Linear(
-                self.num_channels * (self.num_filters + 1), self.hidden_size, bias=True
+                self.num_channels * self.num_filters, self.hidden_size // 2, bias=False
             ),
-            #nn.LazyBatchNorm2d(),
+        ).to(device)
+
+        self.network_tail = nn.Sequential(
+            nn.Linear(self.hidden_size, self.hidden_size, bias=True),
+            nn.LazyBatchNorm2d(),
             nn.ReLU(),
             nn.Linear(self.hidden_size, self.num_channels, bias=False),
         ).to(device)
 
         # initialize final layer with 0
         with torch.no_grad():
-            self.network[-1].weight.zero_()
+            # self.network_filters[0].weight.data.normal_(
+            #    0.0, 1 / np.sqrt(self.num_channels * self.num_filters)
+            # )
+            #self.network_identity[-1].weight.zero_()
+            self.network_filters[-1].weight.zero_()
+            self.network_tail[-1].weight.zero_()
 
         self.meta: dict = {}
 
@@ -155,6 +171,8 @@ class BasicNCAModel(nn.Module):
         return y
 
     def update(self, x):
+        fire_rate = self.fire_rate
+
         x = x.permute(0, 3, 1, 2)  # B W H C --> B C W H
 
         hidden_channels = x[
@@ -171,10 +189,14 @@ class BasicNCAModel(nn.Module):
 
         # Compute delta from FFNN network
         dx = dx.permute(0, 2, 3, 1)  # B C W H --> B W H C
-        dx = self.network(dx)
+
+        dx_identity = dx[..., : self.num_channels]
+        dx_identity = self.network_identity(dx_identity)
+
+        dx_filters = self.network_filters(dx[..., self.num_channels :])
+        dx = self.network_tail(torch.cat([dx_identity, dx_filters], axis=-1))
 
         # Stochastic weight update
-        fire_rate = self.fire_rate
         stochastic = torch.rand([dx.size(0), dx.size(1), dx.size(2), 1]) > fire_rate
         stochastic = stochastic.float().to(self.device)
         dx = dx * stochastic
@@ -182,7 +204,7 @@ class BasicNCAModel(nn.Module):
         dx += self.dx_noise * torch.randn([dx.size(0), dx.size(1), dx.size(2), 1]).to(
             self.device
         )
-        
+
         if self.immutable_image_channels:
             dx[..., : self.num_image_channels] *= 0
 
@@ -263,7 +285,7 @@ class BasicNCAModel(nn.Module):
                 return x, steps
             return x
 
-    def loss(self, x, target) -> Dict[str, float]:
+    def loss(self, x, target):
         """_summary_
 
         Args:

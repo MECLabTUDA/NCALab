@@ -6,10 +6,11 @@ from torcheval.metrics import MulticlassAccuracy, MulticlassAUROC, MulticlassF1S
 from tqdm import tqdm  # type: ignore[import-untyped]
 
 from .basicNCA import BasicNCAModel
+from .splitNCA import SplitNCAModel
 from ..utils import pad_input
 
 
-class ClassificationNCAModel(BasicNCAModel):
+class ClassificationNCAModel(SplitNCAModel):
     def __init__(
         self,
         device,
@@ -20,10 +21,11 @@ class ClassificationNCAModel(BasicNCAModel):
         hidden_size: int = 128,
         use_alive_mask: bool = False,
         immutable_image_channels: bool = True,
-        learned_filters: int = 2,
+        learned_filters: int = 0,
         lambda_activity: float = 0.0,
         pixel_wise_loss: bool = False,
         filter_padding: str = "reflect",
+        pad_noise: bool = False,
     ):
         """_summary_
 
@@ -51,6 +53,7 @@ class ClassificationNCAModel(BasicNCAModel):
             immutable_image_channels,
             learned_filters,
             filter_padding=filter_padding,
+            pad_noise=pad_noise,
         )
         self.num_classes = num_classes
         self.lambda_activity = lambda_activity
@@ -168,7 +171,7 @@ class ClassificationNCAModel(BasicNCAModel):
         loss = (
             1 - self.lambda_activity
         ) * loss_classification + self.lambda_activity * loss_activity
-        return loss
+        return { "total": loss }
 
     def validate(
         self,
@@ -176,7 +179,6 @@ class ClassificationNCAModel(BasicNCAModel):
         steps: int,
         batch_iteration: int,
         summary_writer=None,
-        pad_noise: bool = False,
     ):
         accuracy_macro_metric = MulticlassAccuracy(
             average="macro", num_classes=self.num_classes
@@ -187,10 +189,9 @@ class ClassificationNCAModel(BasicNCAModel):
         auroc_metric = MulticlassAUROC(num_classes=self.num_classes)
         f1_metric = MulticlassF1Score(num_classes=self.num_classes)
 
-        for sample in tqdm(iter(dataloader_val)):
+        for sample in tqdm(iter(dataloader_val), desc="Validation"):
             x, y = sample
-            # x = (x - torch.min(x)) / (torch.max(x) - torch.min(x))
-            x = pad_input(x, self, noise=pad_noise)
+            x = pad_input(x, self, noise=self.pad_noise)
             x = x.permute(0, 2, 3, 1).to(self.device)
             y = y.to(self.device)
             y_prob = self.classify(x, steps, reduce=False)

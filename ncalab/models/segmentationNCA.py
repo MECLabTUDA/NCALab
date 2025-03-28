@@ -1,4 +1,5 @@
 from .basicNCA import BasicNCAModel
+from .splitNCA import SplitNCAModel
 from ..losses import DiceBCELoss
 from ..visualization import show_batch_binary_segmentation
 from ..utils import pad_input
@@ -19,7 +20,7 @@ class SegmentationNCAModel(BasicNCAModel):
         use_alive_mask: bool = False,
         immutable_image_channels: bool = True,
         learned_filters: int = 2,
-        lambda_activity: float = 0.0,
+        pad_noise: bool = False,
     ):
         """_summary_
 
@@ -35,7 +36,6 @@ class SegmentationNCAModel(BasicNCAModel):
             learned_filters (int, optional): _description_. Defaults to 2.
         """
         self.num_classes = num_classes
-        self.lambda_activity = lambda_activity
         super(SegmentationNCAModel, self).__init__(
             device,
             num_image_channels,
@@ -46,17 +46,18 @@ class SegmentationNCAModel(BasicNCAModel):
             use_alive_mask,
             immutable_image_channels,
             learned_filters,
+            pad_noise=pad_noise
         )
         self.plot_function = show_batch_binary_segmentation
 
     def segment(
-        self, image, return_all=False, pad_noise=False, return_steps=False, **kwargs
+        self, image, return_all=False, return_steps=False, **kwargs
     ):
         if return_all:
             return_steps = True
         with torch.no_grad():
             x = image.clone()
-            x = pad_input(x, self, noise=pad_noise)
+            x = pad_input(x, self, noise=self.pad_noise)
             x = x.permute(0, 2, 3, 1)
             x = self(x, **kwargs, return_steps=return_steps)
             if return_steps:
@@ -74,7 +75,6 @@ class SegmentationNCAModel(BasicNCAModel):
             return class_channels
 
     def loss(self, x, y):
-        hidden_channels = x[..., self.num_image_channels : -self.num_output_channels]
         class_channels = x[..., self.num_image_channels + self.num_hidden_channels :]
 
         loss_segmentation_function = DiceBCELoss()
@@ -83,22 +83,13 @@ class SegmentationNCAModel(BasicNCAModel):
             y,
         )
 
-        loss_activity = torch.sum(torch.square(hidden_channels)) / (
-            x.shape[0] * x.shape[1] * x.shape[2]
-        )
+        loss = loss_segmentation
+        return { "total": loss }
 
-        loss = (
-            1 - self.lambda_activity
-        ) * loss_segmentation + self.lambda_activity * loss_activity
-        return loss
-
-    def validate(
+    def metrics(
         self,
-        dataloader_val,
+        dataloader,
         steps: int,
-        batch_iteration: int,
-        summary_writer=None,
-        pad_noise: bool = False,
     ):
         self.eval()
         TP = []
@@ -106,32 +97,45 @@ class SegmentationNCAModel(BasicNCAModel):
         FN = []
         TN = []
 
-        dice = smp.losses.DiceLoss("binary", from_logits=False)
-        dice_scores = []
-
         with torch.no_grad():
-            for images, labels in dataloader_val:
+            for images, labels in dataloader:
                 images, labels = images.to(self.device), labels.to(self.device)
-
+                non_empty_labels = labels[~(labels.sum(dim=(1, 2)) == 0)]
+                non_empty_images = images[~(labels.sum(dim=(1, 2)) == 0)]
                 outputs = self.segment(
-                    images, steps=steps, pad_noise=pad_noise
+                    non_empty_images, steps=steps
                 ).permute(0, 3, 1, 2)
-                dice_score = 1 - dice(labels, outputs)
-                dice_scores.append(dice_score.item())
                 tp, fp, fn, tn = smp.metrics.get_stats(
-                    outputs, labels[:, None, :, :].long(), mode="binary", threshold=0.5
+                    outputs,
+                    non_empty_labels[:, None, :, :].long(),
+                    mode="binary",
+                    threshold=0.5,
                 )
-                TP.append(tp[:, 0])
-                FP.append(fp[:, 0])
-                FN.append(fn[:, 0])
-                TN.append(tn[:, 0])
-        f1_score = smp.metrics.f1_score(
-            torch.cat(TP),
-            torch.cat(FP),
-            torch.cat(FN),
-            torch.cat(TN),
-            reduction="micro",
-        )
+                TP.append(tp.squeeze())
+                FP.append(fp.squeeze())
+                FN.append(fn.squeeze())
+                TN.append(tn.squeeze())
+            iou_score = smp.metrics.iou_score(
+                torch.cat(TP),
+                torch.cat(FP),
+                torch.cat(FN),
+                torch.cat(TN),
+                reduction="macro-imagewise",
+            ).item()
+            Dice = torch.mean(
+                2 * torch.cat(TP) / (2 * torch.cat(TP) + torch.cat(FP) + torch.cat(FN))
+            ).item()
+        return {"IoU": iou_score, "Dice": Dice}
+
+    def validate(
+        self,
+        dataloader_val,
+        steps: int,
+        batch_iteration: int,
+        summary_writer=None,
+    ):
+        self.eval()
+        metrics = self.metrics(dataloader_val, steps)
         if summary_writer:
-            summary_writer.add_scalar("Acc/val_F1", f1_score.item(), batch_iteration)
-        return f1_score.item()
+            summary_writer.add_scalar("Acc/val_Dice", metrics["Dice"], batch_iteration)
+        return metrics["Dice"]

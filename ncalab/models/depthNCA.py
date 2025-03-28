@@ -1,5 +1,7 @@
 from .basicNCA import BasicNCAModel
-from ..visualization import show_batch_binary_segmentation
+from .splitNCA import SplitNCAModel
+
+from ..visualization import show_batch_depth
 from ..utils import pad_input
 
 import torch  # type: ignore[import-untyped]
@@ -48,7 +50,6 @@ class SmoothnessLoss(nn.Module):
             rgb_image, sobel_y.repeat(1, rgb_image.size(1), 1, 1), padding=1
         )
 
-        # Calculate the L1 loss between the gradients
         loss_x = F.l1_loss(depth_grad_x, rgb_grad_x)
         loss_y = F.l1_loss(depth_grad_y, rgb_grad_y)
 
@@ -57,24 +58,25 @@ class SmoothnessLoss(nn.Module):
         return total_loss
 
 
-class DepthNCAModel(BasicNCAModel):
+class DepthNCAModel(SplitNCAModel):
     def __init__(
         self,
-        device,
+        device: torch.device,
         num_image_channels: int,
         num_hidden_channels: int,
         num_classes: int,
-        fire_rate: float = 0.5,
+        fire_rate: float = 0.0,
         hidden_size: int = 128,
         use_alive_mask: bool = False,
         immutable_image_channels: bool = True,
-        learned_filters: int = 2,
+        learned_filters: int = 4,
         lambda_activity: float = 0.0,
+        pad_noise: bool = False,
     ):
-        """_summary_
+        """NCA model for monocular depth estimation.
 
         Args:
-            device (_type_): _description_
+            device (device): Compute device
             num_image_channels (int): _description_
             num_hidden_channels (int): _description_
             num_classes (int): _description_
@@ -97,8 +99,10 @@ class DepthNCAModel(BasicNCAModel):
             immutable_image_channels,
             learned_filters,
             kernel_size=3,
+            pad_noise=pad_noise,
         )
-        self.plot_function = show_batch_binary_segmentation
+        self.plot_function = show_batch_depth
+        self.vignette = None
 
     def prepare_input(self, x):
         # TODO: create positional encoding
@@ -107,7 +111,7 @@ class DepthNCAModel(BasicNCAModel):
     def estimate_depth(self, image, steps=80):
         with torch.no_grad():
             x = image.clone()
-            x = pad_input(x, self, noise=False)
+            x = pad_input(x, self, noise=self.pad_noise)
             x = self.prepare_input(x)
             x = x.permute(0, 2, 3, 1)
             x = self(x, steps=steps)
@@ -120,31 +124,46 @@ class DepthNCAModel(BasicNCAModel):
 
     def loss(self, x, y):
         out_channels = x[..., self.num_image_channels + self.num_hidden_channels :]
-        out_channels = out_channels.permute(0, 3, 1, 2).squeeze(1)
+        y_pred = out_channels.permute(0, 3, 1, 2).squeeze(1)
 
-        loss_depthmap_function = nn.MSELoss()
-        loss_depthmap = loss_depthmap_function(
-            out_channels,
-            y,
-        )
+        assert y_pred.shape == y.shape
+        B, W, H = y_pred.shape
+
+        t_gt = torch.median(torch.median(y, dim=1)[0], dim=1)[0]
+        t_pred = torch.median(torch.median(y_pred, dim=1)[0], dim=1)[0]
+
+        # Scale-Shift Invariant MSE Loss
+        y_SSI = y.permute(1, 2, 0) - t_gt
+        s_gt = torch.abs(y_SSI) / (W * H)
+        s_gt = torch.sum(torch.sum(s_gt, dim=0), dim=0)
+        # y_SSI = torch.div(y_SSI, s_gt)
+        y_SSI = y_SSI.permute(2, 0, 1)
+
+        y_pred_SSI = y_pred.permute(1, 2, 0) - t_pred
+        s_pred = torch.abs(y_pred_SSI) / (W * H)
+        s_pred = torch.sum(torch.sum(s_pred, dim=0), dim=0)
+        # y_pred_SSI = torch.div(y_pred_SSI, s_pred) --> doesn't work, since predictions need to be > 0
+        y_pred_SSI = y_pred_SSI.permute(2, 0, 1)
 
         ssim_function = ssim
         loss_ssim = 1 - ssim_function(
-            out_channels.unsqueeze(1), y.unsqueeze(1), data_range=1.0
+            y_pred.unsqueeze(1), y.unsqueeze(1), data_range=1.0
         )
 
         loss_tv_function = SmoothnessLoss().to(self.device)
         loss_tv = loss_tv_function(
-            out_channels.unsqueeze(1),
+            y_pred.unsqueeze(1),
             y.unsqueeze(1),
         )
 
-        loss = (
-            loss_depthmap
-            + 0.2 * loss_tv
-            + loss_ssim
+        loss_depthmap_function = nn.MSELoss()
+        loss_depthmap = loss_depthmap_function(
+            y_pred_SSI,
+            y_SSI,
         )
-        return loss
+
+        loss = 0.5 * loss_tv + loss_depthmap + loss_ssim
+        return {"total": loss, "tv": loss_tv, "depth": loss_depthmap, "ssim": loss_ssim}
 
     def validate(
         self,
@@ -152,7 +171,6 @@ class DepthNCAModel(BasicNCAModel):
         steps: int,
         batch_iteration: int,
         summary_writer=None,
-        pad_noise: bool = False,
     ):
         self.eval()
         total_ssim = 0.0
@@ -165,9 +183,10 @@ class DepthNCAModel(BasicNCAModel):
                 outputs = self.estimate_depth(images, steps=steps).permute(0, 3, 1, 2)
 
                 s = ssim(outputs, labels.unsqueeze(1), data_range=1.0)
+
                 total_ssim += s
                 N += 1.0
         total_ssim /= N
         if summary_writer:
-            summary_writer.add_scalar("Acc/val_MSE", total_ssim, batch_iteration)
+            summary_writer.add_scalar("Acc/val_acc", total_ssim, batch_iteration)
         return total_ssim
