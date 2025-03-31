@@ -71,6 +71,12 @@ class DepthNCAModel(SplitNCAModel):
         immutable_image_channels: bool = True,
         learned_filters: int = 4,
         lambda_activity: float = 0.0,
+        auto_step: bool = False,
+        auto_max_steps: int = 100,
+        auto_min_steps: int = 10,
+        auto_plateau: int = 5,
+        auto_verbose: bool = False,
+        auto_threshold: float = 1e-2,
         pad_noise: bool = False,
     ):
         """NCA model for monocular depth estimation.
@@ -99,6 +105,12 @@ class DepthNCAModel(SplitNCAModel):
             immutable_image_channels,
             learned_filters,
             kernel_size=3,
+            auto_step=auto_step,
+            auto_max_steps=auto_max_steps,
+            auto_min_steps=auto_min_steps,
+            auto_plateau=auto_plateau,
+            auto_verbose=auto_verbose,
+            auto_threshold=auto_threshold,
             pad_noise=pad_noise,
         )
         self.plot_function = show_batch_depth
