@@ -1,5 +1,6 @@
 from __future__ import annotations
 import copy
+import logging
 from pathlib import Path, PosixPath  # for type hint
 from typing import Callable
 
@@ -21,6 +22,10 @@ from .trainingsummary import TrainingSummary
 
 
 class BasicNCATrainer:
+    """
+    Trainer class for any model subclassing BasicNCA.
+    """
+
     def __init__(
         self,
         nca: BasicNCAModel,
@@ -36,6 +41,22 @@ class BasicNCATrainer:
         max_epochs: int = 200,
         p_retain_pool: float = 0.0,
     ):
+        """_summary_
+
+        Args:
+            nca (BasicNCAModel): _description_
+            model_path (str | Path | PosixPath | None, optional): _description_. Defaults to None.
+            gradient_clipping (bool, optional): _description_. Defaults to False.
+            steps_range (tuple, optional): _description_. Defaults to (90, 110).
+            steps_validation (int, optional): _description_. Defaults to 100.
+            lr (float, optional): _description_. Defaults to 16e-4.
+            lr_gamma (float, optional): _description_. Defaults to 0.9999.
+            adam_betas (tuple, optional): _description_. Defaults to (0.9, 0.99).
+            batch_repeat (int, optional): _description_. Defaults to 2.
+            truncate_backprop (bool, optional): _description_. Defaults to False.
+            max_epochs (int, optional): _description_. Defaults to 200.
+            p_retain_pool (float, optional): _description_. Defaults to 0.0.
+        """
         assert batch_repeat >= 1
         assert lr > 0
         assert steps_range[0] < steps_range[1]
@@ -54,7 +75,32 @@ class BasicNCATrainer:
         self.max_iterations = max_epochs
         self.p_retain_pool = p_retain_pool
 
-    def train_basic_nca(
+    def info(self) -> str:
+        """
+        Shows a markdown-formatted info string with training parameters.
+        Useful for showing info on tensorboard to keep track of parameter changes.
+
+        Returns:
+            str: Markdown-formatted info string.
+        """
+        s = "BasicNCATrainer Info\n"
+        s += "-------------------\n"
+        for attribute in (
+            "model_path",
+            "lr",
+            "lr_gamma",
+            "gradient_clipping",
+            "adam_betas",
+            "batch_repeat",
+            "truncate_backprop",
+            "max_iterations",
+            "p_retain_pool",
+        ):
+            attribute_f = attribute.title().replace("_", " ")
+            s += f"**{attribute_f}:** {getattr(self, attribute)}\n"
+        return s
+
+    def train(
         self,
         dataloader_train: DataLoader,
         dataloader_val: DataLoader | None = None,
@@ -74,6 +120,8 @@ class BasicNCATrainer:
             summary_writer (SummaryWriter, optional): Tensorboard SummaryWriter. Defaults to None.
             plot_function (Callable[ [np.ndarray, np.ndarray, np.ndarray, BasicNCAModel], Figure ], optional): _description_. Defaults to None.
         """
+        logging.basicConfig(encoding="utf-8", level=logging.INFO)
+
         if save_every is None:
             save_every = 100
         assert save_every > 0
@@ -82,6 +130,8 @@ class BasicNCATrainer:
         if not plot_function:
             if self.nca.plot_function:
                 plot_function = self.nca.plot_function
+
+        summary_writer.add_text("Training Info", self.info())
 
         optimizer = optim.Adam(self.nca.parameters(), lr=self.lr, betas=self.adam_betas)
         scheduler = optim.lr_scheduler.ExponentialLR(optimizer, self.lr_gamma)
@@ -103,11 +153,11 @@ class BasicNCATrainer:
             """Run a single training iteration.
 
             Args:
-                x (torch.Tensor): _description_
-                y (torch.Tensor): _description_
-                steps (int): Number of inference steps.
-                optimizer (torch.optim.Optimizer): _description_
-                scheduler (torch.optim.lr_scheduler.LRScheduler): _description_
+                x (torch.Tensor): Input training images.
+                y (torch.Tensor): Input training labels.
+                steps (int): Number of NCA inference time steps.
+                optimizer (torch.optim.Optimizer): Optimizer.
+                scheduler (torch.optim.lr_scheduler.LRScheduler): Scheduler.
                 total_batch_iterations (int): Total training batch iterations
 
             Returns:
@@ -130,10 +180,12 @@ class BasicNCATrainer:
             if self.gradient_clipping:
                 torch.nn.utils.clip_grad_norm_(self.nca.parameters(), 1.0)
             optimizer.step()
-            #scheduler.step()
+            scheduler.step()
             if summary_writer:
                 for key in losses:
-                    summary_writer.add_scalar(f"Loss/train_{key}", losses[key], total_batch_iterations)
+                    summary_writer.add_scalar(
+                        f"Loss/train_{key}", losses[key], total_batch_iterations
+                    )
             return x_pred
 
         total_batch_iterations = 0
@@ -202,7 +254,9 @@ class BasicNCATrainer:
                         summary_writer,
                     )
                     if val_acc > best_acc:
-                        print(f"improved: {best_acc:.5f} --> {val_acc:.5f}")
+                        logging.info(
+                            f"Accuracy improvement: {best_acc:.5f} --> {val_acc:.5f}"
+                        )
                         if best_path:
                             torch.save(self.nca.state_dict(), best_path)
                         best_acc = val_acc
