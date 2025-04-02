@@ -2,7 +2,7 @@ from __future__ import annotations
 import copy
 import logging
 from pathlib import Path, PosixPath  # for type hint
-from typing import Callable
+from typing import Callable, Optional
 
 import numpy as np
 
@@ -21,6 +21,23 @@ from ..utils import pad_input
 from .trainingsummary import TrainingSummary
 
 
+class EarlyStopping:
+    def __init__(self, patience: int, min_delta: float = 1e-6):
+        self.patience = patience
+        self.min_delta = min_delta
+        self.best_accuracy = 0
+        self.counter = 0
+
+    def done(self):
+        return self.counter >= self.patience
+
+    def step(self, accuracy):
+        self.counter += 1
+        if accuracy >= self.best_accuracy + self.min_delta:
+            self.best_accuracy = accuracy
+            self.counter = 0
+
+
 class BasicNCATrainer:
     """
     Trainer class for any model subclassing BasicNCA.
@@ -29,7 +46,7 @@ class BasicNCATrainer:
     def __init__(
         self,
         nca: BasicNCAModel,
-        model_path: str | Path | PosixPath | None = None,
+        model_path: Optional[str | Path | PosixPath] = None,
         gradient_clipping: bool = False,
         steps_range: tuple = (90, 110),
         steps_validation: int = 100,
@@ -103,13 +120,14 @@ class BasicNCATrainer:
     def train(
         self,
         dataloader_train: DataLoader,
-        dataloader_val: DataLoader | None = None,
-        dataloader_test: DataLoader | None = None,
-        save_every: int | None = None,
-        summary_writer: SummaryWriter | None = None,
-        plot_function: (
-            Callable[[np.ndarray, np.ndarray, np.ndarray, BasicNCAModel], Figure] | None
-        ) = None,
+        dataloader_val: Optional[DataLoader] = None,
+        dataloader_test: Optional[DataLoader] = None,
+        save_every: Optional[int] = None,
+        summary_writer: Optional[SummaryWriter] = None,
+        plot_function: Optional[
+            Callable[[np.ndarray, np.ndarray, np.ndarray, BasicNCAModel], Figure]
+        ] = None,
+        earlystopping: Optional[EarlyStopping] = None,
     ) -> TrainingSummary:
         """Execute basic NCA training loop with a single function call.
 
@@ -131,7 +149,8 @@ class BasicNCATrainer:
             if self.nca.plot_function:
                 plot_function = self.nca.plot_function
 
-        summary_writer.add_text("Training Info", self.info())
+        if summary_writer is not None:
+            summary_writer.add_text("Training Info", self.info())
 
         optimizer = optim.Adam(self.nca.parameters(), lr=self.lr, betas=self.adam_betas)
         scheduler = optim.lr_scheduler.ExponentialLR(optimizer, self.lr_gamma)
@@ -190,6 +209,10 @@ class BasicNCATrainer:
 
         total_batch_iterations = 0
         for iteration in tqdm(range(self.max_iterations), desc="Epochs"):
+            if earlystopping is not None:
+                if earlystopping.done():
+                    break
+
             # disable tqdm progress bar if dataset has only one sample, e.g. in the growing task
             gen = iter(dataloader_train)
             if len(dataloader_train) > 3:
@@ -203,9 +226,10 @@ class BasicNCATrainer:
                 x, y = sample
 
                 # Typically, our dataloader supplies a binary, grayscale, RGB or RGBA image.
-                # But out NCA operates on multiple hidden channels and output channels, so we
+                # But the NCA operates on multiple hidden channels and output channels, so we
                 # need to pad the input image with zeros.
                 x = pad_input(x, self.nca, noise=self.nca.pad_noise)
+                # Call model-specific input preparation hook
                 x = self.nca.prepare_input(x)
                 x = x.permute(0, 2, 3, 1)  # --> B W H C
 
@@ -216,7 +240,9 @@ class BasicNCATrainer:
                 ):
                     # batch sizes might be incompatible if DataLoader has drop_last set to False (default)
                     if x_previous.shape[0] == x.shape[0]:
-                        x[:, :, :, self.nca.num_image_channels :]
+                        x[:, :, :, self.nca.num_image_channels :] = x_previous[
+                            :, :, :, self.nca.num_image_channels :
+                        ]
 
                 # batch duplication, slightly stabelizes the training
                 x = torch.cat(self.batch_repeat * [x])
@@ -261,6 +287,8 @@ class BasicNCATrainer:
                             torch.save(self.nca.state_dict(), best_path)
                         best_acc = val_acc
                         best_model = copy.deepcopy(self.nca)
+                    if earlystopping is not None:
+                        earlystopping.step(val_acc)
         metrics = {}
         if dataloader_test is not None:
             metrics = best_model.metrics(dataloader_test, self.steps_validation)

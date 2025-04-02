@@ -6,11 +6,10 @@ from torcheval.metrics import MulticlassAccuracy, MulticlassAUROC, MulticlassF1S
 from tqdm import tqdm  # type: ignore[import-untyped]
 
 from .basicNCA import BasicNCAModel
-from .splitNCA import SplitNCAModel
 from ..utils import pad_input
 
 
-class ClassificationNCAModel(SplitNCAModel):
+class ClassificationNCAModel(BasicNCAModel):
     def __init__(
         self,
         device,
@@ -171,7 +170,11 @@ class ClassificationNCAModel(SplitNCAModel):
         loss = (
             1 - self.lambda_activity
         ) * loss_classification + self.lambda_activity * loss_activity
-        return { "total": loss }
+        return {
+            "total": loss,
+            "activity": loss_activity,
+            "classification": loss_classification,
+        }
 
     def validate(
         self,

@@ -46,13 +46,11 @@ class SegmentationNCAModel(BasicNCAModel):
             use_alive_mask,
             immutable_image_channels,
             learned_filters,
-            pad_noise=pad_noise
+            pad_noise=pad_noise,
         )
         self.plot_function = show_batch_binary_segmentation
 
-    def segment(
-        self, image, return_all=False, return_steps=False, **kwargs
-    ):
+    def segment(self, image, return_all=False, return_steps=False, **kwargs):
         if return_all:
             return_steps = True
         with torch.no_grad():
@@ -84,7 +82,7 @@ class SegmentationNCAModel(BasicNCAModel):
         )
 
         loss = loss_segmentation
-        return { "total": loss }
+        return {"total": loss}
 
     def metrics(
         self,
@@ -102,9 +100,9 @@ class SegmentationNCAModel(BasicNCAModel):
                 images, labels = images.to(self.device), labels.to(self.device)
                 non_empty_labels = labels[~(labels.sum(dim=(1, 2)) == 0)]
                 non_empty_images = images[~(labels.sum(dim=(1, 2)) == 0)]
-                outputs = self.segment(
-                    non_empty_images, steps=steps
-                ).permute(0, 3, 1, 2)
+                outputs = self.segment(non_empty_images, steps=steps).permute(
+                    0, 3, 1, 2
+                )
                 tp, fp, fn, tn = smp.metrics.get_stats(
                     outputs,
                     non_empty_labels[:, None, :, :].long(),

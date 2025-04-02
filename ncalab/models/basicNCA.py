@@ -1,10 +1,29 @@
 from __future__ import annotations
-from typing import Callable, List, Dict
+from typing import Callable, List, Optional, Dict
 import numpy as np
 
 import torch  # type: ignore[import-untyped]
 import torch.nn as nn  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
+
+
+class AutoStepper:
+    def __init__(
+        self,
+        min_steps: int = 10,
+        max_steps: int = 100,
+        plateau: int = 5,
+        verbose: bool = False,
+        threshold: float = 1e-2,
+    ):
+        assert min_steps >= 1
+        assert plateau >= 1
+        assert max_steps > min_steps
+        self.min_steps = min_steps
+        self.max_steps = max_steps
+        self.plateau = plateau
+        self.verbose = verbose
+        self.threshold = threshold
 
 
 class BasicNCAModel(nn.Module):
@@ -21,14 +40,10 @@ class BasicNCAModel(nn.Module):
         num_learned_filters: int = 2,
         dx_noise: float = 0.0,
         filter_padding: str = "reflect",
+        use_laplace: bool = False,
         kernel_size: int = 3,
-        auto_step: bool = False,
-        auto_max_steps: int = 100,
-        auto_min_steps: int = 10,
-        auto_plateau: int = 5,
-        auto_verbose: bool = False,
-        auto_threshold: float = 1e-2,
         pad_noise: bool = False,
+        autostepper: Optional[AutoStepper] = None,
     ):
         """Basic abstract class for NCA models.
 
@@ -57,19 +72,14 @@ class BasicNCAModel(nn.Module):
             num_image_channels + num_hidden_channels + num_output_channels
         )
         self.fire_rate = fire_rate
+        self.hidden_size = hidden_size
         self.use_alive_mask = use_alive_mask
         self.immutable_image_channels = immutable_image_channels
         self.num_learned_filters = num_learned_filters
+        self.use_laplace = use_laplace
         self.dx_noise = dx_noise
-        self.auto_step = auto_step
-        self.auto_max_steps = auto_max_steps
-        self.auto_min_steps = auto_min_steps
-        self.auto_plateau = auto_plateau
-        self.auto_verbose = auto_verbose
-        self.auto_threshold = auto_threshold
         self.pad_noise = pad_noise
-
-        self.hidden_size = hidden_size
+        self.autostepper = autostepper
 
         self.plot_function: Callable | None = None
 
@@ -93,17 +103,20 @@ class BasicNCAModel(nn.Module):
                 )
             self.filters = nn.ModuleList(filters)
         else:
-            self.num_filters = 2
             sobel_x = np.outer([1, 2, 1], [-1, 0, 1]) / 8.0
             sobel_y = sobel_x.T
+            laplace = np.array([[0, 1, 0], [1, -4, 1], [0, 1, 0]])
             self.filters.append(sobel_x)
             self.filters.append(sobel_y)
+            if self.use_laplace:
+                self.filters.append(laplace)
+            self.num_filters = len(self.filters)
 
         self.network = nn.Sequential(
             nn.Linear(
                 self.num_channels * (self.num_filters + 1), self.hidden_size, bias=True
             ),
-            #nn.LazyBatchNorm2d(),
+            nn.LazyBatchNorm2d(),
             nn.ReLU(),
             nn.Linear(self.hidden_size, self.num_channels, bias=False),
         ).to(device)
@@ -175,14 +188,14 @@ class BasicNCAModel(nn.Module):
 
         # Stochastic weight update
         fire_rate = self.fire_rate
-        stochastic = torch.rand([dx.size(0), dx.size(1), dx.size(2), 1]) > fire_rate
+        stochastic = torch.rand([dx.size(0), dx.size(1), dx.size(2), 1]) < fire_rate
         stochastic = stochastic.float().to(self.device)
         dx = dx * stochastic
 
         dx += self.dx_noise * torch.randn([dx.size(0), dx.size(1), dx.size(2), 1]).to(
             self.device
         )
-        
+
         if self.immutable_image_channels:
             dx[..., : self.num_image_channels] *= 0
 
@@ -205,65 +218,60 @@ class BasicNCAModel(nn.Module):
         steps: int = 1,
         return_steps: bool = False,
     ):
-        if self.auto_step:
-            # Assumption: min_steps >= 1; otherwise we cannot compute distance
-            assert self.auto_min_steps >= 1
-            assert self.auto_plateau >= 1
-            assert self.auto_max_steps > self.auto_min_steps
-
-            cooldown = 0
-            # invariant: auto_min_steps > 0, so both of these will be set when used
-            hidden_i: torch.Tensor | None = None
-            hidden_i_1: torch.Tensor | None = None
-            for step in range(self.auto_max_steps):
-                with torch.no_grad():
-                    if (
-                        step >= self.auto_min_steps
-                        and hidden_i is not None
-                        and hidden_i_1 is not None
-                    ):
-                        # normalized absolute difference between two hidden states
-                        score = (hidden_i - hidden_i_1).abs().sum() / (
-                            hidden_i.shape[0]
-                            * hidden_i.shape[1]
-                            * hidden_i.shape[2]
-                            * hidden_i.shape[3]
-                        )
-                        if score >= self.auto_threshold:
-                            cooldown = 0
-                        else:
-                            cooldown += 1
-                        if cooldown >= self.auto_plateau:
-                            if self.auto_verbose:
-                                print(f"Breaking after {step} steps.")
-                            if return_steps:
-                                return x, step
-                            return x
-                # save previous hidden state
-                hidden_i_1 = x[
-                    ...,
-                    self.num_image_channels : self.num_image_channels
-                    + self.num_hidden_channels,
-                ]
-                # single inference time step
-                x = self.update(x)
-                # set current hidden state
-                hidden_i = x[
-                    ...,
-                    self.num_image_channels : self.num_image_channels
-                    + self.num_hidden_channels,
-                ]
-            if return_steps:
-                return x, self.auto_max_steps
-            return x
-        else:
+        if self.autostepper is None:
             for step in range(steps):
                 x = self.update(x)
             if return_steps:
                 return x, steps
             return x
 
-    def loss(self, x, target) -> Dict[str, float]:
+        cooldown = 0
+        # invariant: auto_min_steps > 0, so both of these will be defined when used
+        hidden_i: torch.Tensor | None = None
+        hidden_i_1: torch.Tensor | None = None
+        for step in range(self.autostepper.max_steps):
+            with torch.no_grad():
+                if (
+                    step >= self.autostepper.min_steps
+                    and hidden_i is not None
+                    and hidden_i_1 is not None
+                ):
+                    # normalized absolute difference between two hidden states
+                    score = (hidden_i - hidden_i_1).abs().sum() / (
+                        hidden_i.shape[0]
+                        * hidden_i.shape[1]
+                        * hidden_i.shape[2]
+                        * hidden_i.shape[3]
+                    )
+                    if score >= self.autostepper.threshold:
+                        cooldown = 0
+                    else:
+                        cooldown += 1
+                    if cooldown >= self.autostepper.plateau:
+                        if self.autostepper.verbose:
+                            print(f"Breaking after {step} steps.")
+                        if return_steps:
+                            return x, step
+                        return x
+            # save previous hidden state
+            hidden_i_1 = x[
+                ...,
+                self.num_image_channels : self.num_image_channels
+                + self.num_hidden_channels,
+            ]
+            # single inference time step
+            x = self.update(x)
+            # set current hidden state
+            hidden_i = x[
+                ...,
+                self.num_image_channels : self.num_image_channels
+                + self.num_hidden_channels,
+            ]
+        if return_steps:
+            return x, self.autostepper.max_steps
+        return x
+
+    def loss(self, x, target) -> Dict[str, torch.Tensor]:
         """_summary_
 
         Args:

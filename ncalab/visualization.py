@@ -12,9 +12,10 @@ def show_image_row(
     overlay_vmin=None,
     overlay_vmax=None,
     overlay_cmap=None,
-    label="",
-    colorbar=False,
+    label: str = "",
+    colorbar: bool = False,
 ):
+    """ """
     for j in range(len(images)):
         image = images[j]
         im = ax[j].imshow(image, vmin=vmin, vmax=vmax, cmap=cmap)
@@ -32,6 +33,7 @@ def show_image_row(
         ax[j].axis("off")
         ax[j].set_aspect("auto")
     ax[0].set_ylabel(label)
+    # FIXME: label not shown
 
 
 def show_batch_binary_image_classification(x_seed, x_pred, y_true, nca):

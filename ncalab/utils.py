@@ -52,7 +52,6 @@ def NCALab_banner():
 def print_mascot(message):
     if not message:
         return
-    h = len(message.splitlines())
     w = max([len(L) for L in message.splitlines()])
     print("  " + "-" * w)
     for L in message.splitlines():
@@ -86,8 +85,6 @@ def generate_Kfold_idx(data, K):
     folds = []
     for i in range(K):
         val_idx = idx[i * N_fold : (i + 1) * N_fold]
-        train_idx = np.concatenate(
-            [idx[: i * N_fold], idx[(i + 1) * N_fold :]]
-        )
+        train_idx = np.concatenate([idx[: i * N_fold], idx[(i + 1) * N_fold :]])
         folds.append((train_idx, val_idx))
     return folds

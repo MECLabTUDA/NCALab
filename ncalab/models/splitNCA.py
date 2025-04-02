@@ -18,7 +18,7 @@ class SplitNCAModel(nn.Module):
         hidden_size: int = 128,
         use_alive_mask: bool = False,
         immutable_image_channels: bool = True,
-        num_learned_filters: int = 0,
+        num_learned_filters: int = 2,
         dx_noise: float = 0.0,
         filter_padding: str = "reflect",
         kernel_size: int = 3,
@@ -102,8 +102,6 @@ class SplitNCAModel(nn.Module):
 
         self.network_identity = nn.Sequential(
             nn.Linear(self.num_channels, self.hidden_size // 2, bias=True),
-            nn.LazyBatchNorm2d(),
-            nn.ReLU()
         ).to(device)
 
         self.network_filters = nn.Sequential(
@@ -124,7 +122,7 @@ class SplitNCAModel(nn.Module):
             # self.network_filters[0].weight.data.normal_(
             #    0.0, 1 / np.sqrt(self.num_channels * self.num_filters)
             # )
-            #self.network_identity[-1].weight.zero_()
+            # self.network_identity[-1].weight.zero_()
             self.network_filters[-1].weight.zero_()
             self.network_tail[-1].weight.zero_()
 
@@ -197,7 +195,7 @@ class SplitNCAModel(nn.Module):
         dx = self.network_tail(torch.cat([dx_identity, dx_filters], axis=-1))
 
         # Stochastic weight update
-        stochastic = torch.rand([dx.size(0), dx.size(1), dx.size(2), 1]) > fire_rate
+        stochastic = torch.rand([dx.size(0), dx.size(1), dx.size(2), 1]) < fire_rate
         stochastic = stochastic.float().to(self.device)
         dx = dx * stochastic
 

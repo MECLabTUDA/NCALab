@@ -1,5 +1,6 @@
-from .basicNCA import BasicNCAModel
-from .splitNCA import SplitNCAModel
+from typing import Optional
+
+from .basicNCA import BasicNCAModel, AutoStepper
 
 from ..visualization import show_batch_depth
 from ..utils import pad_input
@@ -58,25 +59,20 @@ class SmoothnessLoss(nn.Module):
         return total_loss
 
 
-class DepthNCAModel(SplitNCAModel):
+class DepthNCAModel(BasicNCAModel):
     def __init__(
         self,
         device: torch.device,
         num_image_channels: int,
         num_hidden_channels: int,
         num_classes: int,
-        fire_rate: float = 0.0,
+        fire_rate: float = 0.8,
         hidden_size: int = 128,
         use_alive_mask: bool = False,
         immutable_image_channels: bool = True,
-        learned_filters: int = 4,
+        learned_filters: int = 2,
         lambda_activity: float = 0.0,
-        auto_step: bool = False,
-        auto_max_steps: int = 100,
-        auto_min_steps: int = 10,
-        auto_plateau: int = 5,
-        auto_verbose: bool = False,
-        auto_threshold: float = 1e-2,
+        autostepper: Optional[AutoStepper] = None,
         pad_noise: bool = False,
     ):
         """NCA model for monocular depth estimation.
@@ -105,12 +101,7 @@ class DepthNCAModel(SplitNCAModel):
             immutable_image_channels,
             learned_filters,
             kernel_size=3,
-            auto_step=auto_step,
-            auto_max_steps=auto_max_steps,
-            auto_min_steps=auto_min_steps,
-            auto_plateau=auto_plateau,
-            auto_verbose=auto_verbose,
-            auto_threshold=auto_threshold,
+            autostepper=autostepper,
             pad_noise=pad_noise,
         )
         self.plot_function = show_batch_depth
@@ -174,7 +165,7 @@ class DepthNCAModel(SplitNCAModel):
             y_SSI,
         )
 
-        loss = 0.5 * loss_tv + loss_depthmap + loss_ssim
+        loss = 0.5 * loss_tv + loss_depthmap + 0.2 * loss_ssim
         return {"total": loss, "tv": loss_tv, "depth": loss_depthmap, "ssim": loss_ssim}
 
     def validate(

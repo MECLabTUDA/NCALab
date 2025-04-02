@@ -4,18 +4,16 @@ import torch.nn.functional as F  # type: ignore[import-untyped]
 
 
 class DiceScore(nn.Module):
-    """_summary_
-
-    Args:
-        nn (_type_): _description_
-    """
+    """ """
 
     def __init__(self):
-        """_summary_"""
+        """"""
         super(DiceScore, self).__init__()
 
-    def forward(self, x: torch.Tensor, y: torch.Tensor, smooth: float = 1):
-        """_summary_
+    def forward(
+        self, x: torch.Tensor, y: torch.Tensor, smooth: float = 1
+    ) -> torch.Tensor:
+        """
 
         Args:
             input (_type_): _description_
@@ -35,10 +33,8 @@ class DiceScore(nn.Module):
 
 
 class DiceBCELoss(nn.Module):
-    """Combination of Dice and BCE Loss.
-
-    Args:
-        nn (_type_): _description_
+    """
+    Combination of Dice and BCE Loss.
     """
 
     def __init__(self):

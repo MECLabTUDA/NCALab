@@ -6,11 +6,10 @@ import torch.nn.functional as F  # type: ignore[import-untyped]
 import numpy as np
 
 from .basicNCA import BasicNCAModel
-from .splitNCA import SplitNCAModel
 from ..visualization import show_batch_growing
 
 
-class GrowingNCAModel(SplitNCAModel):
+class GrowingNCAModel(BasicNCAModel):
     def __init__(
         self,
         device: torch.device,
@@ -60,7 +59,7 @@ class GrowingNCAModel(SplitNCAModel):
             Tensor: MSE Loss
         """
         loss = F.mse_loss(x[..., : self.num_image_channels], y)
-        return { "total": loss }
+        return {"total": loss}
 
     def validate(self, *args, **kwargs):
         """We typically don't validate during training of Growing NCA."""
@@ -88,7 +87,15 @@ class GrowingNCAModel(SplitNCAModel):
             for _ in range(steps):
                 out = self.forward(out, steps=1)
                 step_outs.append(
-                    np.clip(out[..., : self.num_image_channels].squeeze().detach().cpu().numpy(), 0, 1)
+                    np.clip(
+                        out[..., : self.num_image_channels]
+                        .squeeze()
+                        .detach()
+                        .cpu()
+                        .numpy(),
+                        0,
+                        1,
+                    )
                 )
             return step_outs
         else:
