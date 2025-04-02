@@ -2,7 +2,9 @@ import itertools
 from collections.abc import Iterable
 import logging
 
-from torch.utils.tensorboard import SummaryWriter  # for type hint
+import pandas as pd
+
+from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader  # for type hint
 
 from ..training import BasicNCATrainer  # for type hint
@@ -10,13 +12,11 @@ from ..training import BasicNCATrainer  # for type hint
 
 class ParameterSet:
     def __init__(self, **kwargs):
-        """_summary_
-        """
+        """_summary_"""
         self.params = kwargs
         # Replace parameters by iterable parameters (list with single entry)
         # if they are not iterables.
         # Consider that strings are iterable.
-        self.params = kwargs
 
         self.mutable = [
             k
@@ -93,7 +93,9 @@ class ParameterSearch:
         s += "\n|\n| Trainer Parameters:\n"
         s += trainer_info
         s += "\n" + "-" * 40 + "\n"
-        s += f"| Total combinations: {len(self.model_params) * len(self.trainer_params)}"
+        s += (
+            f"| Total combinations: {len(self.model_params) * len(self.trainer_params)}"
+        )
         s += "\n" + "-" * 40 + "\n"
         return s
 
@@ -108,6 +110,8 @@ class ParameterSearch:
             dataloader_train (DataLoader): _description_
             dataloader_val (DataLoader | None, optional): _description_. Defaults to None.
         """
+
+        list_of_summaries = []
         i = 0
         for trainer_args in self.trainer_params:
             for model_args in self.model_params:
@@ -131,12 +135,17 @@ class ParameterSearch:
                 writer = SummaryWriter(comment=experiment_name)
                 model = self.model_class(self.device, **model_args)
                 trainer = BasicNCATrainer(model, **trainer_args)
-                trainer.train_basic_nca(
+                summary = trainer.train(
                     dataloader_train,
                     dataloader_val,
                     summary_writer=writer,
                 )
+                d = summary.to_dict()
+                d.update(**trainer_args)
+                d.update(**model_args)
+                list_of_summaries.append(d)
                 writer.close()
+        return pd.DataFrame(list_of_summaries)
 
     def __call__(self, *args, **kwargs):
         return self.search(*args, **kwargs)
