@@ -94,7 +94,7 @@ class BasicNCATrainer:
             "adam_betas",
             "batch_repeat",
             "truncate_backprop",
-            "max_iterations",
+            "max_epochs",
             "p_retain_pool",
         ):
             attribute_f = attribute.title().replace("_", " ")
@@ -138,7 +138,7 @@ class BasicNCATrainer:
 
         optimizer = optim.Adam(self.nca.parameters(), lr=self.lr, betas=self.adam_betas)
         scheduler = optim.lr_scheduler.ExponentialLR(optimizer, self.lr_gamma)
-        best_acc = torch.Tensor([0.0])
+        best_acc = 0.0
         best_model = self.nca
         if self.model_path:
             best_path = Path(self.model_path).with_suffix(".best.pth")
