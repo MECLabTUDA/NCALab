@@ -127,7 +127,7 @@ def train_depth_KID(batch_size: int, hidden_channels: int):
         num_image_channels=3,
         num_hidden_channels=hidden_channels,
         num_classes=1,
-        lambda_activity=0.00,
+        pad_noise=True,
     )
 
     INPUT_SIZE = 64
@@ -229,12 +229,12 @@ def train_depth_KID(batch_size: int, hidden_channels: int):
 
     trainer = BasicNCATrainer(
         nca,
-        WEIGHTS_PATH / "depth_KID2_normal_small_bowel.pth",
-        max_epochs=3500,
+        WEIGHTS_PATH / f"depth_{dataset_id}.pth",
+        max_epochs=2000,
         steps_range=(96, 110),
         steps_validation=100,
     )
-    trainer.train_basic_nca(
+    trainer.train(
         loader_train,
         loader_val,
         summary_writer=writer,
