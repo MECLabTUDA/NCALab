@@ -11,29 +11,27 @@ import segmentation_models_pytorch as smp  # type: ignore[import-untyped]
 class SegmentationNCAModel(BasicNCAModel):
     def __init__(
         self,
-        device,
-        num_image_channels: int,
-        num_hidden_channels: int,
-        num_classes: int,
-        fire_rate: float = 0.5,
+        device: torch.device,
+        num_image_channels: int = 3,
+        num_hidden_channels: int = 16,
+        num_classes: int = 1,
+        fire_rate: float = 0.8,
         hidden_size: int = 128,
-        use_alive_mask: bool = False,
-        immutable_image_channels: bool = True,
         learned_filters: int = 2,
-        pad_noise: bool = False,
+        pad_noise: bool = True,
     ):
-        """_summary_
+        """
+        Instantiate an image segmentation model based on NCA.
 
         Args:
-            device (_type_): _description_
+            device (torch.device): Compute device
             num_image_channels (int): _description_
             num_hidden_channels (int): _description_
             num_classes (int): _description_
-            fire_rate (float, optional): _description_. Defaults to 0.5.
+            fire_rate (float, optional): _description_. Defaults to 0.8.
             hidden_size (int, optional): _description_. Defaults to 128.
-            use_alive_mask (bool, optional): _description_. Defaults to False.
-            immutable_image_channels (bool, optional): _description_. Defaults to True.
             learned_filters (int, optional): _description_. Defaults to 2.
+            pad_noise (bool, optional): _description_. Defaults to True.
         """
         self.num_classes = num_classes
         super(SegmentationNCAModel, self).__init__(
@@ -41,11 +39,11 @@ class SegmentationNCAModel(BasicNCAModel):
             num_image_channels,
             num_hidden_channels,
             num_classes,
-            fire_rate,
-            hidden_size,
-            use_alive_mask,
-            immutable_image_channels,
-            learned_filters,
+            fire_rate=fire_rate,
+            hidden_size=hidden_size,
+            use_alive_mask=False,
+            immutable_image_channels=True,
+            learned_filters=learned_filters,
             pad_noise=pad_noise,
         )
         self.plot_function = show_batch_binary_segmentation
@@ -98,16 +96,14 @@ class SegmentationNCAModel(BasicNCAModel):
         with torch.no_grad():
             for images, labels in dataloader:
                 images, labels = images.to(self.device), labels.to(self.device)
-                non_empty_labels = labels[~(labels.sum(dim=(1, 2)) == 0)]
-                non_empty_images = images[~(labels.sum(dim=(1, 2)) == 0)]
-                outputs = self.segment(non_empty_images, steps=steps).permute(
-                    0, 3, 1, 2
-                )
+                # non_empty_labels = labels[~(labels.sum(dim=(1, 2)) == 0)]
+                # non_empty_images = images[~(labels.sum(dim=(1, 2)) == 0)]
+                outputs = self.segment(images, steps=steps).permute(0, 3, 1, 2)
                 tp, fp, fn, tn = smp.metrics.get_stats(
                     outputs,
-                    non_empty_labels[:, None, :, :].long(),
+                    labels[:, None, :, :].long(),
                     mode="binary",
-                    threshold=0.5,
+                    threshold=0.1,
                 )
                 TP.append(tp.squeeze())
                 FP.append(fp.squeeze())
@@ -121,7 +117,9 @@ class SegmentationNCAModel(BasicNCAModel):
                 reduction="macro-imagewise",
             ).item()
             Dice = torch.mean(
-                2 * torch.cat(TP) / (2 * torch.cat(TP) + torch.cat(FP) + torch.cat(FN))
+                2.0
+                * (torch.cat(TP) + 1.0)
+                / (2.0 * torch.cat(TP) + torch.cat(FP) + torch.cat(FN) + 1.0)
             ).item()
         return {"IoU": iou_score, "Dice": Dice}
 
@@ -131,9 +129,10 @@ class SegmentationNCAModel(BasicNCAModel):
         steps: int,
         batch_iteration: int,
         summary_writer=None,
-    ):
+    ) -> float:
         self.eval()
         metrics = self.metrics(dataloader_val, steps)
         if summary_writer:
             summary_writer.add_scalar("Acc/val_Dice", metrics["Dice"], batch_iteration)
+            summary_writer.add_scalar("Acc/val_IoU", metrics["IoU"], batch_iteration)
         return metrics["Dice"]

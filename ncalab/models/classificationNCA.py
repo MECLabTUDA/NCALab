@@ -112,7 +112,7 @@ class ClassificationNCAModel(BasicNCAModel):
                 return y_pred
             return y_pred
 
-    def loss(self, x, target) -> Dict[str, torch.Tensor]:
+    def loss(self, x: torch.Tensor, target: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
         Return the classification loss. For pixel-wise ("self-classifying") problems,
         such as self-classifying MNIST, we compute the Cross-Entropy loss.
@@ -183,11 +183,11 @@ class ClassificationNCAModel(BasicNCAModel):
 
     def validate(
         self,
-        dataloader_val,
+        dataloader_val: torch.utils.data.DataLoader,
         steps: int,
         batch_iteration: int,
         summary_writer=None,
-    ):
+    ) -> float:
         accuracy_macro_metric = MulticlassAccuracy(
             average="macro", num_classes=self.num_classes
         )

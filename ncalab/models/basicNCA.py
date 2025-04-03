@@ -289,7 +289,7 @@ class BasicNCAModel(nn.Module):
         steps: int,
         batch_iteration: int,
         summary_writer=None,
-    ) -> torch.Tensor:
+    ) -> float:
         return NotImplemented
 
     def get_meta_dict(self) -> dict:

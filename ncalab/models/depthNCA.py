@@ -8,6 +8,7 @@ from ..utils import pad_input
 import torch  # type: ignore[import-untyped]
 import torch.nn as nn  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
+from torch.utils.data import DataLoader # type: ignore[import-untyped]
 
 from pytorch_msssim import ssim  # type: ignore[import-untyped]
 
@@ -174,17 +175,16 @@ class DepthNCAModel(BasicNCAModel):
 
     def validate(
         self,
-        dataloader_val,
+        dataloader_val: DataLoader,
         steps: int,
         batch_iteration: int,
         summary_writer=None,
-    ) -> torch.Tensor:
+    ) -> float:
         """
         """
         self.eval()
-        total_ssim = torch.Tensor([0.0])
-        N = torch.Tensor([0.0])
-
+        total_ssim = 0.0
+        N = 0.0
         with torch.no_grad():
             for images, labels in dataloader_val:
                 images, labels = images.to(self.device), labels.to(self.device)
@@ -193,7 +193,7 @@ class DepthNCAModel(BasicNCAModel):
 
                 s = ssim(outputs, labels.unsqueeze(1), data_range=1.0)
 
-                total_ssim += s
+                total_ssim += s.item()
                 N += 1.0
         total_ssim /= N
         if summary_writer:

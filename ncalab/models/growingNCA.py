@@ -13,8 +13,8 @@ class GrowingNCAModel(BasicNCAModel):
     def __init__(
         self,
         device: torch.device,
-        num_image_channels: int,
-        num_hidden_channels: int,
+        num_image_channels: int = 4,
+        num_hidden_channels: int = 16,
         fire_rate: float = 0.5,
         hidden_size: int = 128,
         use_alive_mask: bool = False,
