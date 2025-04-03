@@ -104,7 +104,8 @@ class ParameterSearch:
         dataloader_train: DataLoader,
         dataloader_val: DataLoader | None = None,
     ):
-        """_summary_
+        """
+        Run search.
 
         Args:
             dataloader_train (DataLoader): _description_

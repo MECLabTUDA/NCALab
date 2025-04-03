@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Dict, Optional
 
 from .basicNCA import BasicNCAModel, AutoStepper
 
@@ -112,6 +112,8 @@ class DepthNCAModel(BasicNCAModel):
         return x
 
     def estimate_depth(self, image, steps=80):
+        """
+        """
         with torch.no_grad():
             x = image.clone()
             x = pad_input(x, self, noise=self.pad_noise)
@@ -125,7 +127,9 @@ class DepthNCAModel(BasicNCAModel):
 
             return class_channels
 
-    def loss(self, x, y):
+    def loss(self, x, y) -> Dict[str, torch.Tensor]:
+        """
+        """
         out_channels = x[..., self.num_image_channels + self.num_hidden_channels :]
         y_pred = out_channels.permute(0, 3, 1, 2).squeeze(1)
 
@@ -174,10 +178,12 @@ class DepthNCAModel(BasicNCAModel):
         steps: int,
         batch_iteration: int,
         summary_writer=None,
-    ):
+    ) -> torch.Tensor:
+        """
+        """
         self.eval()
-        total_ssim = 0.0
-        N = 0.0
+        total_ssim = torch.Tensor([0.0])
+        N = torch.Tensor([0.0])
 
         with torch.no_grad():
             for images, labels in dataloader_val:

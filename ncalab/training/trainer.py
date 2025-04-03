@@ -18,24 +18,8 @@ from tqdm import tqdm  # type: ignore[import-untyped]
 from ..models.basicNCA import BasicNCAModel  # for type hint
 from ..utils import pad_input
 
+from .earlystopping import EarlyStopping
 from .trainingsummary import TrainingSummary
-
-
-class EarlyStopping:
-    def __init__(self, patience: int, min_delta: float = 1e-6):
-        self.patience = patience
-        self.min_delta = min_delta
-        self.best_accuracy = 0
-        self.counter = 0
-
-    def done(self):
-        return self.counter >= self.patience
-
-    def step(self, accuracy):
-        self.counter += 1
-        if accuracy >= self.best_accuracy + self.min_delta:
-            self.best_accuracy = accuracy
-            self.counter = 0
 
 
 class BasicNCATrainer:
@@ -89,7 +73,7 @@ class BasicNCATrainer:
         self.adam_betas = adam_betas
         self.batch_repeat = batch_repeat
         self.truncate_backprop = truncate_backprop
-        self.max_iterations = max_epochs
+        self.max_epochs = max_epochs
         self.p_retain_pool = p_retain_pool
 
     def info(self) -> str:
@@ -154,7 +138,7 @@ class BasicNCATrainer:
 
         optimizer = optim.Adam(self.nca.parameters(), lr=self.lr, betas=self.adam_betas)
         scheduler = optim.lr_scheduler.ExponentialLR(optimizer, self.lr_gamma)
-        best_acc = 0
+        best_acc = torch.Tensor([0.0])
         best_model = self.nca
         if self.model_path:
             best_path = Path(self.model_path).with_suffix(".best.pth")
@@ -207,8 +191,9 @@ class BasicNCATrainer:
                     )
             return x_pred
 
+        # MAIN LOOP
         total_batch_iterations = 0
-        for iteration in tqdm(range(self.max_iterations), desc="Epochs"):
+        for iteration in tqdm(range(self.max_epochs), desc="Epochs"):
             if earlystopping is not None:
                 if earlystopping.done():
                     break

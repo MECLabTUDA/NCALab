@@ -1,3 +1,5 @@
+from typing import Dict
+
 import torch  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
 
@@ -110,8 +112,11 @@ class ClassificationNCAModel(BasicNCAModel):
                 return y_pred
             return y_pred
 
-    def loss(self, x, target):
-        """_summary_
+    def loss(self, x, target) -> Dict[str, torch.Tensor]:
+        """
+        Return the classification loss. For pixel-wise ("self-classifying") problems,
+        such as self-classifying MNIST, we compute the Cross-Entropy loss.
+        For image-wise classification, MSE loss is returned.
 
         Args:
             x (_type_): _description_

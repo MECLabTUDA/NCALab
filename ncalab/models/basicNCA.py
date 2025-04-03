@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Callable, List, Optional, Dict
+from typing import Callable, List, Optional, Dict, Tuple
 import numpy as np
 
 import torch  # type: ignore[import-untyped]
@@ -217,7 +217,7 @@ class BasicNCAModel(nn.Module):
         x,
         steps: int = 1,
         return_steps: bool = False,
-    ):
+    ) -> torch.Tensor | Tuple[torch.Tensor, int]:
         if self.autostepper is None:
             for step in range(steps):
                 x = self.update(x)
@@ -289,7 +289,7 @@ class BasicNCAModel(nn.Module):
         steps: int,
         batch_iteration: int,
         summary_writer=None,
-    ):
+    ) -> torch.Tensor:
         return NotImplemented
 
     def get_meta_dict(self) -> dict:
@@ -308,7 +308,10 @@ class BasicNCAModel(nn.Module):
         )
 
     def finetune(self):
-        """Prepare model for fine tuning by freezing everything except the final layer."""
+        """
+        Prepare model for fine tuning by freezing everything except the final layer,
+        and setting to "train" mode.
+        """
         self.train()
         if self.num_learned_filters != 0:
             for filter in self.filters:
