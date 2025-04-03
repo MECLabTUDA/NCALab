@@ -1,4 +1,5 @@
-import sys, os
+import os
+import sys
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
@@ -48,7 +49,7 @@ def train_selfclass_mnist(
     )
 
     # Split MNIST dataset into training and validation
-    train_indices, val_indices, _, _ = train_test_split(
+    train_indices, _, _, _ = train_test_split(
         range(len(mnist_train)),
         mnist_train.targets,
         stratify=mnist_train.targets,
@@ -56,14 +57,14 @@ def train_selfclass_mnist(
     )
 
     train_split = Subset(mnist_train, train_indices)
-    val_split = Subset(mnist_train, val_indices)
+    # val_split = Subset(mnist_train, val_indices)
 
     loader_train = torch.utils.data.DataLoader(
         train_split, shuffle=True, batch_size=batch_size
     )
-    loader_val = torch.utils.data.DataLoader(
-        val_split, shuffle=True, batch_size=batch_size
-    )
+    # loader_val = torch.utils.data.DataLoader(
+    #     val_split, shuffle=True, batch_size=batch_size
+    # )
 
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
@@ -80,9 +81,9 @@ def train_selfclass_mnist(
         WEIGHTS_PATH / "selfclass_mnist.pth",
         steps_range=(40, 60),
         steps_validation=50,
-        max_epochs=10,
+        max_epochs=1,
     )
-    trainer.train_basic_nca(
+    trainer.train(
         loader_train,
         # Validation is broken here. We're working on it!
         # loader_val,

@@ -100,8 +100,7 @@ def extract_archive(filename, destination=None):
 
 
 def download_and_extract():
-    """_summary_
-    """
+    """_summary_"""
     KVASIR_SEG_PATH.mkdir(exist_ok=True)
     if os.path.exists("kvasir_seg.zip"):
         if not validate_checksum("kvasir_seg.zip"):

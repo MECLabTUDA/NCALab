@@ -1,18 +1,22 @@
 #!/usr/bin/env python3
 import click
 
-from .train_selfclass_bloodmnist import train_selfclass_bloodmnist
-from .train_selfclass_pathmnist import train_selfclass_pathmnist
+from .train_selfclass_bloodmnist import train_class_bloodmnist
+from .train_selfclass_pathmnist import train_class_pathmnist
 
 
-def train_selfclass_medmnist(
+def train_class_medmnist(
     batch_size: int,
     hidden_channels: int,
     gpu: bool,
     gpu_index: int,
 ):
-    train_selfclass_bloodmnist(batch_size, hidden_channels, gpu, gpu_index)
-    train_selfclass_pathmnist(batch_size, hidden_channels, gpu, gpu_index)
+    train_class_bloodmnist(
+        batch_size, hidden_channels, gpu, gpu_index, lambda_activity=0.0
+    )
+    train_class_pathmnist(
+        batch_size, hidden_channels, gpu, gpu_index, lambda_activity=0.0
+    )
 
 
 @click.command()
@@ -25,7 +29,7 @@ def train_selfclass_medmnist(
     "--gpu-index", type=int, default=0, help="Index of GPU to use, if --gpu in use."
 )
 def main(batch_size, hidden_channels, gpu, gpu_index):
-    train_selfclass_medmnist(
+    train_class_medmnist(
         batch_size=batch_size,
         hidden_channels=hidden_channels,
         gpu=gpu,

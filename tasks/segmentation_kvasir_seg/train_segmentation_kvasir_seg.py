@@ -4,6 +4,7 @@ import sys, os
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
+from pathlib import Path, PosixPath
 from typing import Any
 
 from ncalab import (
@@ -14,25 +15,22 @@ from ncalab import (
     print_mascot,
 )
 
-from download_kvasir_seg import download_and_extract, KVASIR_SEG_PATH
+from download_kvasir_seg import download_and_extract, KVASIR_SEG_PATH  # type: ignore[import-untyped]
 
+
+import albumentations as A  # type: ignore[import-untyped]
+from albumentations.pytorch import ToTensorV2  # type: ignore[import-untyped]
 import click
-
 import numpy as np
-
-from sklearn.model_selection import train_test_split
-
+from PIL import Image
+from sklearn.model_selection import train_test_split  # type: ignore[import-untyped]
 import torch
 from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import Dataset, Subset
-from PIL import Image
-
-import albumentations as A
-from albumentations.pytorch import ToTensorV2
 
 
 class KvasirSegDataset(Dataset):
-    def __init__(self, path: str, transform=None) -> None:
+    def __init__(self, path: Path | PosixPath, transform=None) -> None:
         super().__init__()
         self.path = path
         self.image_filenames = sorted((path / "Kvasir-SEG" / "images").glob("*.jpg"))
@@ -42,9 +40,9 @@ class KvasirSegDataset(Dataset):
         return len(self.image_filenames)
 
     def __getitem__(self, index) -> Any:
-        filename = self.image_filenames[index]
-        image_filename = os.path.join(self.path, "images", filename)
-        mask_filename = os.path.join(self.path, "masks", filename)
+        filename = self.image_filenames[index].name
+        image_filename = (self.path / "Kvasir-SEG" / "images" / filename).resolve()
+        mask_filename = (self.path / "Kvasir-SEG" / "masks" / filename).resolve()
         image = Image.open(image_filename).convert("RGB")
         mask = Image.open(mask_filename).convert("L")
         bbox = image.getbbox()
@@ -67,6 +65,8 @@ def train_segmentation_kvasir_seg(batch_size: int, hidden_channels: int):
         num_image_channels=3,
         num_hidden_channels=hidden_channels,
         num_classes=1,
+        pad_noise=True,
+        fire_rate=0.8,
     )
 
     T = A.Compose(
@@ -97,25 +97,23 @@ def train_segmentation_kvasir_seg(batch_size: int, hidden_channels: int):
     )
 
     trainer = BasicNCATrainer(nca, WEIGHTS_PATH / "segmentation_kvasir_seg.pth")
-    trainer.train_basic_nca(
+    trainer.train(
         loader_train,
-        # loader_val,
+        loader_val,
         summary_writer=writer,
+        save_every=1,
     )
     writer.close()
 
 
 @click.command()
 @click.option("--batch-size", "-b", default=8, type=int)
-@click.option("--hidden-channels", "-H", default=14, type=int)
+@click.option("--hidden-channels", "-H", default=18, type=int)
 def main(batch_size, hidden_channels):
     print_mascot(
         "So you decided to run NCAs on a medical dataset.\n"
-        "Awesome, I love working on medical datasets!\n"
         "\n"
-        "Let's see... Kvasir-SEG, this is an endoscopic dataset, right?\n"
-        "Polyp segmentation, that's super interesting!\n"
-        "\n"
+        "Kvasir-SEG: That's an endoscopic dataset for polyp segmentation.\n"
         "I'm excited to see how NCAs will perform on that."
     )
 

@@ -14,7 +14,7 @@ from ncalab import (
 
 import click
 
-from medmnist import PathMNIST
+from medmnist import PathMNIST  # type: ignore[import-untyped]
 
 import torch  # type: ignore[import-untyped]
 from torchvision import transforms  # type: ignore[import-untyped]
@@ -68,6 +68,7 @@ def train_class_pathmnist(
         fire_rate=0.5,
         lambda_activity=lambda_activity,
         filter_padding="circular",
+        pad_noise=pad_noise,
     )
     trainer = BasicNCATrainer(
         nca,
@@ -75,11 +76,10 @@ def train_class_pathmnist(
         batch_repeat=2,
         max_epochs=100,
         gradient_clipping=gradient_clipping,
-        pad_noise=pad_noise,
         steps_range=(64, 96),
         steps_validation=72,
     )
-    trainer.train_basic_nca(
+    trainer.train(
         loader_train,
         loader_val,
         summary_writer=writer,

@@ -1,18 +1,12 @@
-import sys, os
+import os
+import sys
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from ncalab import (
-    ClassificationNCAModel,
-    get_compute_device,
-    pad_input,
-    WEIGHTS_PATH
-)
+from ncalab import ClassificationNCAModel, get_compute_device, pad_input, WEIGHTS_PATH
 
 import click
-
-from sklearn.model_selection import train_test_split  # type: ignore[import-untyped]
 
 import torch
 
@@ -31,7 +25,7 @@ def print_MNIST_digit(image, prediction):
         6: "green",
         7: "white",
         8: "blue",
-        9: "red"
+        9: "red",
     }
     FG = {
         0: "white",
@@ -59,9 +53,7 @@ def eval_selfclass_mnist(
         transform=transforms.Compose([transforms.ToTensor()]),
     )
 
-    loader_test = torch.utils.data.DataLoader(
-        mnist_test, shuffle=True, batch_size=1
-    )
+    loader_test = torch.utils.data.DataLoader(mnist_test, shuffle=True, batch_size=1)
 
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
@@ -72,7 +64,9 @@ def eval_selfclass_mnist(
         num_classes=10,
         pixel_wise_loss=True,
     )
-    nca.load_state_dict(torch.load(WEIGHTS_PATH / "selfclass_mnist.pth", weights_only=True))
+    nca.load_state_dict(
+        torch.load(WEIGHTS_PATH / "selfclass_mnist.pth", weights_only=True)
+    )
     nca.eval()
 
     i = num_digits
@@ -92,11 +86,12 @@ def eval_selfclass_mnist(
         i -= 1
 
     click.secho()
-    click.secho(f"You should see {num_digits} random downscaled (2x) pictures of\n" \
-                "handwritten digits (0-9) in the lines above.\n" \
-                "If they are correctly classified by the NCA, the numbers\n" \
-                "inside the blocks correspond to the written digit.\n")
-
+    click.secho(
+        f"You should see {num_digits} random downscaled (2x) pictures of\n"
+        "handwritten digits (0-9) in the lines above.\n"
+        "If they are correctly classified by the NCA, the numbers\n"
+        "inside the blocks correspond to the written digit.\n"
+    )
 
 
 @click.command()

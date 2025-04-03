@@ -8,12 +8,11 @@ from ncalab import ClassificationNCAModel, WEIGHTS_PATH, get_compute_device, pad
 
 import click
 
-import torch
+from medmnist import PathMNIST  # type: ignore[import-untyped]
 
-from medmnist import PathMNIST
-
-from torchvision import transforms
-from torchvision.transforms import v2
+import torch  # type: ignore[import-untyped]
+from torchvision import transforms  # type: ignore[import-untyped]
+from torchvision.transforms import v2  # type: ignore[import-untyped]
 
 import numpy as np
 
@@ -55,7 +54,9 @@ def eval_selfclass_pathmnist(
         use_alive_mask=False,
         fire_rate=0.5,
     )
-    nca.load_state_dict(torch.load(WEIGHTS_PATH / "selfclass_pathmnist.best.pth", weights_only=True))
+    nca.load_state_dict(
+        torch.load(WEIGHTS_PATH / "selfclass_pathmnist.best.pth", weights_only=True)
+    )
 
     model_parameters = filter(lambda p: p.requires_grad, nca.parameters())
     params = sum([np.prod(p.size()) for p in model_parameters])
