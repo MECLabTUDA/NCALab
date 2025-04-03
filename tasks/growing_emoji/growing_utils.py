@@ -1,5 +1,5 @@
 from pilmoji import Pilmoji  # type: ignore[import-untyped]
-from PIL import Image, ImageFont
+from PIL import Image, ImageDraw, ImageFont
 
 
 def get_emoji_image(emoji: str = "🦎", padding: int = 2, size: int = 24):
@@ -13,9 +13,18 @@ def get_emoji_image(emoji: str = "🦎", padding: int = 2, size: int = 24):
     Returns:
         Image: Output PIL.Image containing an emoji on transparent background.
     """
-    dims = (padding * 2 + size, padding * 2 + size)
+    scale = size / 109
+    dims = (int(padding * 2 * scale + 109), int(padding * 2 * scale + 109))
     with Image.new("RGBA", dims, (255, 255, 255, 0)) as image:
-        font = ImageFont.truetype("arial.ttf", size)
-        with Pilmoji(image) as pilmoji:
-            pilmoji.text((padding, padding - size), emoji.strip(), (0, 0, 0), font)
+        font = ImageFont.truetype("NotoColorEmoji.ttf", 109)
+        draw = ImageDraw.Draw(image)
+        draw.text(
+            (padding * scale, padding * scale),
+            emoji.strip(),
+            font=font,
+            embedded_color=True,
+        )
+        image = image.resize(
+            (size + 2 * padding, size + 2 * padding), Image.Resampling.LANCZOS
+        )
         return image

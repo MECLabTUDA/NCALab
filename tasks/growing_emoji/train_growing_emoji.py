@@ -1,5 +1,14 @@
 #!/usr/bin/env python3
-import sys, os
+import os
+import sys
+
+import click
+
+from torch.utils.data import DataLoader
+
+from torch.utils.tensorboard import SummaryWriter
+
+import numpy as np
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
@@ -14,19 +23,11 @@ from ncalab import (
     print_mascot,
 )
 
-import click
-
-from torch.utils.data import DataLoader
-
-from torch.utils.tensorboard import SummaryWriter
-
-import numpy as np
-
 from growing_utils import get_emoji_image
 
 
 def train_growing_emoji(
-    batch_size: int, hidden_channels: int, gpu: bool, gpu_index: int
+    batch_size: int, hidden_channels: int, gpu: bool, gpu_index: int, max_epochs: int
 ):
     """Main function to run the "growing emoji" example task.
 
@@ -37,9 +38,6 @@ def train_growing_emoji(
     # Display prologue
     NCALab_banner()
     print_mascot(
-        "Hello, stranger!\n"
-        "I am Bart, the lab rat.\n"
-        "\n"
         "You are about to run the growing lizard emoji example,\n"
         "a true NCA classic! To learn more about it, visit:\n"
         "\n"
@@ -49,7 +47,7 @@ def train_growing_emoji(
     print()
 
     # Create tensorboard summary writer
-    writer = SummaryWriter("Growing Emoji")
+    writer = SummaryWriter("runs")
 
     # Select device, try to use GPU or fall back to CPU
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
@@ -68,8 +66,10 @@ def train_growing_emoji(
     dataloader_train = DataLoader(dataset, batch_size=batch_size, shuffle=False)
 
     # Create Trainer and run training
-    trainer = BasicNCATrainer(nca, WEIGHTS_PATH / "growing_emoji.pth")
-    trainer.train_basic_nca(dataloader_train, summary_writer=writer, save_every=100)
+    trainer = BasicNCATrainer(
+        nca, WEIGHTS_PATH / "growing_emoji.pth", max_epochs=max_epochs
+    )
+    trainer.train(dataloader_train, summary_writer=writer, save_every=100)
     writer.close()
 
 
@@ -82,12 +82,14 @@ def train_growing_emoji(
 @click.option(
     "--gpu-index", type=int, default=0, help="Index of GPU to use, if --gpu in use."
 )
-def main(batch_size, hidden_channels, gpu, gpu_index):
+@click.option("--epochs", "-e", type=int, default=5000)
+def main(batch_size, hidden_channels, gpu, gpu_index, epochs):
     train_growing_emoji(
         batch_size=batch_size,
         hidden_channels=hidden_channels,
         gpu=gpu,
         gpu_index=gpu_index,
+        max_epochs=epochs,
     )
 
 

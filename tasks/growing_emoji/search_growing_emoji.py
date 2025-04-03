@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
-import sys, os
+import os
+import sys
 import logging
+
+import click
+from torch.utils.data import DataLoader
+import numpy as np
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
@@ -14,10 +19,6 @@ from ncalab import (
     ParameterSearch,
     ParameterSet,
 )
-
-import click
-from torch.utils.data import DataLoader
-import numpy as np
 
 from growing_utils import get_emoji_image
 
@@ -55,14 +56,15 @@ def search_growing_emoji(
 
     # Set up parameter ranges for grid search
     model_params = ParameterSet(
-        #fire_rate=[0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
-        #learned_filters=[0, 2],
+        # fire_rate=[0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
+        # learned_filters=[0, 2],
         dx_noise=[0.0, 0.01, 0.05, 0.1, 0.2, 0.5],
         num_image_channels=4,
         num_hidden_channels=hidden_channels,
+        auto_step=True,
     )
     # No need to search trainer parameters, but we could do that
-    trainer_params = ParameterSet(max_epochs=5000)
+    trainer_params = ParameterSet(max_epochs=500)
 
     # Set up hyperparameter search (grid search)
     search = ParameterSearch(device, GrowingNCAModel, model_params, trainer_params)
@@ -72,7 +74,9 @@ def search_growing_emoji(
     print()
 
     # Run the search!
-    search(dataloader_train)
+    df = search(dataloader_train)
+    print(df)
+    df.to_csv("search_summary_growing_emoji.csv")
 
 
 @click.command()

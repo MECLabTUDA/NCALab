@@ -1,5 +1,18 @@
 #!/usr/bin/env python3
-import sys, os
+# -*- coding: UTF-8 -*-
+import os
+import sys
+
+import click
+
+import torch
+from torch.utils.data import DataLoader
+
+from torch.utils.tensorboard import SummaryWriter
+
+import numpy as np
+
+from growing_utils import get_emoji_image
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
@@ -12,17 +25,8 @@ from ncalab import (
     get_compute_device,
     NCALab_banner,
     print_mascot,
+    fix_random_seed,
 )
-
-import click
-
-from torch.utils.data import DataLoader
-
-from torch.utils.tensorboard import SummaryWriter
-
-import numpy as np
-
-from growing_utils import get_emoji_image
 
 
 def finetune_growing_emoji(
@@ -44,6 +48,7 @@ def finetune_growing_emoji(
     )
     print()
 
+    fix_random_seed()
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
     nca = GrowingNCAModel(
@@ -51,34 +56,59 @@ def finetune_growing_emoji(
         num_image_channels=4,
         num_hidden_channels=hidden_channels,
         use_alive_mask=False,
+        num_learned_filters=0,
+        fire_rate=0.5,
     )
 
     # Create emoji dataset for initial training
-    image_lizard = np.asarray(get_emoji_image("\N{lizard}"))
+    image_lizard = np.asarray(get_emoji_image("\N{LIZARD}"))
     dataset_lizard = GrowingNCADataset(
         image_lizard, nca.num_channels, batch_size=batch_size
     )
-    loader_lizard = DataLoader(dataset_lizard, batch_size=batch_size, shuffle=False)
+    loader_lizard = DataLoader(
+        dataset_lizard, batch_size=batch_size, shuffle=False, drop_last=True
+    )
 
     # Run initial training
     writer = SummaryWriter(comment="Growing Emoji: Pre-Training")
-    trainer = BasicNCATrainer(nca, WEIGHTS_PATH / "growing_emoji_finetuned.pth")
-    trainer.train_basic_nca(loader_lizard, summary_writer=writer, save_every=100)
+    trainer = BasicNCATrainer(
+        nca, WEIGHTS_PATH / "growing_emoji_finetuned.pth", gradient_clipping=True
+    )
+    trainer.max_epochs = 5000
+    trainer.train(loader_lizard, summary_writer=writer, save_every=100)
     writer.close()
 
     # So far so good.
     # Now we will freeze the first layer, and only train the linear layer! :)
 
+    # Idea: shuffle first layer's weights. They'll still follow the same distribution.
+    with torch.no_grad():
+        W_filter = nca.network_filters[0].weight.data.clone()
+        W_identity = nca.network_identity[0].weight.data.clone()
+        W_tail = nca.network_tail[0].weight.data.clone()
+
+        np.savez("weights_filter.npz", W_filter.cpu().numpy())
+        np.savez("weights_identity.npz", W_identity.cpu().numpy())
+        np.savez("weights_tail.npz", W_tail.cpu().numpy())
+
+        W = nca.network[0].weight.data.clone()
+        W_final = nca.network[2].weight.data.clone()
+        np.savez("weights_hidden.npz", W.cpu().numpy())
+        np.savez("weights_final.npz", W_final.cpu().numpy())
+        W = W.view(-1)
+        np.random.shuffle(W.cpu().numpy())
+        nca.network[0].weight.data.copy_(W.view(nca.network[0].weight.data.size()))
+
     # Create emoji dataset for finetuning
-    image_dna = np.asarray(get_emoji_image("\N{rat}"))
+    image_dna = np.asarray(get_emoji_image("\N{RAT}"))
     dataset_dna = GrowingNCADataset(image_dna, nca.num_channels, batch_size=batch_size)
     loader_dna = DataLoader(dataset_dna, batch_size=batch_size, shuffle=False)
 
     # Re-train with frozen final layer
     nca.finetune()
     writer = SummaryWriter(comment="Growing Emoji: Finetuning")
-    trainer.max_iterations = 1000  # we don't need as many iterations now
-    trainer.train_basic_nca(loader_dna, summary_writer=writer, save_every=100)
+    trainer.max_epochs = 2000  # we don't need as many iterations now
+    trainer.train(loader_dna, summary_writer=writer, save_every=100)
     writer.close()
 
 

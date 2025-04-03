@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-import sys, os
+import os
+import sys
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
@@ -31,7 +32,9 @@ def eval_growing_emoji(gpu: bool, gpu_index: int):
         use_alive_mask=False,
     ).to(device)
 
-    nca.load_state_dict(torch.load(WEIGHTS_PATH / "growing_emoji.pth"))
+    nca.load_state_dict(
+        torch.load(WEIGHTS_PATH / "growing_emoji.pth", weights_only=True)
+    )
     nca.eval()
 
     images = nca.grow(32, 32, save_steps=True)
