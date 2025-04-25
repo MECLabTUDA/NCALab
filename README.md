@@ -1,7 +1,6 @@
 # NCALab
 
-Neural Cellular Automata (NCA) implementations for different downstream tasks, featuring multiple usage examples, eNCApsulated in a single Python module.
-
+NCALab makes it easy to create Neural Cellular Automata (NCA) implementations for various downstream tasks, such as image segmentation, classification and generation.
 
 
 ![docs](https://github.com/MECLabTUDA/NCAlab/actions/workflows/docs.yml/badge.svg)
@@ -11,12 +10,21 @@ Neural Cellular Automata (NCA) implementations for different downstream tasks, f
 ![NCALab Logo](artwork/ncalab_logo.png)
 
 
+## Features
+
+Features of NCALab include:
+  * Easy training and evaluation of NCA models
+  * Cascaded multi-scale training
+  * Tensorboard integration with default presets
+  * Training with k-fold cross-validation
+  * Convenience features: Fixing random seeds, selecting compute devices, data processing
+
 
 ## Getting started
 
+Perhaps the best way of getting started with NCALab is to take a look at the provided usage example tasks, starting with the Growing Emoji task.
 
-
-### Usage Examples
+### Usage Example Tasks
 
 So far, the following example tasks are implemented in NCALab:
 
