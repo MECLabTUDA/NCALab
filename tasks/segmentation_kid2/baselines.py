@@ -37,6 +37,7 @@ model_zoo_names_pretty = {
     "resnet34": "ResNet34",
     "resnet50": "ResNet50",
     "timm-mobilenetv3_small_100": "MobileNet3",
+    "NCA": "eNCApsulateS"
 }
 
 baseline_colors = {
