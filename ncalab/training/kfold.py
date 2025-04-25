@@ -7,18 +7,17 @@ from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader
 
 from .trainer import BasicNCATrainer
+from .trainingsummary import TrainingSummary
 
 
-class TrainValTestRecord:
+class TrainValRecord:
     def __init__(
         self,
         train: List[str],
         val: List[str],
-        test: Optional[List[str]] = None,
     ):
         self.train = train
         self.val = val
-        self.test = test
 
     def dataloaders(
         self,
@@ -28,7 +27,7 @@ class TrainValTestRecord:
         batch_sizes=None,
     ):
         if batch_sizes is None:
-            batch_sizes = {"train": 8, "val": 8, "test": 32}
+            batch_sizes = {"train": 8, "val": 8}
         dataset_train = DatasetType(path, self.train, transform)
         dataloader_train = DataLoader(
             dataset_train, shuffle=True, drop_last=True, batch_size=batch_sizes["train"]
@@ -39,21 +38,16 @@ class TrainValTestRecord:
             dataset_val, shuffle=True, drop_last=True, batch_size=batch_sizes["val"]
         )
 
-        dataset_test = None
-        if self.test:
-            dataset_test = DatasetType(path, self.test, transform)
-            dataloader_test = DataLoader(dataset_test, batch_size=batch_sizes["test"])
-
         return {
             "train": dataloader_train,
             "val": dataloader_val,
-            "test": dataloader_test,
         }
 
 
 class SplitDefinition:
     def __init__(self):
-        self.folds = []
+        self.folds: List[None | TrainValRecord] = []
+        self.dataloader_test = None
 
     @staticmethod
     def read(path: PosixPath):
@@ -79,10 +73,9 @@ class SplitDefinition:
         sd = SplitDefinition()
         sd.folds = []
         for fold in d:
-            train = d["train"]
-            val = d["val"]
-            test = d.get("test")
-            tvt = TrainValTestRecord(train, val, test)
+            train = fold["train"]
+            val = fold["val"]
+            tvt = TrainValRecord(train, val)
             sd.folds.append(tvt)
         # TODO validate structure
         return sd
@@ -90,16 +83,15 @@ class SplitDefinition:
     def __len__(self):
         return len(self.folds)
 
-    def __getitem__(self, idx) -> TrainValTestRecord:
+    def __getitem__(self, idx) -> TrainValRecord:
         return self.folds[idx]
 
 
 class KFoldCrossValidationTrainer:
-    def __init__(self, trainer: BasicNCATrainer, split: SplitDefinition, k=5):
+    def __init__(self, trainer: BasicNCATrainer, split: SplitDefinition):
         self.trainer = trainer
-        self.k = k
         self.model_prototype = copy.deepcopy(trainer.nca)
-        self.model_name = trainer.model_path
+        self.model_name = trainer.model_path.with_suffix('')
         self.split = split
 
     def train(
@@ -109,9 +101,11 @@ class KFoldCrossValidationTrainer:
         transform,
         batch_sizes: None | Dict = None,
         save_every: int | None = None,
-    ):
-        for i in range(self.k):
-            experiment_name = f"{self.model_name}_fold{self.k:02d}"
+    ) -> List[TrainingSummary]:
+        k = len(self.split)
+        summaries = []
+        for i in range(k):
+            experiment_name = f"{self.model_name}_fold{i:02d}.pth"
             writer = SummaryWriter(comment=experiment_name)
 
             dataloaders = self.split[i].dataloaders(
@@ -122,7 +116,8 @@ class KFoldCrossValidationTrainer:
             summary = self.trainer.train(
                 dataloaders["train"],
                 dataloaders["val"],
-                dataloaders["test"],
                 save_every=save_every,
                 summary_writer=writer,
             )
+            summaries.append(summary)
+        return summaries

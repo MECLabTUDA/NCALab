@@ -258,15 +258,36 @@ class BasicNCATrainer:
                     torch.save(self.nca.state_dict(), self.model_path)
 
                 if dataloader_val:
-                    val_acc = self.nca.validate(
-                        dataloader_val,
-                        self.steps_validation,
-                        iteration,
-                        summary_writer,
-                    )
+                    all_metrics = {}
+                    for sample in dataloader_val:
+                        x, y = sample
+                        x = pad_input(x, self.nca, noise=self.nca.pad_noise)
+                        # Call model-specific input preparation hook
+                        x = self.nca.prepare_input(x)
+                        x = x.permute(0, 2, 3, 1)  # --> B W H C
+                        metrics, _ = self.nca.validate(
+                            x.to(self.nca.device),
+                            y.to(self.nca.device),
+                            self.steps_validation,
+                        )
+                        for name in metrics:
+                            if name == "prediction":
+                                continue
+                            if name not in all_metrics:
+                                all_metrics[name] = []
+                            all_metrics[name].append(metrics[name])
+                    for name in all_metrics:
+                        all_metrics[name] = np.mean(all_metrics[name])
+                        summary_writer.add_scalar(
+                            f"Acc/val_{name}", all_metrics[name], iteration
+                        )
+                    val_acc = all_metrics.get(self.nca.validation_metric, 0)
                     if val_acc > best_acc:
                         logging.info(
                             f"Accuracy improvement: {best_acc:.5f} --> {val_acc:.5f}"
+                        )
+                        logging.info(
+                            f"  In Epoch {iteration}"
                         )
                         if best_path:
                             torch.save(self.nca.state_dict(), best_path)
@@ -274,7 +295,16 @@ class BasicNCATrainer:
                         best_model = copy.deepcopy(self.nca)
                     if earlystopping is not None:
                         earlystopping.step(val_acc)
-        metrics = {}
-        if dataloader_test is not None:
-            metrics = best_model.metrics(dataloader_test, self.steps_validation)
+        with torch.no_grad():
+            metrics = {}
+            if dataloader_test is not None:
+                best_model.eval()
+                for image, label in dataloader_test:
+                    metrics.update(
+                        best_model.metrics(
+                            image.to(self.nca.device),
+                            label.to(self.nca.device),
+                            self.steps_validation,
+                        )
+                    )
         return TrainingSummary(best_acc, best_path, metrics)
