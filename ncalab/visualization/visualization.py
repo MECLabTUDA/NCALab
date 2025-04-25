@@ -124,12 +124,12 @@ def show_batch_binary_segmentation(x_seed, x_pred, y_true, nca):
     show_image_row(ax[0], np.clip(images, 0.0, 1.0), label="Image")
 
     # 2nd row: true segmentation
-    images = y_true
-    show_image_row(ax[1], np.clip(images, 0.0, 1.0), cmap="gray", label="GT Mask")
+    masks_true = y_true
+    show_image_row(ax[1], np.clip(masks_true, 0.0, 1.0), cmap="gray", label="GT Mask")
 
     # 3rd row: prediction
-    images = x_pred[..., -nca.num_classes :]
-    show_image_row(ax[2], np.clip(images, 0.0, 1.0), cmap="gray", label="Pred.")
+    masks_pred = x_pred[..., -nca.num_classes :]
+    show_image_row(ax[2], np.clip(masks_pred, 0.0, 1.0), cmap="gray", label="Pred.")
 
     figure.subplots_adjust(wspace=-0.8, hspace=0)
 
