@@ -4,6 +4,8 @@ from ..losses import DiceBCELoss
 from ..visualization import show_batch_binary_segmentation
 from ..utils import pad_input
 
+from typing import Dict, Tuple
+
 import torch  # type: ignore[import-untyped]
 import segmentation_models_pytorch as smp  # type: ignore[import-untyped]
 
@@ -17,7 +19,7 @@ class SegmentationNCAModel(BasicNCAModel):
         num_classes: int = 1,
         fire_rate: float = 0.8,
         hidden_size: int = 128,
-        learned_filters: int = 2,
+        num_learned_filters: int = 2,
         pad_noise: bool = True,
     ):
         """
@@ -27,7 +29,7 @@ class SegmentationNCAModel(BasicNCAModel):
             device (torch.device): Compute device
             num_image_channels (int): _description_
             num_hidden_channels (int): _description_
-            num_classes (int): _description_
+            num_classes (int): _description_. Defaults to 1.
             fire_rate (float, optional): _description_. Defaults to 0.8.
             hidden_size (int, optional): _description_. Defaults to 128.
             learned_filters (int, optional): _description_. Defaults to 2.
@@ -38,15 +40,16 @@ class SegmentationNCAModel(BasicNCAModel):
             device,
             num_image_channels,
             num_hidden_channels,
-            num_classes,
+            num_output_channels=num_classes,
             fire_rate=fire_rate,
             hidden_size=hidden_size,
             use_alive_mask=False,
             immutable_image_channels=True,
-            learned_filters=learned_filters,
+            num_learned_filters=num_learned_filters,
             pad_noise=pad_noise,
         )
         self.plot_function = show_batch_binary_segmentation
+        self.validation_metric = "Dice"
 
     def segment(self, image, return_all=False, return_steps=False, **kwargs):
         if return_all:
@@ -84,55 +87,47 @@ class SegmentationNCAModel(BasicNCAModel):
 
     def metrics(
         self,
-        dataloader,
+        image,
+        label,
         steps: int,
     ):
-        self.eval()
-        TP = []
-        FP = []
-        FN = []
-        TN = []
-
-        with torch.no_grad():
-            for images, labels in dataloader:
-                images, labels = images.to(self.device), labels.to(self.device)
-                # non_empty_labels = labels[~(labels.sum(dim=(1, 2)) == 0)]
-                # non_empty_images = images[~(labels.sum(dim=(1, 2)) == 0)]
-                outputs = self.segment(images, steps=steps).permute(0, 3, 1, 2)
-                tp, fp, fn, tn = smp.metrics.get_stats(
-                    outputs,
-                    labels[:, None, :, :].long(),
-                    mode="binary",
-                    threshold=0.1,
-                )
-                TP.append(tp.squeeze())
-                FP.append(fp.squeeze())
-                FN.append(fn.squeeze())
-                TN.append(tn.squeeze())
-            iou_score = smp.metrics.iou_score(
-                torch.cat(TP),
-                torch.cat(FP),
-                torch.cat(FN),
-                torch.cat(TN),
-                reduction="macro-imagewise",
-            ).item()
-            Dice = torch.mean(
-                2.0
-                * (torch.cat(TP) + 1.0)
-                / (2.0 * torch.cat(TP) + torch.cat(FP) + torch.cat(FN) + 1.0)
-            ).item()
-        return {"IoU": iou_score, "Dice": Dice}
+        x_pred = self(image, steps=steps)
+        outputs = x_pred[
+            ..., self.num_image_channels + self.num_hidden_channels :
+        ].permute(0, 3, 1, 2)
+        tp, fp, fn, tn = smp.metrics.get_stats(
+            outputs.cpu(),
+            label[:, None, :, :].cpu().long(),
+            mode="binary",
+            threshold=0.1,
+        )
+        tp = tp.squeeze()
+        fp = fp.squeeze()
+        fn = fn.squeeze()
+        tn = tn.squeeze()
+        iou_score = smp.metrics.iou_score(
+            tp,
+            fp,
+            fn,
+            tn,
+            reduction="macro-imagewise",
+        ).item()
+        Dice = torch.mean(2.0 * (tp + 1.0) / (2.0 * tp + fp + fn + 1.0)).item()
+        return {
+            "IoU": iou_score,
+            "Dice": Dice,
+            "TP": tp,
+            "FP": fp,
+            "FN": fn,
+            "TN": tn,
+            "prediction": x_pred,
+        }
 
     def validate(
         self,
-        dataloader_val,
+        image,
+        label,
         steps: int,
-        batch_iteration: int,
-        summary_writer=None,
-    ) -> float:
-        self.eval()
-        metrics = self.metrics(dataloader_val, steps)
-        if summary_writer:
-            summary_writer.add_scalar("Acc/val_Dice", metrics["Dice"], batch_iteration)
-            summary_writer.add_scalar("Acc/val_IoU", metrics["IoU"], batch_iteration)
-        return metrics["Dice"]
+    ) -> Tuple[Dict[str, float], torch.Tensor]:
+        metrics = self.metrics(image, label, steps)
+        return metrics, metrics["prediction"]

@@ -14,7 +14,7 @@ from ..utils import pad_input
 class ClassificationNCAModel(BasicNCAModel):
     def __init__(
         self,
-        device,
+        device: torch.device,
         num_image_channels: int,
         num_hidden_channels: int,
         num_classes: int,
@@ -28,10 +28,9 @@ class ClassificationNCAModel(BasicNCAModel):
         filter_padding: str = "reflect",
         pad_noise: bool = False,
     ):
-        """_summary_
-
+        """
         Args:
-            device (Pytorch device descriptor): _description_
+            device (torch.device): Compute device.
             num_image_channels (int): _description_
             num_hidden_channels (int): _description_
             num_classes (int): _description_
@@ -39,9 +38,11 @@ class ClassificationNCAModel(BasicNCAModel):
             hidden_size (int, optional): _description_. Defaults to 128.
             use_alive_mask (bool, optional): _description_. Defaults to False.
             immutable_image_channels (bool, optional): _description_. Defaults to True.
-            learned_filters (int, optional): _description_. Defaults to 2.
-            lambda_activity (float, optional): Activity loss weight, penalizing high NCA activity. Defaults to 0.01.
-            pixel_wise_loss (bool, optional): Whether a prediction per pixel is desired, like in self classifying MNIST. Defaults to False.
+            learned_filters (int, optional): _description_. Defaults to 0.
+            lambda_activity (float, optional): Activity loss weight, penalizing high NCA activity. Defaults to 0.0.
+            pixel_wise_loss (bool, optional): Whether a prediction per pixel is desired, like in self-classifying MNIST. Defaults to False.
+            filter_padding (str, optional): _description_. Defaults to "reflect".
+            pad_noise (bool, optional): _description_. Defaults to False.
         """
         super(ClassificationNCAModel, self).__init__(
             device,
@@ -138,7 +139,7 @@ class ClassificationNCAModel(BasicNCAModel):
                 mask = x[..., 0] > 0
             # TODO: mask alpha channel if available
             else:
-                mask = 1
+                mask = torch.Tensor([1.0])
             for i in range(x.shape[0]):
                 y[i] *= target[i]
             loss_ce = (
@@ -155,7 +156,6 @@ class ClassificationNCAModel(BasicNCAModel):
             y_var = torch.var(y_pred.flatten(1, 2), dim=-1).mean()
             y_pred = torch.mean(y_pred, dim=1)  # average W
             y_pred = torch.mean(y_pred, dim=1)  # average H
-            # loss_ce = F.cross_entropy(y_pred, target.squeeze().long())
             loss_mse = (
                 F.mse_loss(
                     y_pred.float(),
@@ -181,12 +181,19 @@ class ClassificationNCAModel(BasicNCAModel):
             "classification": loss_classification,
         }
 
+    def metrics(
+        self,
+        image,
+        label,
+        steps: int,
+    ):
+        pass
+
+
     def validate(
         self,
         dataloader_val: torch.utils.data.DataLoader,
         steps: int,
-        batch_iteration: int,
-        summary_writer=None,
     ) -> float:
         accuracy_macro_metric = MulticlassAccuracy(
             average="macro", num_classes=self.num_classes
@@ -210,20 +217,20 @@ class ClassificationNCAModel(BasicNCAModel):
             auroc_metric.update(y_prob, y_true)
             f1_metric.update(y_prob, y_true)
 
-        accuracy_macro = accuracy_macro_metric.compute()
-        accuracy_micro = accuracy_micro_metric.compute()
-        auroc = auroc_metric.compute()
-        f1 = f1_metric.compute()
+        accuracy_macro = accuracy_macro_metric.compute().item()
+        accuracy_micro = accuracy_micro_metric.compute().item()
+        auroc = auroc_metric.compute().item()
+        f1 = f1_metric.compute().item()
 
-        if summary_writer:
-            summary_writer.add_scalar(
-                "Acc/val_acc_macro", accuracy_macro, batch_iteration
-            )
-            summary_writer.add_scalar(
-                "Acc/val_acc_micro", accuracy_micro, batch_iteration
-            )
-            summary_writer.add_scalar("Acc/val_AUC", auroc, batch_iteration)
-            summary_writer.add_scalar("Acc/val_F1", f1, batch_iteration)
+        #if summary_writer:
+        #    summary_writer.add_scalar(
+        #        "Acc/val_acc_macro", accuracy_macro, batch_iteration
+        #    )
+        #    summary_writer.add_scalar(
+        #        "Acc/val_acc_micro", accuracy_micro, batch_iteration
+        #    )
+        #    summary_writer.add_scalar("Acc/val_AUC", auroc, batch_iteration)
+        #    summary_writer.add_scalar("Acc/val_F1", f1, batch_iteration)
         return f1
 
     def get_meta_dict(self) -> dict:

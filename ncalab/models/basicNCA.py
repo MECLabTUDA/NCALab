@@ -1,5 +1,7 @@
 from __future__ import annotations
-from typing import Callable, List, Optional, Dict, Tuple
+from typing import Callable, Optional, Dict, Tuple
+from os import PathLike
+
 import numpy as np
 
 import torch  # type: ignore[import-untyped]
@@ -82,7 +84,7 @@ class BasicNCAModel(nn.Module):
         self.autostepper = autostepper
 
         self.plot_function: Callable | None = None
-
+        self.validation_metric = None
         self.filters: list | nn.ModuleList = []
 
         if num_learned_filters > 0:
@@ -116,7 +118,7 @@ class BasicNCAModel(nn.Module):
             nn.Linear(
                 self.num_channels * (self.num_filters + 1), self.hidden_size, bias=True
             ),
-            nn.LazyBatchNorm2d(),
+            # nn.LazyBatchNorm2d(),
             nn.ReLU(),
             nn.Linear(self.hidden_size, self.num_channels, bias=False),
         ).to(device)
@@ -218,6 +220,16 @@ class BasicNCAModel(nn.Module):
         steps: int = 1,
         return_steps: bool = False,
     ) -> torch.Tensor | Tuple[torch.Tensor, int]:
+        """_summary_
+
+        Args:
+            x (_type_): _description_
+            steps (int, optional): _description_. Defaults to 1.
+            return_steps (bool, optional): _description_. Defaults to False.
+
+        Returns:
+            torch.Tensor | Tuple[torch.Tensor, int]: _description_
+        """
         if self.autostepper is None:
             for step in range(steps):
                 x = self.update(x)
@@ -285,11 +297,10 @@ class BasicNCAModel(nn.Module):
 
     def validate(
         self,
-        dataloader_val,
+        image,
+        label,
         steps: int,
-        batch_iteration: int,
-        summary_writer=None,
-    ) -> float:
+    ) -> Tuple[Dict[str, float], torch.Tensor]:
         return NotImplemented
 
     def get_meta_dict(self) -> dict:
@@ -319,5 +330,12 @@ class BasicNCAModel(nn.Module):
         for layer in self.network[:-1]:
             layer.requires_grad_ = False
 
-    def metrics(self, dataloader_test, steps: int):
+    def metrics(self, image, label, steps: int):
         return {}
+
+    def export_onnx(self, path: str | PathLike, optimize: bool = True):
+        dummy = torch.zeros((8, 16, 16, self.num_channels)).to(self.device)
+        onnx_program = torch.onnx.export(self, dummy, dynamo=True)
+        if optimize:
+            onnx_program.optimize()
+        onnx_program.save(path)

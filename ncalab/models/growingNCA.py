@@ -29,8 +29,8 @@ class GrowingNCAModel(BasicNCAModel):
 
         Args:
             device (device): Pytorch device descriptor.
-            num_image_channels (int): Number of channels reserved for input image.
-            num_hidden_channels (int): Number of hidden channels (communication channels).
+            num_image_channels (int): Number of channels reserved for input image. Defaults to 4.
+            num_hidden_channels (int): Number of hidden channels (communication channels). Defaults to 16.
             fire_rate (float, optional): _description_. Defaults to 0.5.
             hidden_size (int, optional): _description_. Defaults to 128.
             use_alive_mask (bool, optional): _description_. Defaults to False.
@@ -49,7 +49,7 @@ class GrowingNCAModel(BasicNCAModel):
         )
         self.plot_function = show_batch_growing
 
-    def loss(self, x, y):
+    def loss(self, x: torch.Tensor, y: torch.Tensor):
         """
         Implements a simple MSE loss between target and prediction.
 

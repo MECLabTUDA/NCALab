@@ -64,43 +64,40 @@ class DepthNCAModel(BasicNCAModel):
     def __init__(
         self,
         device: torch.device,
-        num_image_channels: int,
-        num_hidden_channels: int,
-        num_classes: int,
+        num_image_channels: int = 3,
+        num_hidden_channels: int = 18,
         fire_rate: float = 0.8,
         hidden_size: int = 128,
-        use_alive_mask: bool = False,
-        immutable_image_channels: bool = True,
-        learned_filters: int = 2,
-        lambda_activity: float = 0.0,
+        num_learned_filters: int = 2,
         autostepper: Optional[AutoStepper] = None,
         pad_noise: bool = False,
     ):
-        """NCA model for monocular depth estimation.
+        """
+        NCA model for monocular depth estimation.
 
         Args:
-            device (device): Compute device
-            num_image_channels (int): _description_
-            num_hidden_channels (int): _description_
-            num_classes (int): _description_
-            fire_rate (float, optional): _description_. Defaults to 0.5.
+            device (torch.device): _description_
+            num_image_channels (int, optional): _description_. Defaults to 3.
+            num_hidden_channels (int, optional): _description_. Defaults to 18.
+            fire_rate (float, optional): _description_. Defaults to 0.8.
             hidden_size (int, optional): _description_. Defaults to 128.
             use_alive_mask (bool, optional): _description_. Defaults to False.
             immutable_image_channels (bool, optional): _description_. Defaults to True.
             learned_filters (int, optional): _description_. Defaults to 2.
+            lambda_activity (float, optional): _description_. Defaults to 0.0.
+            autostepper (Optional[AutoStepper], optional): _description_. Defaults to None.
+            pad_noise (bool, optional): _description_. Defaults to False.
         """
-        self.num_classes = num_classes
-        self.lambda_activity = lambda_activity
         super(DepthNCAModel, self).__init__(
             device,
             num_image_channels,
             num_hidden_channels,
-            num_classes,
-            fire_rate,
-            hidden_size,
-            use_alive_mask,
-            immutable_image_channels,
-            learned_filters,
+            num_output_channels=1,
+            fire_rate=fire_rate,
+            hidden_size=hidden_size,
+            use_alive_mask=False,
+            immutable_image_channels=True,
+            num_learned_filters=num_learned_filters,
             kernel_size=3,
             autostepper=autostepper,
             pad_noise=pad_noise,
