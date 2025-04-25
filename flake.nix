@@ -40,9 +40,6 @@
 
           torch # or: torchWithCuda
           torchvision
-
-          # Optional, just for experiments:
-          openvino
         ]))
       ];
 
