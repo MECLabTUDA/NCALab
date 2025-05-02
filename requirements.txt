@@ -21,7 +21,6 @@ cycler==0.12.1
 debugpy==1.8.14
 decorator==5.2.1
 docopt==0.6.2
-efficientnet==1.1.1
 efficientnet_pytorch==0.7.1
 emoji==2.14.1
 etils==1.12.2
@@ -126,7 +125,7 @@ pure_eval==0.2.3
 pyasn1==0.6.1
 pyasn1_modules==0.4.2
 pydantic==2.11.4
-pydantic_core==2.34.1
+pydantic_core==2.33.2
 Pygments==2.19.1
 pyparsing==3.2.3
 pyproject_hooks==1.2.0
