@@ -9,6 +9,7 @@ from typing import Any
 
 from ncalab import (
     SegmentationNCAModel,
+    CascadeNCA,
     BasicNCATrainer,
     WEIGHTS_PATH,
     get_compute_device,
@@ -68,11 +69,12 @@ def train_segmentation_kvasir_seg(batch_size: int, hidden_channels: int):
         pad_noise=True,
         fire_rate=0.8,
     )
+    cascade = CascadeNCA(nca, [8, 4, 2, 1], [70, 20, 10, 5])
 
     T = A.Compose(
         [
             A.RandomCrop(300, 300),
-            A.Resize(64, 64),
+            A.Resize(256, 256),
             A.RandomRotate90(),
             A.HorizontalFlip(),
             ToTensorV2(),
@@ -96,7 +98,7 @@ def train_segmentation_kvasir_seg(batch_size: int, hidden_channels: int):
         val_split, shuffle=True, batch_size=batch_size, drop_last=True
     )
 
-    trainer = BasicNCATrainer(nca, WEIGHTS_PATH / "segmentation_kvasir_seg.pth")
+    trainer = BasicNCATrainer(cascade, WEIGHTS_PATH / "segmentation_kvasir_seg.pth")
     trainer.train(
         loader_train,
         loader_val,
