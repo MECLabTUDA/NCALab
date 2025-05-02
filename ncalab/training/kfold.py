@@ -11,11 +11,22 @@ from .trainingsummary import TrainingSummary
 
 
 class TrainValRecord:
+    """
+    Helper class, storing a training / validation data split to generate
+    respective DataLoader objects.
+    """
+
     def __init__(
         self,
         train: List[str],
         val: List[str],
     ):
+        """
+        Constructor.
+
+        :param train (List[str]): List of training image file paths
+        :param val (List[str]): List of validation image file paths
+        """
         self.train = train
         self.val = val
 
@@ -26,6 +37,10 @@ class TrainValRecord:
         transform=None,
         batch_sizes=None,
     ):
+        """
+        Generate a pair of training and validation DataLoader objects, based on
+        a given DataSet subtype.
+        """
         if batch_sizes is None:
             batch_sizes = {"train": 8, "val": 8}
         dataset_train = DatasetType(path, self.train, transform)
@@ -45,7 +60,14 @@ class TrainValRecord:
 
 
 class SplitDefinition:
+    """
+    Stores a k-fold cross-validation split.
+    """
+
     def __init__(self):
+        """
+        Constructor.
+        """
         self.folds: List[None | TrainValRecord] = []
         self.dataloader_test = None
 
@@ -55,18 +77,21 @@ class SplitDefinition:
         Reads json files with split definitions, similar to those created by nnUNet.
 
         Format is like
-        [
-            {
-                "train": [ "filename0", "filename1",... ]
-                "val": [ "filename2", "filename3",... ]
-            },
-            {
-                ...
-            }
-        ]
 
-        Args:
-            path (PosixPath): Path to JSON file containing split definition.
+        .. highlight:: python
+        .. code-block:: python
+
+            [
+                {
+                    "train": [ "filename0", "filename1",... ]
+                    "val": [ "filename2", "filename3",... ]
+                },
+                {
+                    ...
+                }
+            ]
+
+        :param path [PosixPath]: Path to JSON file containing split definition.
         """
         with open(path, "r") as f:
             d = json.load(f)
@@ -89,9 +114,15 @@ class SplitDefinition:
 
 class KFoldCrossValidationTrainer:
     def __init__(self, trainer: BasicNCATrainer, split: SplitDefinition):
+        """
+        Constructor.
+
+        :param trainer [BasicNCATrainer]: BasicNCATrainer, to train each individual fold.
+        :param split [SplitDefinition]: Definition of the split used for k-fold cross-training.
+        """
         self.trainer = trainer
         self.model_prototype = copy.deepcopy(trainer.nca)
-        self.model_name = trainer.model_path.with_suffix('')
+        self.model_name = trainer.model_path.with_suffix("")
         self.split = split
 
     def train(
@@ -102,6 +133,18 @@ class KFoldCrossValidationTrainer:
         batch_sizes: None | Dict = None,
         save_every: int | None = None,
     ) -> List[TrainingSummary]:
+        """
+        Run training loop with a single function call.
+
+        :param DatasetType [Type]: Type of dataset class to use.
+        :param datapath [Path]: _description_
+        :param transform: Data transform, e.g. initialized via Albumentations.
+        :param batch_sizes: Dict of batch sizes per set, e.g. {"train": 8, "val": 16}. Defaults to None.
+        :param save_every [int]: _description_. Defaults to None.
+        :param plot_function: Plot function override. If None, use model's default. Defaults to None.
+
+        :returns [List[TrainingSummary]]: List of TrainingSummary objects, one per fold.
+        """
         k = len(self.split)
         summaries = []
         for i in range(k):

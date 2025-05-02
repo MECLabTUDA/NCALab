@@ -19,10 +19,14 @@ def downscale(image, scale):
 
 
 class CascadeNCA(BasicNCAModel):
+    """
+    Chain multiple instances of the same NCA model, operating at different
+    image scales.
+    """
+
     def __init__(self, backbone: BasicNCAModel, scales: List[int], steps: List[int]):
         """
-        Chain multiple instances of the same NCA model, operating at different
-        image scales.
+        Constructor.
 
         Args:
             backbone (Type): _description_

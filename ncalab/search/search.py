@@ -135,6 +135,7 @@ class ParameterSearch:
                 )
                 writer = SummaryWriter(comment=experiment_name)
                 model = self.model_class(self.device, **model_args)
+                # TODO: allow k-fold
                 trainer = BasicNCATrainer(model, **trainer_args)
                 summary = trainer.train(
                     dataloader_train,

@@ -42,21 +42,22 @@ class BasicNCATrainer:
         max_epochs: int = 200,
         p_retain_pool: float = 0.0,
     ):
-        """_summary_
+        """
+        Initialize trainer object.
 
         Args:
-            nca (BasicNCAModel): _description_
-            model_path (str | Path | PosixPath | None, optional): _description_. Defaults to None.
-            gradient_clipping (bool, optional): _description_. Defaults to False.
-            steps_range (tuple, optional): _description_. Defaults to (90, 110).
-            steps_validation (int, optional): _description_. Defaults to 100.
-            lr (float, optional): _description_. Defaults to 16e-4.
-            lr_gamma (float, optional): _description_. Defaults to 0.9999.
-            adam_betas (tuple, optional): _description_. Defaults to (0.9, 0.99).
-            batch_repeat (int, optional): _description_. Defaults to 2.
-            truncate_backprop (bool, optional): _description_. Defaults to False.
-            max_epochs (int, optional): _description_. Defaults to 200.
-            p_retain_pool (float, optional): _description_. Defaults to 0.0.
+            nca (BasicNCAModel): NCA model instance to train.
+            model_path (Optional[str  |  Path  |  PosixPath], optional): Path to saved models. If None, models are not saved. Defaults to None.
+            gradient_clipping (bool, optional): Whether to clip gradients. Defaults to False.
+            steps_range (tuple, optional): Inclusive range of NCA time steps, randomized in each forward pass. Defaults to (90, 110).
+            steps_validation (int, optional): Number of steps to use during validation. Defaults to 100.
+            lr (float, optional): Initial learning rate. Defaults to 16e-4.
+            lr_gamma (float, optional): Exponential learning rate decay. Defaults to 0.9999.
+            adam_betas (tuple, optional): Beta values for Adam optimizer. Defaults to (0.9, 0.99).
+            batch_repeat (int, optional): How often each batch will be duplicated. Defaults to 2.
+            truncate_backprop (bool, optional): Whether to truncate backpropagation. Defaults to False.
+            max_epochs (int, optional): Maximum number of epochs in training. Defaults to 200.
+            p_retain_pool (float, optional): Probability at which a sample will be retained. Defaults to 0.0.
         """
         assert batch_repeat >= 1
         assert lr > 0
@@ -113,19 +114,27 @@ class BasicNCATrainer:
         ] = None,
         earlystopping: Optional[EarlyStopping] = None,
     ) -> TrainingSummary:
-        """Execute basic NCA training loop with a single function call.
+        """
+        Execute basic NCA training loop with a single function call.
 
         Args:
             dataloader_train (DataLoader): Training DataLoader
             dataloader_val (DataLoader): Validation DataLoader
-            save_every (int):
-            summary_writer (SummaryWriter, optional): Tensorboard SummaryWriter. Defaults to None.
-            plot_function (Callable[ [np.ndarray, np.ndarray, np.ndarray, BasicNCAModel], Figure ], optional): _description_. Defaults to None.
+            save_every (int, optional):
+                How often to save model state (in epochs). Useful for very small datasets, like growing lizard.
+            summary_writer (SummaryWriter, optional):
+                Tensorboard SummaryWriter. Defaults to None.
+            plot_function (Callable[ [np.ndarray, np.ndarray, np.ndarray, BasicNCAModel], Figure ], optional):
+                Plot function override. If None, use model's default. Defaults to None.
+            earlystopping (EarlyStopping, optional): EarlyStopping object. Defaults to None.
+
+        Returns:
+            TrainingSummary: TrainingSummary object.
         """
         logging.basicConfig(encoding="utf-8", level=logging.INFO)
 
         if save_every is None:
-            save_every = 100
+            save_every = 1
         assert save_every > 0
 
         # Use default plot function for NCA flavor if none is explicitly given
@@ -153,7 +162,8 @@ class BasicNCATrainer:
             scheduler: torch.optim.lr_scheduler.LRScheduler,
             total_batch_iterations: int,
         ) -> torch.Tensor:
-            """Run a single training iteration.
+            """
+            Run a single training iteration.
 
             Args:
                 x (torch.Tensor): Input training images.
@@ -216,22 +226,29 @@ class BasicNCATrainer:
                 x = pad_input(x, self.nca, noise=self.nca.pad_noise)
                 # Call model-specific input preparation hook
                 x = self.nca.prepare_input(x)
-                x = x.permute(0, 2, 3, 1)  # --> B W H C
+                x = x.permute(0, 2, 3, 1)  # B C W H --> B W H C
 
                 if (
                     self.p_retain_pool > 0.0
                     and x_previous is not None
                     and np.random.random() <= self.p_retain_pool
                 ):
-                    # batch sizes might be incompatible if DataLoader has drop_last set to False (default)
+                    # Batch sizes might be incompatible if DataLoader has drop_last set to False (default).
+                    # Retention is not applied in this case.
                     if x_previous.shape[0] == x.shape[0]:
                         x[:, :, :, self.nca.num_image_channels :] = x_previous[
                             :, :, :, self.nca.num_image_channels :
                         ]
+                    else:
+                        raise Exception(
+                            "Batch retention cannot be applied."
+                            "Make sure you set drop_last=True in your DataLoader."
+                        )
 
-                # batch duplication, slightly stabelizes the training
-                x = torch.cat(self.batch_repeat * [x])
-                y = torch.cat(self.batch_repeat * [y])
+                # Batch duplication, slightly stabelizes the training
+                if self.batch_repeat > 1:
+                    x = torch.cat(self.batch_repeat * [x])
+                    y = torch.cat(self.batch_repeat * [y])
 
                 steps = np.random.randint(*self.steps_range)
                 x_pred = train_iteration(
@@ -241,18 +258,18 @@ class BasicNCATrainer:
                     x_previous = x_pred
                 total_batch_iterations += 1
 
-            # VISUALIZATION
-            if plot_function and summary_writer and (iteration + 1) % save_every == 0:
-                figure = plot_function(
-                    x.detach().cpu().numpy(),
-                    x_pred.detach().cpu().numpy(),
-                    y.detach().cpu().numpy(),
-                    self.nca,
-                )
-                summary_writer.add_figure("Training Batch", figure, iteration)
-
-            # VALIDATION
             with torch.no_grad():
+                # VISUALIZATION
+                if plot_function and summary_writer and (iteration + 1) % save_every == 0:
+                    figure = plot_function(
+                        x.detach().cpu().numpy(),
+                        x_pred.detach().cpu().numpy(),
+                        y.detach().cpu().numpy(),
+                        self.nca,
+                    )
+                    summary_writer.add_figure("Training Batch", figure, iteration)
+
+                # VALIDATION
                 self.nca.eval()
                 if self.model_path:
                     torch.save(self.nca.state_dict(), self.model_path)
@@ -279,22 +296,21 @@ class BasicNCATrainer:
                     for name in all_metrics:
                         all_metrics[name] = np.mean(all_metrics[name])
                         summary_writer.add_scalar(
-                            f"Acc/val_{name}", all_metrics[name], iteration
+                            f"Acc/Val/{name}", all_metrics[name], iteration
                         )
                     val_acc = all_metrics.get(self.nca.validation_metric, 0)
                     if val_acc > best_acc:
                         logging.info(
                             f"Accuracy improvement: {best_acc:.5f} --> {val_acc:.5f}"
                         )
-                        logging.info(
-                            f"  In Epoch {iteration}"
-                        )
+                        logging.info(f"  In Epoch {iteration}")
                         if best_path:
                             torch.save(self.nca.state_dict(), best_path)
                         best_acc = val_acc
                         best_model = copy.deepcopy(self.nca)
                     if earlystopping is not None:
                         earlystopping.step(val_acc)
+        # After training: Compute metrics on test set for training summary
         with torch.no_grad():
             metrics = {}
             if dataloader_test is not None:

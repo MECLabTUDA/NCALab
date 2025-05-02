@@ -78,13 +78,3 @@ def fix_random_seed(seed=DEFAULT_RANDOM_SEED):
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
 
-
-def generate_Kfold_idx(data, K):
-    N_fold = len(data) // K
-    idx = np.arange(len(data))
-    folds = []
-    for i in range(K):
-        val_idx = idx[i * N_fold : (i + 1) * N_fold]
-        train_idx = np.concatenate([idx[: i * N_fold], idx[(i + 1) * N_fold :]])
-        folds.append((train_idx, val_idx))
-    return folds

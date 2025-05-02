@@ -25,19 +25,18 @@ class ClassificationNCAModel(BasicNCAModel):
         pad_noise: bool = False,
     ):
         """
-        Args:
-            device (torch.device): Compute device.
-            num_image_channels (int): _description_
-            num_hidden_channels (int): _description_
-            num_classes (int): _description_
-            fire_rate (float, optional): _description_. Defaults to 0.5.
-            hidden_size (int, optional): _description_. Defaults to 128.
-            use_alive_mask (bool, optional): _description_. Defaults to False.
-            immutable_image_channels (bool, optional): _description_. Defaults to True.
-            learned_filters (int, optional): _description_. Defaults to 0.
-            pixel_wise_loss (bool, optional): Whether a prediction per pixel is desired, like in self-classifying MNIST. Defaults to False.
-            filter_padding (str, optional): _description_. Defaults to "reflect".
-            pad_noise (bool, optional): _description_. Defaults to False.
+        :param device [torch.device]: Compute device.
+        :param num_image_channels [int]: _description_
+        :param num_hidden_channels [int]: _description_
+        :param num_classes [int]: _description_
+        :param fire_rate [float]: _description_. Defaults to 0.5.
+        :param hidden_size [int]: _description_. Defaults to 128.
+        :param use_alive_mask [bool]: _description_. Defaults to False.
+        :param immutable_image_channels [bool]: _description_. Defaults to True.
+        :param learned_filters [int]: _description_. Defaults to 0.
+        :param pixel_wise_loss [bool]: Whether a prediction per pixel is desired, like in self-classifying MNIST. Defaults to False.
+        :param filter_padding [str]: _description_. Defaults to "reflect".
+        :param pad_noise [bool]: _description_. Defaults to False.
         """
         super(ClassificationNCAModel, self).__init__(
             device,
@@ -59,15 +58,14 @@ class ClassificationNCAModel(BasicNCAModel):
     def classify(
         self, image: torch.Tensor, steps: int = 100, reduce: bool = False
     ) -> torch.Tensor:
-        """_summary_
+        """
+        Predict classification for an input image.
 
-        Args:
-            image (torch.Tensor): Input image.
-            steps (int, optional): Inference steps. Defaults to 100.
-            reduce (bool, optional): Return a single softmax probability. Defaults to False.
+        :param image [torch.Tensor]: Input image.
+        :param steps [int]: Inference steps. Defaults to 100.
+        :param reduce [bool]: Return a single softmax probability. Defaults to False.
 
-        Returns:
-            (torch.Tensor): Single class index or vector of logits.
+        :returns [torch.Tensor]: Single class index or vector of logits.
         """
         with torch.no_grad():
             x = image.clone()

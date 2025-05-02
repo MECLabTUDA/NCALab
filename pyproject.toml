@@ -157,6 +157,7 @@ dependencies = [
     "wheel==0.45.1",
     "wrapt==1.17.1",
     "zipp==3.21.0",
+    "sphinx-autoapi>=3.6.0",
 ]
 
 [tool.uv.sources]

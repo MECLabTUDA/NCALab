@@ -29,6 +29,10 @@ class AutoStepper:
 
 
 class BasicNCAModel(nn.Module):
+    """
+    Abstract base class for NCA models.
+    """
+
     def __init__(
         self,
         device: torch.device,
@@ -47,20 +51,20 @@ class BasicNCAModel(nn.Module):
         pad_noise: bool = False,
         autostepper: Optional[AutoStepper] = None,
     ):
-        """Basic abstract class for NCA models.
-
-        Args:
-            device (device): Pytorch device descriptor.
-            num_image_channels (int): Number of channels reserved for input image.
-            num_hidden_channels (int): Number of hidden channels (communication channels).
-            num_output_channels (int): Number of output channels.
-            fire_rate (float, optional): Fire rate for stochastic weight update. Defaults to 0.5.
-            hidden_size (int, optional): Number of neurons in hidden layer. Defaults to 128.
-            use_alive_mask (bool, optional): Whether to use alive masking during training. Defaults to False.
-            immutable_image_channels (bool, optional): If image channels should be fixed during inference,
-                which is the case for most segmentation or classification problems. Defaults to True.
-            num_learned_filters (int, optional): Number of learned filters. If zero, use two sobel filters instead. Defaults to 2.
-            dx_noise (float)
+        """
+        Constructor.
+        
+        :param device [device]: Pytorch device descriptor.
+        :param num_image_channels [int]: Number of channels reserved for input image.
+        :param num_hidden_channels [int]: Number of hidden channels (communication channels).
+        :param num_output_channels [int]: Number of output channels.
+        :param fire_rate [float]: Fire rate for stochastic weight update. Defaults to 0.5.
+        :param hidden_size [int]: Number of neurons in hidden layer. Defaults to 128.
+        :param use_alive_mask [bool]: Whether to use alive masking during training. Defaults to False.
+        :param immutable_image_channels [bool]: If image channels should be fixed during inference,
+            which is the case for most segmentation or classification problems. Defaults to True.
+        :param num_learned_filters [int]: Number of learned filters. If zero, use two sobel filters instead. Defaults to 2.
+        :param dx_noise [float]:
         """
         super(BasicNCAModel, self).__init__()
 
@@ -130,6 +134,14 @@ class BasicNCAModel(nn.Module):
         self.meta: dict = {}
 
     def prepare_input(self, x):
+        """
+        Preprocess input. Intended to be overwritten by subclass, if preprocessing
+        is necessary.
+
+        :param x [torch.Tensor]: Input tensor to preprocess.
+
+        :returns: Processed tensor.
+        """
         return x
 
     def alive(self, x):
