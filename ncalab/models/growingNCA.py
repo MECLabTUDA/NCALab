@@ -45,6 +45,7 @@ class GrowingNCAModel(BasicNCAModel):
             hidden_size=hidden_size,
             use_alive_mask=use_alive_mask,
             immutable_image_channels=False,
+            pad_noise=False,
             **kwargs,
         )
         self.plot_function = show_batch_growing
@@ -53,18 +54,19 @@ class GrowingNCAModel(BasicNCAModel):
         """
         Implements a simple MSE loss between target and prediction.
 
-        Args:
-            x (Tensor): Prediction
-            y (Tensor): Target
+        :param x [Tensor]: Prediction
+        :param y [Tensor]: Target
 
-        Returns:
-            Tensor: MSE Loss
+        :returns [Tensor]: MSE Loss
         """
         loss = F.mse_loss(x[..., : self.num_image_channels], y)
         return {"total": loss}
 
     def validate(self, *args, **kwargs):
-        """We typically don't validate during training of Growing NCA."""
+        """
+        We typically don't validate during training of Growing NCA,
+        because there is only a single sample in the training set.
+        """
         pass
 
     def grow(
@@ -73,36 +75,34 @@ class GrowingNCAModel(BasicNCAModel):
         """
         Run the growth process and return the resulting output image.
 
-        Args:
-            width (int): Output image width.
-            height (int): Output image height.
-            steps (int, optional): Number of inference steps. Defaults to 100.
+        :param width [int]: Output image width.
+        :param height [int]: Output image height.
+        :param steps [int]: Number of inference steps. Defaults to 100.
 
-        Returns:
-            np.ndarray: Image channels of the output image.
+        :returns [np.ndarray]: Image channels of the output image.
         """
-        out = torch.zeros((1, self.num_channels, width, height)).to(self.device)
-        out[:, 3:, :, :] = 1.0
-        out = out.permute(0, 2, 3, 1)
+        with torch.no_grad():
+            x = torch.zeros((1, width, height, self.num_channels)).to(self.device)
+            x[:, :, :, 3:] = 1.0
 
-        if save_steps:
-            step_outs = []
-            for _ in range(steps):
-                out = self.forward(out, steps=1)  # type: ignore[assignment]
-                step_outs.append(
-                    np.clip(
-                        out[..., : self.num_image_channels]
-                        .squeeze()
-                        .detach()
-                        .cpu()
-                        .numpy(),
-                        0,
-                        1,
+            if save_steps:
+                step_outs = []
+                for _ in range(steps):
+                    x = self.forward(x, steps=1)  # type: ignore[assignment]
+                    step_outs.append(
+                        np.clip(
+                            x[..., : self.num_image_channels]
+                            .squeeze()
+                            .detach()
+                            .cpu()
+                            .numpy(),
+                            0,
+                            1,
+                        )
                     )
-                )
-            return step_outs
-        else:
-            out = self.forward(out, steps=steps)  # type: ignore[assignment]
-        out_np = out[..., : self.num_image_channels].detach().cpu().numpy()[0]
-        out_np = np.clip(out_np, 0, 1)
-        return out_np
+                return step_outs
+            else:
+                x = self.forward(x, steps=steps)  # type: ignore[assignment]
+            out_np = x[..., : self.num_image_channels].detach().cpu().numpy().squeeze(0)
+            out_np = np.clip(out_np, 0, 1)
+            return out_np

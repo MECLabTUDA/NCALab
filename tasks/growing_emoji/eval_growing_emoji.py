@@ -33,11 +33,11 @@ def eval_growing_emoji(gpu: bool, gpu_index: int):
     ).to(device)
 
     nca.load_state_dict(
-        torch.load(WEIGHTS_PATH / "growing_emoji.pth", weights_only=True)
+        torch.load(WEIGHTS_PATH / "ncalab_growing_emoji.pth", weights_only=True)
     )
     nca.eval()
 
-    images = nca.grow(32, 32, save_steps=True)
+    images = nca.grow(32, 32, steps=110, save_steps=True)
 
     fig, ax = plt.subplots()
     fig.set_size_inches(2, 2)

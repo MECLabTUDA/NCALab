@@ -20,16 +20,15 @@ class GrowingNCADataset(Dataset):
         a fixed image. Hence, this Dataset class only stores multiple copies of the
         same image.
 
-        Args:
-            image (np.ndarray): _description_
-            num_channels (int): _description_
-            batch_size (int, optional): Output batch size. Defaults to 8.
+        :param image [np.ndarray]: Input image.
+        :param num_channels [int]: Total number of image channels (including hidden)
+        :param batch_size [int]: Output batch size. Defaults to 8.
         """
         super(GrowingNCADataset, self).__init__()
         self.batch_size = batch_size
+        self.image = image.astype(np.float32) / 255.0
         self.seed = np.zeros((num_channels, image.shape[0], image.shape[1]))
         self.seed[3:, :, :] = 1.0
-        self.image = image.astype(np.float32) / 255.0
 
     def __len__(self):
         return self.batch_size
