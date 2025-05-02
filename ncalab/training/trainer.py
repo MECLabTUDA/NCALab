@@ -82,8 +82,7 @@ class BasicNCATrainer:
         Shows a markdown-formatted info string with training parameters.
         Useful for showing info on tensorboard to keep track of parameter changes.
 
-        Returns:
-            str: Markdown-formatted info string.
+        :returns [str]: Markdown-formatted info string.
         """
         s = "BasicNCATrainer Info\n"
         s += "-------------------\n"
@@ -102,6 +101,53 @@ class BasicNCATrainer:
             s += f"**{attribute_f}:** {getattr(self, attribute)}\n"
         return s
 
+    def train_iteration(
+        self,
+        x: torch.Tensor,
+        y: torch.Tensor,
+        steps: int,
+        optimizer: torch.optim.Optimizer,
+        scheduler: torch.optim.lr_scheduler.LRScheduler,
+        total_batch_iterations: int,
+        summary_writer,
+    ) -> torch.Tensor:
+        """
+        Run a single training iteration.
+
+        :param x [Tensor]: Input training images.
+        :param y [Tensor]: Input training labels.
+        :param steps [int]: Number of NCA inference time steps.
+        :param optimizer [torch.optim.Optimizer]: Optimizer.
+        :param scheduler [torch.optim.lr_scheduler.LRScheduler]: Scheduler.
+        :param total_batch_iterations [int]: Total training batch iterations
+
+        :returns [Tensor]: Predicted image.
+        """
+        device = self.nca.device
+        self.nca.train()
+        optimizer.zero_grad()
+        x_pred = x.clone().to(self.nca.device)
+        if self.truncate_backprop:
+            for step in range(steps):
+                x_pred = self.nca(x_pred, steps=1)
+                if step < steps - 10:
+                    x_pred.detach()
+        else:
+            x_pred = self.nca(x_pred, steps=steps)
+        losses = self.nca.loss(x_pred, y.to(device))
+        losses["total"].backward()
+
+        if self.gradient_clipping:
+            torch.nn.utils.clip_grad_norm_(self.nca.parameters(), 1.0)
+        optimizer.step()
+        scheduler.step()
+        if summary_writer:
+            for key in losses:
+                summary_writer.add_scalar(
+                    f"Loss/train_{key}", losses[key], total_batch_iterations
+                )
+        return x_pred
+
     def train(
         self,
         dataloader_train: DataLoader,
@@ -117,19 +163,14 @@ class BasicNCATrainer:
         """
         Execute basic NCA training loop with a single function call.
 
-        Args:
-            dataloader_train (DataLoader): Training DataLoader
-            dataloader_val (DataLoader): Validation DataLoader
-            save_every (int, optional):
-                How often to save model state (in epochs). Useful for very small datasets, like growing lizard.
-            summary_writer (SummaryWriter, optional):
-                Tensorboard SummaryWriter. Defaults to None.
-            plot_function (Callable[ [np.ndarray, np.ndarray, np.ndarray, BasicNCAModel], Figure ], optional):
-                Plot function override. If None, use model's default. Defaults to None.
-            earlystopping (EarlyStopping, optional): EarlyStopping object. Defaults to None.
+        :param dataloader_train [DataLoader]: Training DataLoader
+        :param dataloader_val [DataLoader]: Validation DataLoader
+        :param save_every [int]: How often to save model state (in epochs). Useful for very small datasets, like growing lizard.
+        :param summary_writer [SummaryWriter] Tensorboard SummaryWriter. Defaults to None.
+        :param plot_function: Plot function override. If None, use model's default. Defaults to None.
+        :param earlystopping (EarlyStopping, optional): EarlyStopping object. Defaults to None.
 
-        Returns:
-            TrainingSummary: TrainingSummary object.
+        :returns [TrainingSummary]: TrainingSummary object.
         """
         logging.basicConfig(encoding="utf-8", level=logging.INFO)
 
@@ -153,53 +194,6 @@ class BasicNCATrainer:
             best_path = Path(self.model_path).with_suffix(".best.pth")
         else:
             best_path = None
-
-        def train_iteration(
-            x: torch.Tensor,
-            y: torch.Tensor,
-            steps: int,
-            optimizer: torch.optim.Optimizer,
-            scheduler: torch.optim.lr_scheduler.LRScheduler,
-            total_batch_iterations: int,
-        ) -> torch.Tensor:
-            """
-            Run a single training iteration.
-
-            Args:
-                x (torch.Tensor): Input training images.
-                y (torch.Tensor): Input training labels.
-                steps (int): Number of NCA inference time steps.
-                optimizer (torch.optim.Optimizer): Optimizer.
-                scheduler (torch.optim.lr_scheduler.LRScheduler): Scheduler.
-                total_batch_iterations (int): Total training batch iterations
-
-            Returns:
-                torch.Tensor: Predicted image.
-            """
-            device = self.nca.device
-            self.nca.train()
-            optimizer.zero_grad()
-            x_pred = x.clone().to(self.nca.device)
-            if self.truncate_backprop:
-                for step in range(steps):
-                    x_pred = self.nca(x_pred, steps=1)
-                    if step < steps - 10:
-                        x_pred.detach()
-            else:
-                x_pred = self.nca(x_pred, steps=steps)
-            losses = self.nca.loss(x_pred, y.to(device))
-            losses["total"].backward()
-
-            if self.gradient_clipping:
-                torch.nn.utils.clip_grad_norm_(self.nca.parameters(), 1.0)
-            optimizer.step()
-            scheduler.step()
-            if summary_writer:
-                for key in losses:
-                    summary_writer.add_scalar(
-                        f"Loss/train_{key}", losses[key], total_batch_iterations
-                    )
-            return x_pred
 
         # MAIN LOOP
         total_batch_iterations = 0
@@ -251,8 +245,14 @@ class BasicNCATrainer:
                     y = torch.cat(self.batch_repeat * [y])
 
                 steps = np.random.randint(*self.steps_range)
-                x_pred = train_iteration(
-                    x, y, steps, optimizer, scheduler, total_batch_iterations
+                x_pred = self.train_iteration(
+                    x,
+                    y,
+                    steps,
+                    optimizer,
+                    scheduler,
+                    total_batch_iterations,
+                    summary_writer,
                 )
                 if self.p_retain_pool > 0.0:
                     x_previous = x_pred
@@ -260,7 +260,11 @@ class BasicNCATrainer:
 
             with torch.no_grad():
                 # VISUALIZATION
-                if plot_function and summary_writer and (iteration + 1) % save_every == 0:
+                if (
+                    plot_function
+                    and summary_writer
+                    and (iteration + 1) % save_every == 0
+                ):
                     figure = plot_function(
                         x.detach().cpu().numpy(),
                         x_pred.detach().cpu().numpy(),
