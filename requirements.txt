@@ -116,9 +116,7 @@ efficientnet==1.0.0
 efficientnet-pytorch==0.7.1
     # via ncalab (pyproject.toml)
 emoji==2.14.1
-    # via
-    #   ncalab (pyproject.toml)
-    #   pilmoji
+    # via ncalab (pyproject.toml)
 etils==1.12.2
     # via
     #   ncalab (pyproject.toml)
@@ -543,12 +541,9 @@ pillow==11.2.1
     #   imageio
     #   matplotlib
     #   medmnist
-    #   pilmoji
     #   scikit-image
     #   segmentation-models-pytorch
     #   torchvision
-pilmoji @ git+https://github.com/jay3332/pilmoji@b4cf625ca37717f93c5c39ed537b2c6fc60c6e13
-    # via ncalab (pyproject.toml)
 pip==25.1
     # via pip-tools
 pip-tools==7.4.1

@@ -82,7 +82,6 @@ dependencies = [
     "parso==0.8.4",
     "pexpect==4.9.0",
     "pillow==11.2.1",
-    "pilmoji",
     "platformdirs==4.3.7",
     "pluggy==1.5.0",
     "pretrainedmodels==0.7.4",
@@ -203,6 +202,3 @@ dependencies = [
     "virtualenv==20.30.0",
     "sphinx==8.1.3",
 ]
-
-[tool.uv.sources]
-pilmoji = { git = "https://github.com/jay3332/pilmoji", rev = "b4cf625ca37717f93c5c39ed537b2c6fc60c6e13" }
