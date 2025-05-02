@@ -130,7 +130,7 @@ threadpoolctl==3.5.0
 tifffile==2024.9.20
 timm==0.9.7
 tokenizers==0.21.0
-torch==2.5.1
+torch==2.7.0
 torch-tb-profiler==0.4.3
 torcheval==0.0.7
 torchvision==0.20.1

@@ -22,7 +22,7 @@ dependencies = [
     "efficientnet-pytorch==0.7.1",
     "efficientnet==1.0.0",
     "numpy==2.0.2",
-    "torch==2.5.1",
+    "torch==2.7.0",
     "tqdm==4.66.6",
     "emoji==2.14.0",
     "etils==1.12.2",
