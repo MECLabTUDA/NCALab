@@ -295,14 +295,6 @@ class BasicNCAModel(nn.Module):
         """
         return NotImplemented
 
-    def validate(
-        self,
-        image,
-        label,
-        steps: int,
-    ) -> Tuple[Dict[str, float], torch.Tensor]:
-        return NotImplemented
-
     def get_meta_dict(self) -> dict:
         return dict(
             device=str(self.device),
@@ -339,3 +331,12 @@ class BasicNCAModel(nn.Module):
         if optimize:
             onnx_program.optimize()
         onnx_program.save(path)
+
+    def validate(
+        self,
+        image,
+        label,
+        steps: int,
+    ) -> float:
+        metrics = self.metrics(image, label, steps)
+        return metrics, metrics["prediction"]

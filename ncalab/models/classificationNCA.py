@@ -5,10 +5,7 @@ import torch.nn.functional as F  # type: ignore[import-untyped]
 
 from torcheval.metrics import MulticlassAccuracy, MulticlassAUROC, MulticlassF1Score  # type: ignore[import-untyped]
 
-from tqdm import tqdm  # type: ignore[import-untyped]
-
 from .basicNCA import BasicNCAModel
-from ..utils import pad_input
 
 
 class ClassificationNCAModel(BasicNCAModel):
@@ -23,7 +20,6 @@ class ClassificationNCAModel(BasicNCAModel):
         use_alive_mask: bool = False,
         immutable_image_channels: bool = True,
         learned_filters: int = 0,
-        lambda_activity: float = 0.0,
         pixel_wise_loss: bool = False,
         filter_padding: str = "reflect",
         pad_noise: bool = False,
@@ -39,7 +35,6 @@ class ClassificationNCAModel(BasicNCAModel):
             use_alive_mask (bool, optional): _description_. Defaults to False.
             immutable_image_channels (bool, optional): _description_. Defaults to True.
             learned_filters (int, optional): _description_. Defaults to 0.
-            lambda_activity (float, optional): Activity loss weight, penalizing high NCA activity. Defaults to 0.0.
             pixel_wise_loss (bool, optional): Whether a prediction per pixel is desired, like in self-classifying MNIST. Defaults to False.
             filter_padding (str, optional): _description_. Defaults to "reflect".
             pad_noise (bool, optional): _description_. Defaults to False.
@@ -58,8 +53,8 @@ class ClassificationNCAModel(BasicNCAModel):
             pad_noise=pad_noise,
         )
         self.num_classes = num_classes
-        self.lambda_activity = lambda_activity
         self.pixel_wise_loss = pixel_wise_loss
+        self.validation_metric = "accuracy_micro"
 
     def classify(
         self, image: torch.Tensor, steps: int = 100, reduce: bool = False
@@ -153,7 +148,6 @@ class ClassificationNCAModel(BasicNCAModel):
             loss_classification = loss_ce
         else:
             y_pred = F.softmax(class_channels, dim=-1)  # softmax along channel dim
-            y_var = torch.var(y_pred.flatten(1, 2), dim=-1).mean()
             y_pred = torch.mean(y_pred, dim=1)  # average W
             y_pred = torch.mean(y_pred, dim=1)  # average H
             loss_mse = (
@@ -163,21 +157,11 @@ class ClassificationNCAModel(BasicNCAModel):
                     reduction="none",
                 )
             ).mean()
-            loss_classification = loss_mse + 0.0 * y_var
+            loss_classification = loss_mse
 
-        # Activity loss, mildly penalizes highly active NCAs.
-        # We want to enforce the NCA model to "focus" on important areas for classification,
-        # so that masking away inactive pixels during inference becomes more effective.
-        loss_activity = torch.sum(torch.square(hidden_channels)) / (
-            x.shape[0] * x.shape[1] * x.shape[2]
-        )
-
-        loss = (
-            1 - self.lambda_activity
-        ) * loss_classification + self.lambda_activity * loss_activity
+        loss = loss_classification
         return {
             "total": loss,
-            "activity": loss_activity,
             "classification": loss_classification,
         }
 
@@ -187,14 +171,6 @@ class ClassificationNCAModel(BasicNCAModel):
         label,
         steps: int,
     ):
-        pass
-
-
-    def validate(
-        self,
-        dataloader_val: torch.utils.data.DataLoader,
-        steps: int,
-    ) -> float:
         accuracy_macro_metric = MulticlassAccuracy(
             average="macro", num_classes=self.num_classes
         )
@@ -204,41 +180,31 @@ class ClassificationNCAModel(BasicNCAModel):
         auroc_metric = MulticlassAUROC(num_classes=self.num_classes)
         f1_metric = MulticlassF1Score(num_classes=self.num_classes)
 
-        for sample in tqdm(iter(dataloader_val), desc="Validation"):
-            x, y = sample
-            x = pad_input(x, self, noise=self.pad_noise)
-            x = x.permute(0, 2, 3, 1).to(self.device)
-            y = y.to(self.device)
-            y_prob = self.classify(x, steps, reduce=False)
-            # TODO adjust for pixel-wise problems
-            y_true = y.squeeze()
-            accuracy_macro_metric.update(y_prob, y_true)
-            accuracy_micro_metric.update(y_prob, y_true)
-            auroc_metric.update(y_prob, y_true)
-            f1_metric.update(y_prob, y_true)
+        y_prob = self.classify(image, steps, reduce=False)
+        # TODO adjust for pixel-wise problems
+        y_true = label.squeeze()
+        accuracy_macro_metric.update(y_prob, y_true)
+        accuracy_micro_metric.update(y_prob, y_true)
+        auroc_metric.update(y_prob, y_true)
+        f1_metric.update(y_prob, y_true)
 
         accuracy_macro = accuracy_macro_metric.compute().item()
         accuracy_micro = accuracy_micro_metric.compute().item()
         auroc = auroc_metric.compute().item()
         f1 = f1_metric.compute().item()
-
-        #if summary_writer:
-        #    summary_writer.add_scalar(
-        #        "Acc/val_acc_macro", accuracy_macro, batch_iteration
-        #    )
-        #    summary_writer.add_scalar(
-        #        "Acc/val_acc_micro", accuracy_micro, batch_iteration
-        #    )
-        #    summary_writer.add_scalar("Acc/val_AUC", auroc, batch_iteration)
-        #    summary_writer.add_scalar("Acc/val_F1", f1, batch_iteration)
-        return f1
+        return {
+            "accuracy_macro": accuracy_macro,
+            "accuracy_micro": accuracy_micro,
+            "f1": f1,
+            "auroc": auroc,
+            "prediction": y_prob,
+        }
 
     def get_meta_dict(self) -> dict:
         meta = super().get_meta_dict()
         meta.update(
             dict(
                 num_classes=self.num_classes,
-                lambda_activity=self.lambda_activity,
                 pixel_wise_loss=self.pixel_wise_loss,
             )
         )
