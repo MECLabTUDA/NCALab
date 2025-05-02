@@ -1,6 +1,6 @@
 import torch
 
-from ncalab import get_compute_device, pad_input, GrowingNCAModel
+from ncalab import get_compute_device, pad_input, GrowingNCAModel, fix_random_seed
 
 
 def test_pad_input():
@@ -25,3 +25,11 @@ def test_pad_input():
         ).float()
         != 0
     )
+
+
+def test_fix_random_seed():
+    fix_random_seed()
+    x_torch_before = torch.rand(10)
+    fix_random_seed()
+    x_torch_after = torch.rand(10)
+    assert torch.all(x_torch_before == x_torch_after)
