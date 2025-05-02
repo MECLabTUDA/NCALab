@@ -12,6 +12,7 @@ class NCAAnimator:
         self.ax.set_axis_off()
 
         def update(i):
+            nonlocal x
             x = nca(x)
             im.set_array(x)
             return (im,)

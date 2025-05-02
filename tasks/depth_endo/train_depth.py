@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-import sys, os
+import sys
+import os
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)

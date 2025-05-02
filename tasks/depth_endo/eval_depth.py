@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-import sys, os
+import sys
+import os
 from pathlib import Path
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
@@ -119,9 +120,6 @@ vignette_rgb.shape
 )
 @click.option("--hidden-channels", "-H", default=20, type=int)
 def eval_depth(gpu: bool, gpu_index: int, hidden_channels: int):
-    bench_index_3d = 3
-    sample_index_3d = 2
-
     device = "cpu"  # get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
     # eNCApsulateD

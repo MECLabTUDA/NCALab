@@ -1,5 +1,6 @@
 #!/usr/bin/env python3
-import sys, os
+import sys
+import os
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
@@ -32,13 +33,13 @@ def validate_checksum(filename: str):
     """
     checksum = KVASIR_SEG_CHECKSUM
     if checksum is None:
-        click.secho(f"No checksum available to compare with.", fg="yellow")
-        click.secho(f"The downloaded file might be unsafe.", fg="yellow")
+        click.secho("No checksum available to compare with.", fg="yellow")
+        click.secho("The downloaded file might be unsafe.", fg="yellow")
         if not click.confirm("Still want to continue?"):
             return False
         return True
     else:
-        click.secho(f"Validating checksum...", fg="blue")
+        click.secho("Validating checksum...", fg="blue")
         sha256 = hashlib.sha256()
         with open(filename, "rb") as f:
             while True:
@@ -49,7 +50,7 @@ def validate_checksum(filename: str):
         file_hash = sha256.hexdigest()
         if checksum != file_hash:
             click.secho(
-                f"Invalid checksum. This might be a bug, a server error or transmission problem.",
+                "Invalid checksum. This might be a bug, a server error or transmission problem.",
                 fg="red",
             )
             click.secho(f"expected: {checksum}")

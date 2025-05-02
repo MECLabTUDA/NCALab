@@ -120,7 +120,6 @@ class ClassificationNCAModel(BasicNCAModel):
             _type_: _description_
         """
         # x: B W H C
-        hidden_channels = x[..., self.num_image_channels : -self.num_output_channels]
         class_channels = x[..., self.num_image_channels + self.num_hidden_channels :]
 
         # Create one-hot ground truth tensor, where all pixels of the predicted class are

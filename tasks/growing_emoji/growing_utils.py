@@ -1,4 +1,3 @@
-from pilmoji import Pilmoji  # type: ignore[import-untyped]
 from PIL import Image, ImageDraw, ImageFont
 
 

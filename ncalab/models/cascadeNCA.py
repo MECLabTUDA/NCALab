@@ -68,9 +68,9 @@ class CascadeNCA(BasicNCAModel):
         self.steps = steps
 
         # initialize parameters by passing dummy data
-        #dummy = torch.zeros((8, 16, 16, backbone.num_channels)).to(backbone.device)
-        #backbone(dummy)
-        #models = [deepcopy(backbone) for _ in scales]
+        # dummy = torch.zeros((8, 16, 16, backbone.num_channels)).to(backbone.device)
+        # backbone(dummy)
+        # models = [deepcopy(backbone) for _ in scales]
         models = [backbone for _ in scales]
         self.models = nn.ModuleList(models)
 
@@ -91,9 +91,7 @@ class CascadeNCA(BasicNCAModel):
                 ).permute(0, 2, 3, 1)
         return x_pred
 
-    def validate(
-        self, images, labels, steps: int
-    ):
+    def validate(self, images, labels, steps: int):
         # images: B W H C
         x_scaled = downscale(images.permute(0, 3, 1, 2), self.scales[0]).permute(
             0, 2, 3, 1

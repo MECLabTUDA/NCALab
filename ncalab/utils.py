@@ -36,12 +36,12 @@ def pad_input(x, nca, noise=True):
 
 def NCALab_banner():
     banner = """
- _   _  _____          _           _     
-| \\ | |/ ____|   /\\   | |         | |    
-|  \\| | |       /  \\  | |     __ _| |__  
-| . ` | |      / /\\ \\ | |    / _` | '_ \\ 
+ _   _  _____          _           _
+| \\ | |/ ____|   /\\   | |         | |
+|  \\| | |       /  \\  | |     __ _| |__
+| . ` | |      / /\\ \\ | |    / _` | '_ \\
 | |\\  | |____ / ____ \\| |___| (_| | |_) |
-|_| \\_|\\_____/_/    \\_\\______\\__,_|_.__/ 
+|_| \\_|\\_____/_/    \\_\\______\\__,_|_.__/
 -----------------------------------------
     Developed at MECLab - TU Darmstadt
 -----------------------------------------
@@ -77,4 +77,3 @@ def fix_random_seed(seed=DEFAULT_RANDOM_SEED):
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
-

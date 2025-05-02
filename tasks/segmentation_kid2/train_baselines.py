@@ -140,7 +140,6 @@ def train_baselines(folds, dataset_id):
     )
 
     zoo = make_model_zoo()
-    params = list_trainable_parameters(zoo)
 
     split = SplitDefinition.read(
         KID_DATASET_PATH_NNUNET
