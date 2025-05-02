@@ -29,11 +29,11 @@ from growing_utils import get_emoji_image
 def train_growing_emoji(
     batch_size: int, hidden_channels: int, gpu: bool, gpu_index: int, max_epochs: int
 ):
-    """Main function to run the "growing emoji" example task.
+    """
+    Main function to run the "growing emoji" example task.
 
-    Args:
-        batch_size (int, optional): _description_.
-        hidden_channels (int, optional): _description_.
+    :param batch_size [int]: Minibatch size.
+    :param hidden_channels [int]: Hidden channels the NCA will use.
     """
     # Display prologue
     NCALab_banner()
@@ -47,7 +47,7 @@ def train_growing_emoji(
     print()
 
     # Create tensorboard summary writer
-    writer = SummaryWriter("runs")
+    writer = SummaryWriter(comment="Growing NCA (Lizard)")
 
     # Select device, try to use GPU or fall back to CPU
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
@@ -67,7 +67,7 @@ def train_growing_emoji(
 
     # Create Trainer and run training
     trainer = BasicNCATrainer(
-        nca, WEIGHTS_PATH / "growing_emoji.pth", max_epochs=max_epochs
+        nca, WEIGHTS_PATH / "ncalab_growing_emoji.pth", max_epochs=max_epochs
     )
     trainer.train(dataloader_train, summary_writer=writer, save_every=100)
     writer.close()
