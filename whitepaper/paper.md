@@ -21,7 +21,7 @@ authors:
 affiliations:
  - name: Technische Universität Darmstadt, Germany
    index: 1
-date: 5 November 2024
+date: 3 April 2025
 bibliography: paper.bib
 
 # Optional fields if submitting to a AAS journal too, see this blog post:
@@ -33,23 +33,47 @@ bibliography: paper.bib
 # Summary
 
 
-Neural Cellular Automata (NCA) are a new family of lightweight neural network models that are employed in various imaging tasks such as image segmentation, classification and generation.
+Neural Cellular Automata (NCA) are lightweight neural network models that can be employed in various image analysis tasks such as image segmentation, classification and generation.
 These models are recently getting attention in the medical imaging community, thanks to their small size, their robustness and their overall versatility.
 In terms of accuracy, they are often on-par with state-of-the art models, while being much smaller in size.
+However, the training dynamics of NCAs are not yet fully understood, and there is potential for investigating practical tweaks to increase accuracy, reduce VRAM requirements and increase the overall training stability.
 `NCALab` provides an extensible research framework for training and evaluating NCAs, conducting hyperparameter searches and prototyping applications that build on NCAs for image processing.
 
 
 # Statement of Need
 
-NCAs are recently gaining attention in medical imaging, where they are deployed for various modalities in different downstream tasks [@kalkhof2023med] [@kalkhof2023m3d].
+NCAs are recently gaining attention in medical imaging, where they are deployed for various modalities in different downstream tasks, including 3D prostate segmentation on MRI [@kalkhof2023med] [@kalkhof2023m3d], image registration [@ranem...] or image generation [@...].
 In most cases, they outperform other U-Net or transformer-style architectures in terms of model size and robustness, while yielding similarly accurate predictions.
 However, there is no unified framework or reference implementation for training, evaluating and experimentation with NCAs.
 
-Research code for Neural Cellular Automata is typically organized in individual repositories for each individual downstream task.
-Code bases follow different structures, even though the architecture is universal; in most cases, it can be defined by the number of input channels, hidden channels and output channels and the weights of the trained network.
+Research code for Neural Cellular Automata is typically organized in individual repositories for each downstream task under investigation.
+Code bases often follow different approaches, even though the underlying architecture is universal; in most cases, it can be defined by the number of input channels, hidden channels and output channels and the weights of the trained network.
 
-The goal of this project is to unify the code base for various downstream tasks with NCAs in a shared project.
-Within minutes, researchers and practitioners should be able to create a lean boilerplate for their task at hand, inspired by the numerous example tasks provided in this code repository.
+The goal of NCALab is to provide a uniform and easy-to-use code base for various downstream tasks with NCAs in a shared project.
+Within minutes, researchers and practitioners should be able to create prototypes for their ideas, inspired by the numerous example tasks provided in this code repository.
+
+
+# Features
+
+NCALab provides dedicated models and example tasks for recurring image analysis tasks, such as:
+
+* Growing NCA
+* Pixel-wise image segmentation
+* Image classification
+* Per-pixel image classification
+* Monocular depth estimation
+
+Until now, NCALab provides the following key features:
+
+* Simplified creation, loading and training of NCA models
+* Streamlined grid search for model and training hyperparameters
+* Tensorboard integration to easily monitor training progress
+* k-fold cross validation
+* Finetuning by re-training the final layer of an NCA
+* Visualization and animation of NCA inference process
+
+
+# Getting Started
 
 
 # Ongoing Research
@@ -59,7 +83,6 @@ Currently, one journal submission and a conference paper utilizing `NCALab` are 
 
 # Acknowledgements
 
-This work is partially supported by Norwegian Research Council project
-number 322600 (Capsnetwork).
+This work is partially supported by Norwegian Research Council project number 322600 (Capsnetwork).
 
 # References
