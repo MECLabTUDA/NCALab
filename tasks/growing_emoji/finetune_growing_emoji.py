@@ -32,12 +32,6 @@ from ncalab import (
 def finetune_growing_emoji(
     batch_size: int, hidden_channels: int, gpu: bool, gpu_index: int
 ):
-    """_summary_
-
-    Args:
-        batch_size (int, optional): _description_.
-        hidden_channels (int, optional): _description_.
-    """
     NCALab_banner()
     print_mascot(
         "Things are getting really exciting now!\n"
@@ -55,7 +49,7 @@ def finetune_growing_emoji(
         device,
         num_image_channels=4,
         num_hidden_channels=hidden_channels,
-        use_alive_mask=False,
+        use_alive_mask=True,
         num_learned_filters=0,
         fire_rate=0.5,
     )
@@ -83,18 +77,7 @@ def finetune_growing_emoji(
 
     # Idea: shuffle first layer's weights. They'll still follow the same distribution.
     with torch.no_grad():
-        W_filter = nca.network_filters[0].weight.data.clone()
-        W_identity = nca.network_identity[0].weight.data.clone()
-        W_tail = nca.network_tail[0].weight.data.clone()
-
-        np.savez("weights_filter.npz", W_filter.cpu().numpy())
-        np.savez("weights_identity.npz", W_identity.cpu().numpy())
-        np.savez("weights_tail.npz", W_tail.cpu().numpy())
-
         W = nca.network[0].weight.data.clone()
-        W_final = nca.network[2].weight.data.clone()
-        np.savez("weights_hidden.npz", W.cpu().numpy())
-        np.savez("weights_final.npz", W_final.cpu().numpy())
         W = W.view(-1)
         np.random.shuffle(W.cpu().numpy())
         nca.network[0].weight.data.copy_(W.view(nca.network[0].weight.data.size()))
@@ -107,7 +90,7 @@ def finetune_growing_emoji(
     # Re-train with frozen final layer
     nca.finetune()
     writer = SummaryWriter(comment="Growing Emoji: Finetuning")
-    trainer.max_epochs = 2000  # we don't need as many iterations now
+    trainer.max_epochs = 5000  # we don't need as many iterations now
     trainer.train(loader_dna, summary_writer=writer, save_every=100)
     writer.close()
 
