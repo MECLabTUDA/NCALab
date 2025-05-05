@@ -14,30 +14,34 @@ from torchvision.datasets import MNIST  # type: ignore[import-untyped]
 from torchvision import transforms  # type: ignore[import-untyped]
 
 
-def print_MNIST_digit(image, prediction):
+def print_MNIST_digit(image, prediction, downscale: int = 2):
+    assert downscale >= 1
+    assert downscale <= 28
+
     BG = {
-        0: "black",
-        1: "red",
-        2: "cyan",
+        0: "yellow",
+        1: "magenta",
+        2: "red",
         3: "green",
-        4: "magenta",
-        5: "yellow",
+        4: "yellow",
+        5: "cyan",
         6: "green",
         7: "white",
-        8: "blue",
-        9: "red",
+        8: "magenta",
+        9: "green",
     }
     FG = {
         0: "white",
         6: "red",
         7: "black",
     }
-    for y in range(14):
-        for x in range(14):
-            if image[y * 2, x * 2] < 0.3:
+
+    for y in range(28 // downscale):
+        for x in range(28 // downscale):
+            if image[y * downscale, x * downscale] < 0.3:
                 click.secho("  ", nl=False, fg="black", bg="black")
                 continue
-            n = prediction[y * 2, x * 2].detach().cpu()
+            n = prediction[y * downscale, x * downscale].detach().cpu()
             n = int(torch.argmax(n))
             click.secho(f" {n}", nl=False, fg=FG.get(n, "black"), bg=BG.get(n, "white"))
         click.secho()

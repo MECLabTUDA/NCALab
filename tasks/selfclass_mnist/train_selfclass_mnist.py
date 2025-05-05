@@ -8,11 +8,12 @@ from ncalab import (
     ClassificationNCAModel,
     BasicNCATrainer,
     WEIGHTS_PATH,
-    show_batch_binary_image_classification,
     get_compute_device,
     NCALab_banner,
     print_mascot,
+    fix_random_seed,
 )
+from ncalab.visualization import show_batch_binary_image_classification
 
 import click
 
@@ -38,6 +39,7 @@ def train_selfclass_mnist(
         "https://distill.pub/2020/selforg/mnist/\n"
         "(Ctrl + click to open in browser)"
     )
+    fix_random_seed()
 
     writer = SummaryWriter(comment="Selfclassifying MNIST")
 
@@ -49,7 +51,7 @@ def train_selfclass_mnist(
     )
 
     # Split MNIST dataset into training and validation
-    train_indices, _, _, _ = train_test_split(
+    train_indices, _, val_indices, _ = train_test_split(
         range(len(mnist_train)),
         mnist_train.targets,
         stratify=mnist_train.targets,
@@ -57,14 +59,14 @@ def train_selfclass_mnist(
     )
 
     train_split = Subset(mnist_train, train_indices)
-    # val_split = Subset(mnist_train, val_indices)
+    val_split = Subset(mnist_train, val_indices)
 
     loader_train = torch.utils.data.DataLoader(
         train_split, shuffle=True, batch_size=batch_size
     )
-    # loader_val = torch.utils.data.DataLoader(
-    #     val_split, shuffle=True, batch_size=batch_size
-    # )
+    loader_val = torch.utils.data.DataLoader(
+        val_split, shuffle=True, batch_size=32
+    )
 
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
@@ -81,12 +83,11 @@ def train_selfclass_mnist(
         WEIGHTS_PATH / "selfclass_mnist.pth",
         steps_range=(40, 60),
         steps_validation=50,
-        max_epochs=1,
+        max_epochs=5,
     )
     trainer.train(
         loader_train,
-        # Validation is broken here. We're working on it!
-        # loader_val,
+        loader_val,
         summary_writer=writer,
         plot_function=show_batch_binary_image_classification,
     )

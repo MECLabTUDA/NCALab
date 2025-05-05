@@ -95,9 +95,8 @@ class ClassificationNCAModel(BasicNCAModel):
 
             # Average over all pixels if a single categorial prediction is desired
             y_pred = F.softmax(class_channels, dim=-1)
-            if not self.pixel_wise_loss:
-                y_pred = torch.mean(y_pred, dim=1)
-                y_pred = torch.mean(y_pred, dim=1)
+            y_pred = torch.mean(y_pred, dim=1)
+            y_pred = torch.mean(y_pred, dim=1)
 
             # If reduce enabled, reduce to a single scalar.
             # Otherwise, return logits of all channels as a vector.
