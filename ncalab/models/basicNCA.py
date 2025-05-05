@@ -194,8 +194,6 @@ class BasicNCAModel(nn.Module):
     def update(self, x):
         x = x.permute(0, 3, 1, 2)  # B W H C --> B C W H
 
-        pre_life_mask = self.__alive(x)
-
         # Perception
         dx = self.perceive(x)
 
@@ -222,7 +220,7 @@ class BasicNCAModel(nn.Module):
         # Alive masking
         if self.use_alive_mask:
             life_mask = self.__alive(x)
-            life_mask = life_mask & pre_life_mask
+            life_mask = life_mask
             x = x.permute(1, 0, 2, 3)  # B C W H --> C B W H
             x = x * life_mask.float()
             x = x.permute(1, 0, 2, 3)  # C B W H --> B C W H
