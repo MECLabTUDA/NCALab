@@ -27,14 +27,12 @@ class GrowingNCAModel(BasicNCAModel):
         For instance, it has no output channels, as the growing task directly
         manipulates the input image channels.
 
-        Args:
-            device (device): Pytorch device descriptor.
-            num_image_channels (int): Number of channels reserved for input image. Defaults to 4.
-            num_hidden_channels (int): Number of hidden channels (communication channels). Defaults to 16.
-            fire_rate (float, optional): _description_. Defaults to 0.5.
-            hidden_size (int, optional): _description_. Defaults to 128.
-            use_alive_mask (bool, optional): _description_. Defaults to False.
-            learned_filters (int, optional): _description_. Defaults to 2.
+        :param device [torch.device]: Pytorch device descriptor.
+        :param num_image_channels [int]: Number of channels reserved for input image. Defaults to 4.
+        :param num_hidden_channels [int]: Number of hidden channels (communication channels). Defaults to 16.
+        :param fire_rate [float]: _description_. Defaults to 0.5.
+        :param hidden_size [int]: _description_. Defaults to 128.
+        :param use_alive_mask [bool]: _description_. Defaults to False.
         """
         super(GrowingNCAModel, self).__init__(
             device,

@@ -10,6 +10,10 @@ import torch.nn.functional as F  # type: ignore[import-untyped]
 
 
 class AutoStepper:
+    """
+    Helps selecting number of timesteps based on NCA activity.
+    """
+
     def __init__(
         self,
         min_steps: int = 10,
@@ -18,6 +22,15 @@ class AutoStepper:
         verbose: bool = False,
         threshold: float = 1e-2,
     ):
+        """
+        Constructor.
+
+        :param min_steps [int]: Minimum number of timesteps to always execute. Defaults to 10.
+        :param max_steps [int]: Terminate after maximum number of steps. Defaults to 100.
+        :param plateau [int]: _description_. Defaults to 5.
+        :param verbose [bool]: Whether to communicate. Defaults to False.
+         threshold (float, optional): _description_. Defaults to 1e-2.
+        """
         assert min_steps >= 1
         assert plateau >= 1
         assert max_steps > min_steps
@@ -45,7 +58,7 @@ class BasicNCAModel(nn.Module):
         immutable_image_channels: bool = True,
         num_learned_filters: int = 2,
         dx_noise: float = 0.0,
-        filter_padding: str = "reflect",
+        filter_padding: str = "circular",
         use_laplace: bool = False,
         kernel_size: int = 3,
         pad_noise: bool = False,
@@ -61,10 +74,14 @@ class BasicNCAModel(nn.Module):
         :param fire_rate [float]: Fire rate for stochastic weight update. Defaults to 0.5.
         :param hidden_size [int]: Number of neurons in hidden layer. Defaults to 128.
         :param use_alive_mask [bool]: Whether to use alive masking during training. Defaults to False.
-        :param immutable_image_channels [bool]: If image channels should be fixed during inference,
-            which is the case for most segmentation or classification problems. Defaults to True.
+        :param immutable_image_channels [bool]: If image channels should be fixed during inference, which is the case for most segmentation or classification problems. Defaults to True.
         :param num_learned_filters [int]: Number of learned filters. If zero, use two sobel filters instead. Defaults to 2.
         :param dx_noise [float]:
+        :param filter_padding [str]: Padding type to use. Might affect reliance on spatial cues. Defaults to "circular".
+        :param use_laplace [bool]: Whether to use Laplace filter (only if num_learned_filters == 0)
+        :param kernel_size [int]: Filter kernel size (only for learned filters)
+        :param pad_noise [bool]: Whether to pad input image tensor with noise in hidden / output channels
+        :param autostepper [Optional[AutoStepper]]: AutoStepper object to select number of time steps based on activity
         """
         super(BasicNCAModel, self).__init__()
 
@@ -133,7 +150,7 @@ class BasicNCAModel(nn.Module):
 
         self.meta: dict = {}
 
-    def prepare_input(self, x):
+    def prepare_input(self, x: torch.Tensor) -> torch.Tensor:
         """
         Preprocess input. Intended to be overwritten by subclass, if preprocessing
         is necessary.
@@ -214,19 +231,11 @@ class BasicNCAModel(nn.Module):
 
     def forward(
         self,
-        x,
+        x: torch.Tensor,
         steps: int = 1,
         return_steps: bool = False,
     ) -> torch.Tensor | Tuple[torch.Tensor, int]:
-        """_summary_
-
-        Args:
-            x (_type_): _description_
-            steps (int, optional): _description_. Defaults to 1.
-            return_steps (bool, optional): _description_. Defaults to False.
-
-        Returns:
-            torch.Tensor | Tuple[torch.Tensor, int]: _description_
+        """
         """
         if self.autostepper is None:
             for step in range(steps):
@@ -281,11 +290,11 @@ class BasicNCAModel(nn.Module):
             return x, self.autostepper.max_steps
         return x
 
-    def loss(self, x, target) -> Dict[str, torch.Tensor]:
-        """_summary_
+    def loss(self, x: torch.Tensor, target: torch.Tensor) -> Dict[str, torch.Tensor]:
+        """
+        Compute loss.
 
-        Args:
-            x (_type_): _description_
+        :param x: _description_
             target (_type_): _description_
 
         Returns:
