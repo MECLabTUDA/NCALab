@@ -29,7 +29,7 @@ def eval_growing_emoji(gpu: bool, gpu_index: int):
         device,
         num_image_channels=4,
         num_hidden_channels=12,
-        use_alive_mask=False,
+        use_alive_mask=True,
     ).to(device)
 
     nca.load_state_dict(
@@ -37,12 +37,15 @@ def eval_growing_emoji(gpu: bool, gpu_index: int):
     )
     nca.eval()
 
-    images = nca.grow(32, 32, steps=110, save_steps=True)
+    images = nca.grow(64, 64, steps=100, save_steps=True)
 
     fig, ax = plt.subplots()
     fig.set_size_inches(2, 2)
     im = ax.imshow(images[0], animated=True)
     ax.set_axis_off()
+    plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
+    plt.margins(0, 0)
+    plt.tight_layout()
 
     def update(i):
         im.set_array(images[i])
