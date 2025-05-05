@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, Tuple
 
 from .basicNCA import BasicNCAModel, AutoStepper
 
@@ -8,7 +8,7 @@ from ..utils import pad_input
 import torch  # type: ignore[import-untyped]
 import torch.nn as nn  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
-from torch.utils.data import DataLoader # type: ignore[import-untyped]
+from torch.utils.data import DataLoader  # type: ignore[import-untyped]
 
 from pytorch_msssim import ssim  # type: ignore[import-untyped]
 
@@ -110,24 +110,16 @@ class DepthNCAModel(BasicNCAModel):
         return x
 
     def estimate_depth(self, image, steps=80):
-        """
-        """
+        """ """
         with torch.no_grad():
             x = image.clone()
             x = pad_input(x, self, noise=self.pad_noise)
             x = self.prepare_input(x)
-            x = x.permute(0, 2, 3, 1)
             x = self(x, steps=steps)
-
-            class_channels = x[
-                ..., self.num_image_channels + self.num_hidden_channels :
-            ]
-
-            return class_channels
+            return x
 
     def loss(self, x, y) -> Dict[str, torch.Tensor]:
-        """
-        """
+        """ """
         out_channels = x[..., self.num_image_channels + self.num_hidden_channels :]
         y_pred = out_channels.permute(0, 3, 1, 2).squeeze(1)
 
@@ -170,29 +162,24 @@ class DepthNCAModel(BasicNCAModel):
         loss = 0.5 * loss_tv + loss_depthmap + 0.2 * loss_ssim
         return {"total": loss, "tv": loss_tv, "depth": loss_depthmap, "ssim": loss_ssim}
 
+    def metrics(
+        self,
+        image,
+        label,
+        steps: int,
+    ):
+        outputs = self.estimate_depth(image, steps=steps)
+        s = ssim(
+            outputs[..., -1].unsqueeze(1), label.unsqueeze(1), data_range=1.0
+        ).item()
+
+        return {"ssim": s, "prediction": outputs}
+
     def validate(
         self,
-        dataloader_val: DataLoader,
+        image,
+        label,
         steps: int,
-        batch_iteration: int,
-        summary_writer=None,
-    ) -> float:
-        """
-        """
-        self.eval()
-        total_ssim = 0.0
-        N = 0.0
-        with torch.no_grad():
-            for images, labels in dataloader_val:
-                images, labels = images.to(self.device), labels.to(self.device)
-
-                outputs = self.estimate_depth(images, steps=steps).permute(0, 3, 1, 2)
-
-                s = ssim(outputs, labels.unsqueeze(1), data_range=1.0)
-
-                total_ssim += s.item()
-                N += 1.0
-        total_ssim /= N
-        if summary_writer:
-            summary_writer.add_scalar("Acc/val_acc", total_ssim, batch_iteration)
-        return total_ssim
+    ) -> Tuple[Dict[str, float], torch.Tensor]:
+        metrics = self.metrics(image, label, steps)
+        return metrics, metrics["prediction"]

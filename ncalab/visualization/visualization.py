@@ -154,7 +154,7 @@ def show_batch_depth(x_seed, x_pred, y_true, nca):
     )
 
     # 3rd row: prediction
-    images = x_pred[..., -nca.num_classes :]
+    images = x_pred[..., -1]
     show_image_row(
         ax[2], np.clip(images, 0.0, 1.0), cmap="magma", label="Pred.", colorbar=True
     )
