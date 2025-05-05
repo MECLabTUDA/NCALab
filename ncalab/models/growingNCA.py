@@ -81,7 +81,7 @@ class GrowingNCAModel(BasicNCAModel):
         """
         with torch.no_grad():
             x = torch.zeros((1, width, height, self.num_channels)).to(self.device)
-            x[:, :, :, 3:] = 1.0
+            x[:, width // 2, height // 2, 3:] = 1.0
 
             if save_steps:
                 step_outs = []

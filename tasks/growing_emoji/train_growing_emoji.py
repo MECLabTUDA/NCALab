@@ -21,6 +21,7 @@ from ncalab import (
     get_compute_device,
     NCALab_banner,
     print_mascot,
+    fix_random_seed,
 )
 
 from growing_utils import get_emoji_image
@@ -45,6 +46,7 @@ def train_growing_emoji(
         "(Ctrl+click to open URL)\n"
     )
     print()
+    fix_random_seed()
 
     # Create tensorboard summary writer
     writer = SummaryWriter(comment="Growing NCA (Lizard)")
@@ -57,7 +59,7 @@ def train_growing_emoji(
         device,
         num_image_channels=4,
         num_hidden_channels=hidden_channels,
-        use_alive_mask=False,
+        use_alive_mask=True,
     )
 
     # Create dataset containing a single growing emoji

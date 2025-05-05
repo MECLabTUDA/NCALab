@@ -1,7 +1,7 @@
 from PIL import Image, ImageDraw, ImageFont
 
 
-def get_emoji_image(emoji: str = "🦎", padding: int = 2, size: int = 24):
+def get_emoji_image(emoji: str = "🦎", padding: int = 8, size: int = 24):
     """_summary_
 
     Args:
