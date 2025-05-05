@@ -144,23 +144,16 @@ class BasicNCAModel(nn.Module):
         """
         return x
 
-    def alive(self, x):
+    def __alive(self, x):
         mask = (
             F.max_pool2d(
-                x[
-                    :,
-                    self.num_image_channels : self.num_image_channels
-                    + self.num_hidden_channels,
-                    :,
-                    :,
-                ],
+                x[:, 3, :, :],
                 kernel_size=3,
                 stride=1,
                 padding=1,
             )
             > 0.1
         )
-        mask = torch.any(mask, dim=1)
         return mask
 
     def perceive(self, x):
@@ -184,14 +177,7 @@ class BasicNCAModel(nn.Module):
     def update(self, x):
         x = x.permute(0, 3, 1, 2)  # B W H C --> B C W H
 
-        hidden_channels = x[
-            :,
-            self.num_image_channels : self.num_image_channels
-            + self.num_hidden_channels,
-            :,
-            :,
-        ]
-        pre_life_mask = self.alive(hidden_channels)
+        pre_life_mask = self.__alive(x)
 
         # Perception
         dx = self.perceive(x)
@@ -218,7 +204,7 @@ class BasicNCAModel(nn.Module):
 
         # Alive masking
         if self.use_alive_mask:
-            life_mask = self.alive(hidden_channels)
+            life_mask = self.__alive(x)
             life_mask = life_mask & pre_life_mask
             x = x.permute(1, 0, 2, 3)  # B C W H --> C B W H
             x = x * life_mask.float()
