@@ -299,9 +299,10 @@ class BasicNCATrainer:
                             all_metrics[name].append(metrics[name])
                     for name in all_metrics:
                         all_metrics[name] = np.mean(all_metrics[name])
-                        summary_writer.add_scalar(
-                            f"Acc/Val/{name}", all_metrics[name], iteration
-                        )
+                        if summary_writer is not None:
+                            summary_writer.add_scalar(
+                                f"Acc/Val/{name}", all_metrics[name], iteration
+                            )
                     val_acc = all_metrics.get(self.nca.validation_metric, 0)
                     if val_acc > best_acc:
                         logging.info(
