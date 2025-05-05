@@ -5,12 +5,12 @@ import os
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from typing import Any  # type hint
-from pathlib import Path, PosixPath  # type hint
+from pathlib import Path  # type hint
 
 from ncalab import (
     DepthNCAModel,
     BasicNCATrainer,
+    CascadeNCA,
     WEIGHTS_PATH,
     get_compute_device,
     fix_random_seed,
@@ -18,9 +18,6 @@ from ncalab import (
 
 import click
 
-import cv2
-
-import numpy as np
 import pandas as pd
 
 import albumentations as A  # type: ignore[import-untyped]
@@ -28,98 +25,13 @@ from albumentations.pytorch import ToTensorV2  # type: ignore[import-untyped]
 
 import torch
 from torch.utils.tensorboard import SummaryWriter
-from torch.utils.data import Dataset
-from PIL import Image
 
 from config import KID_DATASET_PATH, KVASIR_CAPSULE_DATASET_PATH
-
-
-TASK_PATH = Path(__file__).parent
-
-
-class KIDDataset(Dataset):
-    def __init__(self, path: Path | PosixPath, filenames, transform=None) -> None:
-        super().__init__()
-        self.path = path
-        self.image_filenames = filenames
-        self.transform = transform
-        self.vignette = np.asarray(Image.open(TASK_PATH / "vignette_kid2.png"))[..., 0]
-
-    def __len__(self):
-        return len(self.image_filenames)
-
-    def __getitem__(self, index) -> Any:
-        filename = self.image_filenames[index]
-        image_filename = self.path / "all" / filename
-        mask_filename = self.path / "depth" / filename
-        image = Image.open(image_filename).convert("RGB")
-        mask = Image.open(mask_filename).convert("L")
-        image_arr = np.asarray(image, dtype=np.float32) / 255.0
-        mask_arr = np.asarray(mask, dtype=np.float32) / 255.0
-        image_arr[self.vignette == 0] = 0
-        mask_arr[self.vignette == 0] = 0
-        sample = {"image": image_arr, "mask": mask_arr}
-        if self.transform is not None:
-            sample = self.transform(**sample)
-        return sample["image"], sample["mask"]
-
-
-class KvasirCapsuleDataset(Dataset):
-    def __init__(self, path: Path | PosixPath, filenames, transform=None) -> None:
-        super().__init__()
-        self.path = path
-        self.image_filenames = filenames
-        self.transform = transform
-        self.vignette = cv2.imread(str(path / "vignette_kvasir_capsule.png"))[..., 0]
-
-    def __len__(self):
-        return len(self.image_filenames)
-
-    def __getitem__(self, index):
-        filename = self.image_filenames[index]
-        image_filename = self.path / "images" / "Any" / filename
-        mask_filename = self.path / "depth" / filename
-        image = Image.open(image_filename).convert("RGB")
-        mask = Image.open(mask_filename).convert("L")
-        image_arr = np.asarray(image, dtype=np.float32) / 255.0
-        mask_arr = np.asarray(mask, dtype=np.float32) / 255.0
-        image_arr[self.vignette == 0] = 0
-        mask_arr[self.vignette == 0] = 0
-        sample = {"image": image_arr, "mask": mask_arr}
-        if self.transform is not None:
-            sample = self.transform(**sample)
-        return sample["image"], sample["mask"]
-
-
-class EndoSLAMDataset(Dataset):
-    def __init__(self, path: Path | PosixPath, filenames, transform=None) -> None:
-        super().__init__()
-        self.path = path
-        self.image_filenames = filenames
-        self.transform = transform
-        self.vignette = np.asarray(Image.open(path / "vignette_unity.png"))[..., 0]
-
-    def __len__(self):
-        return len(self.image_filenames)
-
-    def __getitem__(self, index) -> Any:
-        filename = self.image_filenames[index]
-        image_filename = self.path / "Frames" / filename
-        mask_filename = self.path / "Pixelwise Depths" / ("aov_" + filename)
-        image = Image.open(image_filename).convert("RGB")
-        mask = Image.open(mask_filename).convert("L")
-        image_arr = np.asarray(image, dtype=np.float32) / 255.0
-        mask_arr = np.asarray(mask, dtype=np.float32) / 255.0
-        image_arr[self.vignette == 0] = 0
-        mask_arr[self.vignette == 0] = 0
-        sample = {"image": image_arr, "mask": mask_arr}
-        if self.transform is not None:
-            sample = self.transform(**sample)
-        return sample["image"], sample["mask"]
+from depth_datasets import KIDDataset, KvasirCapsuleDataset, EndoSLAMDataset
 
 
 def train_depth_KID(batch_size: int, hidden_channels: int):
-    writer = SummaryWriter()
+    writer = SummaryWriter(comment="WCE Depth Estimation")
     fix_random_seed()
     device = get_compute_device("cuda:0")
 
@@ -127,11 +39,10 @@ def train_depth_KID(batch_size: int, hidden_channels: int):
         device,
         num_image_channels=3,
         num_hidden_channels=hidden_channels,
-        num_classes=1,
         pad_noise=True,
     )
 
-    INPUT_SIZE = 64
+    INPUT_SIZE = 200
 
     T = A.Compose(
         [
@@ -184,17 +95,17 @@ def train_depth_KID(batch_size: int, hidden_channels: int):
             for filename in train_filenames
             if (KVASIR_CAPSULE_DATASET_PATH / "depth" / filename).exists()
         ]
-        train_dataset = KvasirCapsuleDataset(
-            KVASIR_CAPSULE_DATASET_PATH,
-            filenames=train_filenames,
-            transform=T,
-        )
         val_filenames = split[split.split == "val"].filename.values
         val_filenames = [
             filename
             for filename in val_filenames
             if (KVASIR_CAPSULE_DATASET_PATH / "depth" / filename).exists()
         ]
+        train_dataset = KvasirCapsuleDataset(
+            KVASIR_CAPSULE_DATASET_PATH,
+            filenames=train_filenames,
+            transform=T,
+        )
         val_dataset = KvasirCapsuleDataset(
             KVASIR_CAPSULE_DATASET_PATH,
             filenames=val_filenames,
@@ -228,8 +139,10 @@ def train_depth_KID(batch_size: int, hidden_channels: int):
     )
     nca.vignette = train_dataset.vignette
 
+    cascade = CascadeNCA(nca, [8, 4, 2, 1], [50, 25, 15, 15])
+
     trainer = BasicNCATrainer(
-        nca,
+        cascade,
         WEIGHTS_PATH / f"depth_{dataset_id}.pth",
         max_epochs=2000,
         steps_range=(96, 110),
