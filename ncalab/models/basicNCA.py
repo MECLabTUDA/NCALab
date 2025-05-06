@@ -247,7 +247,7 @@ class BasicNCAModel(nn.Module):
         if self.autostepper is None:
             for step in range(steps):
                 x = self._update(x)
-            x = x.permute((0, 2, 3, 1)) # --> BWHC
+            x = x.permute((0, 2, 3, 1))  # --> BWHC
             if return_steps:
                 return x, steps
             return x
@@ -286,7 +286,7 @@ class BasicNCAModel(nn.Module):
                 self.num_image_channels : self.num_image_channels
                 + self.num_hidden_channels,
                 :,
-                :
+                :,
             ]
             # single inference time step
             x = self._update(x)
@@ -296,9 +296,9 @@ class BasicNCAModel(nn.Module):
                 self.num_image_channels : self.num_image_channels
                 + self.num_hidden_channels,
                 :,
-                :
+                :,
             ]
-        x = x.permute((0, 2, 3, 1)) # --> BWHC
+        x = x.permute((0, 2, 3, 1))  # --> BWHC
         if return_steps:
             return x, self.autostepper.max_steps
         return x
@@ -342,20 +342,21 @@ class BasicNCAModel(nn.Module):
         for layer in self.network[:-1]:
             layer.requires_grad_ = False
 
-    def metrics(self, pred: torch.Tensor, label: torch.Tensor, steps: int):
+    def metrics(self, pred: torch.Tensor, label: torch.Tensor):
         """
         Return dict of standard evaluation metrics.
         Needs to include special item 'prediction', containing the predicted image (all channels).
 
         :param pred [torch.Tensor]: Predicted image.
         :param label [torch.Tensor]: Ground truth label.
-        :param steps [int]: Number of inference time steps.
         """
         return {}
 
     def predict(self, image: torch.Tensor, steps: int = 100):
         """
         :param image [torch.Tensor]: Input image, BCWH.
+
+        :returns [torch.Tensor]: Output image, BWHC
         """
         assert steps >= 1
         assert image.shape[1] <= self.num_channels
@@ -367,9 +368,16 @@ class BasicNCAModel(nn.Module):
             x = self.forward(x, steps=steps)
             return x
 
-    def validate(self, image: torch.Tensor, label: torch.Tensor, steps: int) -> float:
+    def validate(
+        self, image: torch.Tensor, label: torch.Tensor, steps: int
+    ) -> Tuple[float, torch.Tensor]:
         """
+        :param image [torch.Tensor]: Input image, BCWH
+        :param label [torch.Tensor]: Ground truth label
+        :param steps [int]: Inference steps
+
+        :returns [Tuple[float, torch.Tensor]]: Validation metric, predicted image BWHC
         """
-        pred = self.predict(image.to(self.device))
-        metrics = self.metrics(pred, label.to(self.device), steps)
-        return metrics, metrics["prediction"]
+        pred = self.predict(image.to(self.device), steps=steps)
+        metrics = self.metrics(pred, label.to(self.device))
+        return metrics, pred

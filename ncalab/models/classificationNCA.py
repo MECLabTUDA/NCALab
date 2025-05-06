@@ -163,9 +163,8 @@ class ClassificationNCAModel(BasicNCAModel):
 
     def metrics(
         self,
-        image,
-        label,
-        steps: int,
+        pred: torch.Tensor,
+        label: torch.Tensor
     ):
         accuracy_macro_metric = MulticlassAccuracy(
             average="macro", num_classes=self.num_classes
@@ -176,7 +175,7 @@ class ClassificationNCAModel(BasicNCAModel):
         auroc_metric = MulticlassAUROC(num_classes=self.num_classes)
         f1_metric = MulticlassF1Score(num_classes=self.num_classes)
 
-        y_prob = self.classify(image, steps, reduce=False)
+        y_prob = pred[..., -self.num_output_channels :]
         y_true = label.squeeze()
         accuracy_macro_metric.update(y_prob, y_true)
         accuracy_micro_metric.update(y_prob, y_true)

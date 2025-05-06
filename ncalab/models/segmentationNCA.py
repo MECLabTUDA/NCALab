@@ -1,16 +1,18 @@
 from .basicNCA import BasicNCAModel
-from .splitNCA import SplitNCAModel
 from ..losses import DiceBCELoss
 from ..visualization import show_batch_binary_segmentation
-from ..utils import pad_input
-
-from typing import Dict, Tuple
 
 import torch  # type: ignore[import-untyped]
 import segmentation_models_pytorch as smp  # type: ignore[import-untyped]
 
 
 class SegmentationNCAModel(BasicNCAModel):
+    """
+    Model used for image segmentation.
+
+    Uses Dice score as the default validation metric.
+    """
+
     def __init__(
         self,
         device: torch.device,
@@ -25,15 +27,14 @@ class SegmentationNCAModel(BasicNCAModel):
         """
         Instantiate an image segmentation model based on NCA.
 
-        Args:
-            device (torch.device): Compute device
-            num_image_channels (int): _description_
-            num_hidden_channels (int): _description_
-            num_classes (int): _description_. Defaults to 1.
-            fire_rate (float, optional): _description_. Defaults to 0.8.
-            hidden_size (int, optional): _description_. Defaults to 128.
-            learned_filters (int, optional): _description_. Defaults to 2.
-            pad_noise (bool, optional): _description_. Defaults to True.
+        :param device [torch.device]: Compute device.
+        :param num_image_channels [int]: Number of image channels. Defaults to 3.
+        :param num_hidden_channels [int]: Number of hidden channels. Defaults to 16.
+        :param num_classes [int]: Number of classes. Defaults to 1.
+        :param fire_rate [float]: NCA fire rate. Defaults to 0.8.
+        :param hidden_size [int]: Number of neurons in hidden layer. Defaults to 128.
+        :param learned_filters [int]: Number of learned filters. If 0, use sobel. Defaults to 2.
+        :param pad_noise [bool]: Whether to pad input images with noise. Defaults to True.
         """
         self.num_classes = num_classes
         super(SegmentationNCAModel, self).__init__(
@@ -65,12 +66,10 @@ class SegmentationNCAModel(BasicNCAModel):
 
     def metrics(
         self,
-        image,
-        label,
-        steps: int,
+        pred,
+        label
     ):
-        x_pred = self(image, steps=steps)
-        outputs = x_pred[
+        outputs = pred[
             ..., self.num_image_channels + self.num_hidden_channels :
         ].permute(0, 3, 1, 2)
         tp, fp, fn, tn = smp.metrics.get_stats(
@@ -97,15 +96,5 @@ class SegmentationNCAModel(BasicNCAModel):
             "TP": tp,
             "FP": fp,
             "FN": fn,
-            "TN": tn,
-            "prediction": x_pred,
+            "TN": tn
         }
-
-    def validate(
-        self,
-        image,
-        label,
-        steps: int,
-    ) -> Tuple[Dict[str, float], torch.Tensor]:
-        metrics = self.metrics(image, label, steps)
-        return metrics, metrics["prediction"]

@@ -20,7 +20,7 @@ def downscale(image, scale):
 
 class CascadeNCA(BasicNCAModel):
     """
-    Chain multiple instances of the same NCA model, operating at different
+    Chain multiple instances of the same NCA backbone model, operating at different
     image scales.
     """
 
@@ -28,7 +28,7 @@ class CascadeNCA(BasicNCAModel):
         """
         Constructor.
 
-        :param backbone [BasicNCAModel]: _description_
+        :param backbone [BasicNCAModel]: Backbone model based on BasicNCAModel.
         :param scales [List[int]]: List of scales to operate at, e.g. [4, 2, 1].
         :param steps [List[int]]: List of number of NCA inference time steps.
         """
@@ -55,8 +55,7 @@ class CascadeNCA(BasicNCAModel):
         self.validation_metric = backbone.validation_metric
 
         # TODO automatically copy attributes
-        if hasattr(backbone, "segment"):
-            self.segment = backbone.segment
+        if hasattr(backbone, "num_classes"):
             self.num_classes = backbone.num_classes
 
         self.backbone = backbone
@@ -66,43 +65,44 @@ class CascadeNCA(BasicNCAModel):
         self.scales = scales
         self.steps = steps
 
-        # initialize parameters by passing dummy data
-        # dummy = torch.zeros((8, 16, 16, backbone.num_channels)).to(backbone.device)
-        # backbone(dummy)
-        # models = [deepcopy(backbone) for _ in scales]
         models = [backbone for _ in scales]
         self.models = nn.ModuleList(models)
 
-    def forward(self, x, steps=1):
-        x_scaled = downscale(x.permute(0, 3, 1, 2), self.scales[0]).permute(0, 2, 3, 1)
+    def forward(self, x: torch.Tensor, steps: int = 1):
+        """
+        :param x [torch.Tensor]: Input image tensor, BCWH.
+        :param steps [int]: Unused, as steps are defined in constructor.
+        """
+        x_scaled = downscale(x, self.scales[0])
         for i, (model, scale, scale_steps) in enumerate(
             zip(self.models, self.scales, self.steps)
         ):
-            x_pred = model(x_scaled, steps=scale_steps)
+            x_pred = model(x_scaled, steps=scale_steps)  # BWHC
             if i < len(self.scales) - 1:
                 x_scaled = upscale(
                     x_pred.permute(0, 3, 1, 2), scale / self.scales[i + 1]
-                ).permute(0, 2, 3, 1)
+                )
                 # replace input with downscaled variant of original image
-                x_scaled[..., : model.num_image_channels] = downscale(
-                    x[..., : model.num_image_channels].permute(0, 3, 1, 2),
+                x_scaled[:, : model.num_image_channels, :, :] = downscale(
+                    x[:, : model.num_image_channels, :, :],
                     self.scales[i + 1],
-                ).permute(0, 2, 3, 1)
+                )
         return x_pred
 
-    def validate(self, image, label, steps: int):
+    def validate(self, image: torch.Tensor, label: torch.Tensor, steps: int = 1):
         """
+        Validation method.
 
-        :param images:
-        :param labels (_type_):
-        :param steps (int):
+        Takes care of scaling the input image and label on each scale,
+        and calls the respective validation method of the backbone.
+
+        :param image [torch.Tensor]: Input image tensor, BCWH.
+        :param label [torch.Tensor]: Ground truth.
+        :param steps [int]: Unused, as steps are defined in constructor.
 
         :returns:
         """
-        # images: B W H C
-        x_scaled = downscale(image.permute(0, 3, 1, 2), self.scales[0]).permute(
-            0, 2, 3, 1
-        )
+        x_scaled = downscale(image, self.scales[0])
         for i, (model, scale, scale_steps) in enumerate(
             zip(self.models, self.scales, self.steps)
         ):
@@ -115,10 +115,10 @@ class CascadeNCA(BasicNCAModel):
             if i < len(self.scales) - 1:
                 x_scaled = upscale(
                     x_pred.permute(0, 3, 1, 2), scale / self.scales[i + 1]
-                ).permute(0, 2, 3, 1)
-                # replace input with downscaled variant of original image
-                x_scaled[..., : model.num_image_channels] = downscale(
-                    image[..., : model.num_image_channels].permute(0, 3, 1, 2),
+                )
+                # replace input channel with downscaled variant of original image
+                x_scaled[:, : model.num_image_channels, :, :] = downscale(
+                    image[:, : model.num_image_channels, :, :],
                     self.scales[i + 1],
-                ).permute(0, 2, 3, 1)
+                )
         return metrics, x_pred
