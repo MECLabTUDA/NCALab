@@ -28,19 +28,13 @@ def search_growing_emoji(
 ):
     logging.basicConfig(level=logging.INFO)
 
-    """Main function to run the "growing emoji" example task.
-
-    Args:
-        batch_size (int, optional): _description_.
-        hidden_channels (int, optional): _description_.
+    """
+    Main function to run the "growing emoji search" example task.
     """
     # Display prologue
     NCALab_banner()
     print_mascot(
-        "Hello, stranger!\n"
-        "I am Bart, the lab rat!\n"
-        "I am pleased to hear that you are\n"
-        "about to run a hyperparameter search.\n"
+        "You are about to run a hyperparameter search.\n"
         "\n"
         "Grab a cup of coffee, this will take some time."
     )
@@ -56,15 +50,15 @@ def search_growing_emoji(
 
     # Set up parameter ranges for grid search
     model_params = ParameterSet(
-        # fire_rate=[0.2, 0.3, 0.4, 0.5, 0.6, 0.7],
-        # learned_filters=[0, 2],
+        fire_rate=[0.2, 0.5, 0.8],
+        num_learned_filters=[0, 2],
         dx_noise=[0.0, 0.01, 0.05, 0.1, 0.2, 0.5],
         num_image_channels=4,
         num_hidden_channels=hidden_channels,
-        auto_step=True,
+        use_alive_mask=True,
     )
     # No need to search trainer parameters, but we could do that
-    trainer_params = ParameterSet(max_epochs=500)
+    trainer_params = ParameterSet(max_epochs=1000)
 
     # Set up hyperparameter search (grid search)
     search = ParameterSearch(device, GrowingNCAModel, model_params, trainer_params)
