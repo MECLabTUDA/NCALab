@@ -28,10 +28,9 @@ class CascadeNCA(BasicNCAModel):
         """
         Constructor.
 
-        Args:
-            backbone (Type): _description_
-            scales (List[int]): List of scales to operate at, e.g. [4, 2, 1].
-            steps (List[int]): List of number of NCA inference time steps.
+        :param backbone [BasicNCAModel]: _description_
+        :param scales [List[int]]: List of scales to operate at, e.g. [4, 2, 1].
+        :param steps [List[int]]: List of number of NCA inference time steps.
         """
         super(CascadeNCA, self).__init__(
             backbone.device,
@@ -91,15 +90,23 @@ class CascadeNCA(BasicNCAModel):
                 ).permute(0, 2, 3, 1)
         return x_pred
 
-    def validate(self, images, labels, steps: int):
+    def validate(self, image, label, steps: int):
+        """
+
+        :param images:
+        :param labels (_type_):
+        :param steps (int):
+
+        :returns:
+        """
         # images: B W H C
-        x_scaled = downscale(images.permute(0, 3, 1, 2), self.scales[0]).permute(
+        x_scaled = downscale(image.permute(0, 3, 1, 2), self.scales[0]).permute(
             0, 2, 3, 1
         )
         for i, (model, scale, scale_steps) in enumerate(
             zip(self.models, self.scales, self.steps)
         ):
-            y_scaled = downscale(labels.unsqueeze(1), scale).squeeze(1)
+            y_scaled = downscale(label.unsqueeze(1), scale).squeeze(1)
             metrics, x_pred = model.validate(
                 x_scaled,
                 y_scaled,
@@ -111,7 +118,7 @@ class CascadeNCA(BasicNCAModel):
                 ).permute(0, 2, 3, 1)
                 # replace input with downscaled variant of original image
                 x_scaled[..., : model.num_image_channels] = downscale(
-                    images[..., : model.num_image_channels].permute(0, 3, 1, 2),
+                    image[..., : model.num_image_channels].permute(0, 3, 1, 2),
                     self.scales[i + 1],
                 ).permute(0, 2, 3, 1)
         return metrics, x_pred

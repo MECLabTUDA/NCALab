@@ -177,7 +177,6 @@ class ClassificationNCAModel(BasicNCAModel):
         f1_metric = MulticlassF1Score(num_classes=self.num_classes)
 
         y_prob = self.classify(image, steps, reduce=False)
-        # TODO adjust for pixel-wise problems
         y_true = label.squeeze()
         accuracy_macro_metric.update(y_prob, y_true)
         accuracy_micro_metric.update(y_prob, y_true)

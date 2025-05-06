@@ -104,19 +104,11 @@ class DepthNCAModel(BasicNCAModel):
         )
         self.plot_function = show_batch_depth
         self.vignette = None
+        self.validation_metric = "ssim"
 
     def prepare_input(self, x):
         # TODO: create positional encoding
         return x
-
-    def estimate_depth(self, image, steps=80):
-        """ """
-        with torch.no_grad():
-            x = image.clone()
-            x = pad_input(x, self, noise=self.pad_noise)
-            x = self.prepare_input(x)
-            x = self(x, steps=steps)
-            return x
 
     def loss(self, x, y) -> Dict[str, torch.Tensor]:
         """ """
@@ -168,7 +160,7 @@ class DepthNCAModel(BasicNCAModel):
         label,
         steps: int,
     ):
-        outputs = self.estimate_depth(image, steps=steps)
+        outputs = self.predict(image, steps=steps)
         s = ssim(
             outputs[..., -1].unsqueeze(1), label.unsqueeze(1), data_range=1.0
         ).item()

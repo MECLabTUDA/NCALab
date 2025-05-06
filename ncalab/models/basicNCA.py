@@ -8,6 +8,8 @@ import torch  # type: ignore[import-untyped]
 import torch.nn as nn  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
 
+from ..utils import pad_input
+
 
 class AutoStepper:
     """
@@ -173,7 +175,7 @@ class BasicNCAModel(nn.Module):
         )
         return mask
 
-    def perceive(self, x):
+    def _perceive(self, x):
         def _perceive_with(x, weight):
             if isinstance(weight, nn.Conv2d):
                 return weight(x)
@@ -191,11 +193,14 @@ class BasicNCAModel(nn.Module):
         y = torch.cat(perception, 1)
         return y
 
-    def update(self, x):
-        x = x.permute(0, 3, 1, 2)  # B W H C --> B C W H
+    def _update(self, x: torch.Tensor):
+        """
+        :param x [torch.Tensor]: Input tensor, BCWH
+        """
+        assert x.shape[1] == self.num_channels
 
         # Perception
-        dx = self.perceive(x)
+        dx = self._perceive(x)
 
         # Compute delta from FFNN network
         dx = dx.permute(0, 2, 3, 1)  # B C W H --> B W H C
@@ -224,7 +229,6 @@ class BasicNCAModel(nn.Module):
             x = x.permute(1, 0, 2, 3)  # B C W H --> C B W H
             x = x * life_mask.float()
             x = x.permute(1, 0, 2, 3)  # C B W H --> B C W H
-        x = x.permute(0, 2, 3, 1)  # B C W H --> B W H C
         return x
 
     def forward(
@@ -234,10 +238,16 @@ class BasicNCAModel(nn.Module):
         return_steps: bool = False,
     ) -> torch.Tensor | Tuple[torch.Tensor, int]:
         """
+        :param x [torch.Tensor]: Input image, padded along the channel dimension, BCWH.
+        :param steps [int]: Time steps in forward pass.
+        :param return_steps [bool]: Whether to return number of steps we took.
+
+        :returns: Output image, BWHC
         """
         if self.autostepper is None:
             for step in range(steps):
-                x = self.update(x)
+                x = self._update(x)
+            x = x.permute((0, 2, 3, 1)) # --> BWHC
             if return_steps:
                 return x, steps
             return x
@@ -272,31 +282,36 @@ class BasicNCAModel(nn.Module):
                         return x
             # save previous hidden state
             hidden_i_1 = x[
-                ...,
+                :,
                 self.num_image_channels : self.num_image_channels
                 + self.num_hidden_channels,
+                :,
+                :
             ]
             # single inference time step
-            x = self.update(x)
+            x = self._update(x)
             # set current hidden state
             hidden_i = x[
-                ...,
+                :,
                 self.num_image_channels : self.num_image_channels
                 + self.num_hidden_channels,
+                :,
+                :
             ]
+        x = x.permute((0, 2, 3, 1)) # --> BWHC
         if return_steps:
             return x, self.autostepper.max_steps
         return x
 
-    def loss(self, x: torch.Tensor, target: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def loss(self, image: torch.Tensor, label: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
         Compute loss.
+        Needs to be overloaded by any subclass.
 
-        :param x: _description_
-            target (_type_): _description_
+        :param image [torch.Tensor]: Input image.
+        :param label [torch.Tensor]: Ground truth.
 
-        Returns:
-            _type_: _description_
+        :returns: Dictionary of identifiers mapped to computed losses.
         """
         return NotImplemented
 
@@ -327,21 +342,34 @@ class BasicNCAModel(nn.Module):
         for layer in self.network[:-1]:
             layer.requires_grad_ = False
 
-    def metrics(self, image, label, steps: int):
+    def metrics(self, pred: torch.Tensor, label: torch.Tensor, steps: int):
+        """
+        Return dict of standard evaluation metrics.
+        Needs to include special item 'prediction', containing the predicted image (all channels).
+
+        :param pred [torch.Tensor]: Predicted image.
+        :param label [torch.Tensor]: Ground truth label.
+        :param steps [int]: Number of inference time steps.
+        """
         return {}
 
-    def export_onnx(self, path: str | PathLike, optimize: bool = True):
-        dummy = torch.zeros((8, 16, 16, self.num_channels)).to(self.device)
-        onnx_program = torch.onnx.export(self, dummy, dynamo=True)
-        if optimize:
-            onnx_program.optimize()
-        onnx_program.save(path)
+    def predict(self, image: torch.Tensor, steps: int = 100):
+        """
+        :param image [torch.Tensor]: Input image, BCWH.
+        """
+        assert steps >= 1
+        assert image.shape[1] <= self.num_channels
+        self.eval()
+        with torch.no_grad():
+            x = image.clone()
+            x = pad_input(x, self, noise=self.pad_noise)
+            x = self.prepare_input(x)
+            x = self.forward(x, steps=steps)
+            return x
 
-    def validate(
-        self,
-        image,
-        label,
-        steps: int,
-    ) -> float:
-        metrics = self.metrics(image, label, steps)
+    def validate(self, image: torch.Tensor, label: torch.Tensor, steps: int) -> float:
+        """
+        """
+        pred = self.predict(image.to(self.device))
+        metrics = self.metrics(pred, label.to(self.device), steps)
         return metrics, metrics["prediction"]
