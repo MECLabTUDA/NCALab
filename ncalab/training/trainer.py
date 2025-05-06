@@ -2,7 +2,7 @@ from __future__ import annotations
 import copy
 import logging
 from pathlib import Path, PosixPath  # for type hint
-from typing import Callable, Dict, Optional, List
+from typing import Callable, Dict, Optional, List, Tuple
 
 import numpy as np
 
@@ -30,7 +30,7 @@ class BasicNCATrainer:
     def __init__(
         self,
         nca: BasicNCAModel,
-        model_path: Path | PosixPath,
+        model_path: Optional[Path | PosixPath] = None,
         gradient_clipping: bool = False,
         steps_range: tuple = (90, 110),
         steps_validation: int = 100,
@@ -110,7 +110,7 @@ class BasicNCATrainer:
         scheduler: torch.optim.lr_scheduler.LRScheduler,
         total_batch_iterations: int,
         summary_writer,
-    ) -> torch.Tensor:
+    ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
         """
         Run a single training iteration.
 
@@ -146,7 +146,7 @@ class BasicNCATrainer:
                 summary_writer.add_scalar(
                     f"Loss/train_{key}", losses[key], total_batch_iterations
                 )
-        return x_pred
+        return x_pred, losses
 
     def train(
         self,
@@ -189,6 +189,7 @@ class BasicNCATrainer:
         optimizer = optim.Adam(self.nca.parameters(), lr=self.lr, betas=self.adam_betas)
         scheduler = optim.lr_scheduler.ExponentialLR(optimizer, self.lr_gamma)
         best_acc = 0.0
+        best_training_loss = np.inf
         best_model = self.nca
         if self.model_path:
             best_path = Path(self.model_path).with_suffix(".best.pth")
@@ -244,7 +245,7 @@ class BasicNCATrainer:
                     y = torch.cat(self.batch_repeat * [y])
 
                 steps = np.random.randint(*self.steps_range)
-                x_pred = self.train_iteration(
+                x_pred, losses = self.train_iteration(
                     x,
                     y,
                     steps,
@@ -258,6 +259,10 @@ class BasicNCATrainer:
                 total_batch_iterations += 1
 
             with torch.no_grad():
+                # SAVE TRAINING LOSS
+                if losses["total"].item() < best_training_loss:
+                    best_training_loss = losses["total"].item()
+
                 # VISUALIZATION
                 if (
                     plot_function
@@ -317,8 +322,7 @@ class BasicNCATrainer:
                 for image, label in dataloader_test:
                     metrics.update(
                         best_model.metrics(
-                            image.to(self.nca.device),
-                            label.to(self.nca.device)
+                            image.to(self.nca.device), label.to(self.nca.device)
                         )
                     )
-        return TrainingSummary(best_acc, best_path, metrics)
+        return TrainingSummary(best_acc, best_path, best_training_loss, metrics)

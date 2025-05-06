@@ -122,7 +122,7 @@ class KFoldCrossValidationTrainer:
         """
         self.trainer = trainer
         self.model_prototype = copy.deepcopy(trainer.nca)
-        self.model_name = trainer.model_path.with_suffix("")
+        self.model_name = trainer.model_path.with_suffix("")  # type: ignore[union-attr]
         self.split = split
 
     def train(

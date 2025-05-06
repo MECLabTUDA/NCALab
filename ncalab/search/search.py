@@ -1,6 +1,7 @@
 import itertools
 from collections.abc import Iterable
 import logging
+from typing import Any, Dict, Optional
 
 import pandas as pd
 
@@ -11,8 +12,12 @@ from ..training import BasicNCATrainer  # for type hint
 
 
 class ParameterSet:
+    """
+
+    """
+
     def __init__(self, **kwargs):
-        """_summary_"""
+        """ """
         self.params = kwargs
         # Replace parameters by iterable parameters (list with single entry)
         # if they are not iterables.
@@ -25,6 +30,7 @@ class ParameterSet:
         ]
         self.params = {k: v if k in self.mutable else [v] for k, v in kwargs.items()}
 
+        # compute carthesian product of all possible combinations
         C = itertools.product(*self.params.values())
         self.combinations = []
         for combination in C:
@@ -45,7 +51,7 @@ class ParameterSet:
         s += f"{len(self)} combinations"
         return s
 
-    def next(self):
+    def next(self) -> Dict[str, Any]:
         if self.index < len(self.combinations):
             ret = self.combinations[self.index]
             self.index += 1
@@ -78,7 +84,10 @@ class ParameterSearch:
         self.model_params = model_params
         self.trainer_params = trainer_params
 
-    def info(self):
+    def info(self) -> str:
+        """
+        Generate information string with a summary of the search to run.
+        """
         model_info = self.model_params.info()
         model_info = "\n".join(["|    " + L for L in model_info.splitlines()])
         trainer_info = self.trainer_params.info()
@@ -102,21 +111,22 @@ class ParameterSearch:
     def search(
         self,
         dataloader_train: DataLoader,
-        dataloader_val: DataLoader | None = None,
+        dataloader_val: Optional[DataLoader] = None,
     ):
         """
         Run search.
 
-        Args:
-            dataloader_train (DataLoader): _description_
-            dataloader_val (DataLoader | None, optional): _description_. Defaults to None.
+        :param dataloader_train [DataLoader]: Training DataLoader.
+        :param dataloader_val [DataLoader]: Validation DataLoader. Defaults to None.
         """
 
         list_of_summaries = []
         i = 0
         for trainer_args in self.trainer_params:
             for model_args in self.model_params:
+                # experiment index
                 i += 1
+                # create name for tensorboard comment
                 experiment_name = "T_" + "".join(
                     [
                         f"_{k}={v}" if self.trainer_params.is_mutable(k) else ""
@@ -135,19 +145,40 @@ class ParameterSearch:
                 )
                 writer = SummaryWriter(comment=experiment_name)
                 model = self.model_class(self.device, **model_args)
-                # TODO: allow k-fold
+                # TODO: allow k-fold trainer
                 trainer = BasicNCATrainer(model, **trainer_args)
                 summary = trainer.train(
                     dataloader_train,
                     dataloader_val,
                     summary_writer=writer,
                 )
+
+                # save current set of (mutable) args in dict
                 d = summary.to_dict()
-                d.update(**trainer_args)
-                d.update(**model_args)
+                d.update(
+                    **{
+                        k: v
+                        for k, v in trainer_args.items()
+                        if self.trainer_params.is_mutable(k)
+                    }
+                )
+                d.update(
+                    **{
+                        k: v
+                        for k, v in model_args.items()
+                        if self.model_params.is_mutable(k)
+                    }
+                )
                 list_of_summaries.append(d)
                 writer.close()
+
+                # Print intermediate results
+                df = pd.DataFrame(list_of_summaries)
+                print(df)
         return pd.DataFrame(list_of_summaries)
 
     def __call__(self, *args, **kwargs):
+        """
+        Shorthand for running the search.
+        """
         return self.search(*args, **kwargs)
