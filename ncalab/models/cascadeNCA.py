@@ -1,18 +1,16 @@
-from copy import deepcopy
-from typing import Type, List
+from typing import List
 
 import torch  # type: ignore[import-untyped]
 import torch.nn as nn  # type: ignore[import-untyped]
-import torch.nn.functional as F  # type: ignore[import-untyped]
 
 from .basicNCA import BasicNCAModel
 
 
-def upscale(image, scale):
+def upscale(image: torch.Tensor, scale: float):
     return nn.Upsample(scale_factor=scale, mode="nearest")(image)
 
 
-def downscale(image, scale):
+def downscale(image: torch.Tensor, scale: float):
     return nn.Upsample(scale_factor=1 / scale, mode="bilinear", align_corners=True)(
         image
     )
@@ -47,12 +45,12 @@ class CascadeNCA(BasicNCAModel):
             pad_noise=backbone.pad_noise,
             autostepper=backbone.autostepper,
         )
-        self.loss = backbone.loss
-        self.get_meta_dict = backbone.get_meta_dict
-        self.finetune = backbone.finetune
-        self.prepare_input = backbone.prepare_input
-        self.plot_function = backbone.plot_function
-        self.validation_metric = backbone.validation_metric
+        self.loss = backbone.loss  # type: ignore[method-assign]
+        self.get_meta_dict = backbone.get_meta_dict  # type: ignore[method-assign]
+        self.finetune = backbone.finetune  # type: ignore[method-assign]
+        self.prepare_input = backbone.prepare_input  # type: ignore[method-assign]
+        self.plot_function = backbone.plot_function  # type: ignore[method-assign]
+        self.validation_metric = backbone.validation_metric  # type: ignore[method-assign]
 
         # TODO automatically copy attributes
         if hasattr(backbone, "num_classes"):
@@ -68,7 +66,7 @@ class CascadeNCA(BasicNCAModel):
         models = [backbone for _ in scales]
         self.models = nn.ModuleList(models)
 
-    def forward(self, x: torch.Tensor, steps: int = 1):
+    def forward(self, x: torch.Tensor, steps: int = 1, return_steps: bool = False):
         """
         :param x [torch.Tensor]: Input image tensor, BCWH.
         :param steps [int]: Unused, as steps are defined in constructor.

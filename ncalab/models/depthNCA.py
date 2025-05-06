@@ -1,23 +1,25 @@
-from typing import Dict, Optional, Tuple
+from typing import Dict, Optional
 
 from .basicNCA import BasicNCAModel, AutoStepper
 
 from ..visualization import show_batch_depth
-from ..utils import pad_input
 
 import torch  # type: ignore[import-untyped]
 import torch.nn as nn  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
-from torch.utils.data import DataLoader  # type: ignore[import-untyped]
 
 from pytorch_msssim import ssim  # type: ignore[import-untyped]
 
 
 class SmoothnessLoss(nn.Module):
+    """ """
+
     def __init__(self):
         super(SmoothnessLoss, self).__init__()
 
-    def forward(self, depth_map, rgb_image):
+    def forward(self, depth_map: torch.Tensor, rgb_image: torch.Tensor):
+        """ """
+
         # Ensure the inputs are in the right shape
         assert depth_map.dim() == 4
         assert rgb_image.dim() == 4
@@ -74,19 +76,6 @@ class DepthNCAModel(BasicNCAModel):
     ):
         """
         NCA model for monocular depth estimation.
-
-        Args:
-            device (torch.device): _description_
-            num_image_channels (int, optional): _description_. Defaults to 3.
-            num_hidden_channels (int, optional): _description_. Defaults to 18.
-            fire_rate (float, optional): _description_. Defaults to 0.8.
-            hidden_size (int, optional): _description_. Defaults to 128.
-            use_alive_mask (bool, optional): _description_. Defaults to False.
-            immutable_image_channels (bool, optional): _description_. Defaults to True.
-            learned_filters (int, optional): _description_. Defaults to 2.
-            lambda_activity (float, optional): _description_. Defaults to 0.0.
-            autostepper (Optional[AutoStepper], optional): _description_. Defaults to None.
-            pad_noise (bool, optional): _description_. Defaults to False.
         """
         super(DepthNCAModel, self).__init__(
             device,
@@ -105,10 +94,6 @@ class DepthNCAModel(BasicNCAModel):
         self.plot_function = show_batch_depth
         self.vignette = None
         self.validation_metric = "ssim"
-
-    def prepare_input(self, x):
-        # TODO: create positional encoding
-        return x
 
     def loss(self, x, y) -> Dict[str, torch.Tensor]:
         """ """
@@ -154,24 +139,15 @@ class DepthNCAModel(BasicNCAModel):
         loss = 0.5 * loss_tv + loss_depthmap + 0.2 * loss_ssim
         return {"total": loss, "tv": loss_tv, "depth": loss_depthmap, "ssim": loss_ssim}
 
-    def metrics(
-        self,
-        image,
-        label,
-        steps: int,
-    ):
-        outputs = self.predict(image, steps=steps)
-        s = ssim(
-            outputs[..., -1].unsqueeze(1), label.unsqueeze(1), data_range=1.0
-        ).item()
+    def metrics(self, pred: torch.Tensor, label: torch.Tensor) -> Dict[str, float]:
+        """
+        Return dict of standard evaluation metrics.
+        Needs to include special item 'prediction', containing the predicted image (all channels).
 
-        return {"ssim": s, "prediction": outputs}
+        :param pred [torch.Tensor]: Predicted image, BWHC.
+        :param label [torch.Tensor]: Ground truth label.
 
-    def validate(
-        self,
-        image,
-        label,
-        steps: int,
-    ) -> Tuple[Dict[str, float], torch.Tensor]:
-        metrics = self.metrics(image, label, steps)
-        return metrics, metrics["prediction"]
+        :returns [Dict]: Dict of metrics, mapped by their names.
+        """
+        s = ssim(pred[..., -1].unsqueeze(1), label.unsqueeze(1), data_range=1.0).item()
+        return {"ssim": s}

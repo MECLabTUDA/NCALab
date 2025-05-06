@@ -56,23 +56,39 @@ class SegmentationNCAModel(BasicNCAModel):
         self.plot_function = show_batch_binary_segmentation
         self.validation_metric = "Dice"
 
-    def loss(self, x, y):
-        class_channels = x[..., self.num_image_channels + self.num_hidden_channels :]
+    def loss(self, image: torch.Tensor, label: torch.Tensor) -> Dict[str, torch.Tensor]:
+        """
+        Compute Dice + BCE loss.
+
+        :param image [torch.Tensor]: Input image, BWHC.
+        :param label [torch.Tensor]: Ground truth.
+
+        :returns: Dictionary of identifiers mapped to computed losses.
+        """
+        assert len(image.shape) == 4, "Expecting a four-dimensional Tensor."
+        assert (
+            image.shape[-1] == self.num_channels
+        ), "Image dimensions need to have BWHC order."
+        class_channels = image[
+            ..., self.num_image_channels + self.num_hidden_channels :
+        ]
 
         loss_segmentation_function = DiceBCELoss()
         loss_segmentation = loss_segmentation_function(
             class_channels.permute(0, 3, 1, 2),
-            y,
+            label,
         )
 
         loss = loss_segmentation
         return {"total": loss}
 
-    def metrics(
-        self,
-        pred,
-        label
-    ):
+    def metrics(self, pred: torch.Tensor, label: torch.Tensor):
+        """
+        Return dict of standard evaluation metrics.
+
+        :param pred [torch.Tensor]: Predicted image.
+        :param label [torch.Tensor]: Ground truth label.
+        """
         outputs = pred[
             ..., self.num_image_channels + self.num_hidden_channels :
         ].permute(0, 3, 1, 2)
@@ -94,11 +110,4 @@ class SegmentationNCAModel(BasicNCAModel):
             reduction="macro-imagewise",
         ).item()
         Dice = torch.mean(2.0 * (tp + 1.0) / (2.0 * tp + fp + fn + 1.0)).item()
-        return {
-            "IoU": iou_score,
-            "Dice": Dice,
-            "TP": tp,
-            "FP": fp,
-            "FN": fn,
-            "TN": tn
-        }
+        return {"IoU": iou_score, "Dice": Dice, "TP": tp, "FP": fp, "FN": fn, "TN": tn}

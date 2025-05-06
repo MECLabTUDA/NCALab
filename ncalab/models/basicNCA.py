@@ -106,8 +106,8 @@ class BasicNCAModel(nn.Module):
         self.pad_noise = pad_noise
         self.autostepper = autostepper
 
-        self.plot_function: Callable | None = None
-        self.validation_metric = None
+        self.plot_function: Optional[Callable] = None
+        self.validation_metric: Optional[str] = None
         self.filters: list | nn.ModuleList = []
 
         if num_learned_filters > 0:
@@ -308,7 +308,7 @@ class BasicNCAModel(nn.Module):
         Compute loss.
         Needs to be overloaded by any subclass.
 
-        :param image [torch.Tensor]: Input image.
+        :param image [torch.Tensor]: Input image, BWHC.
         :param label [torch.Tensor]: Ground truth.
 
         :returns: Dictionary of identifiers mapped to computed losses.
@@ -342,13 +342,15 @@ class BasicNCAModel(nn.Module):
         for layer in self.network[:-1]:
             layer.requires_grad_ = False
 
-    def metrics(self, pred: torch.Tensor, label: torch.Tensor):
+    def metrics(self, pred: torch.Tensor, label: torch.Tensor) -> Dict[str, float]:
         """
         Return dict of standard evaluation metrics.
         Needs to include special item 'prediction', containing the predicted image (all channels).
 
-        :param pred [torch.Tensor]: Predicted image.
+        :param pred [torch.Tensor]: Predicted image, BWHC.
         :param label [torch.Tensor]: Ground truth label.
+
+        :returns [Dict]: Dict of metrics, mapped by their names.
         """
         return {}
 
@@ -365,12 +367,12 @@ class BasicNCAModel(nn.Module):
             x = image.clone()
             x = pad_input(x, self, noise=self.pad_noise)
             x = self.prepare_input(x)
-            x = self.forward(x, steps=steps)
+            x = self.forward(x, steps=steps)  # type: ignore[assignment]
             return x
 
     def validate(
         self, image: torch.Tensor, label: torch.Tensor, steps: int
-    ) -> Tuple[float, torch.Tensor]:
+    ) -> Tuple[Dict[str, float], torch.Tensor]:
         """
         :param image [torch.Tensor]: Input image, BCWH
         :param label [torch.Tensor]: Ground truth label

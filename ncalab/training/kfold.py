@@ -68,7 +68,7 @@ class SplitDefinition:
         """
         Constructor.
         """
-        self.folds: List[None | TrainValRecord] = []
+        self.folds = []
         self.dataloader_test = None
 
     @staticmethod
@@ -155,7 +155,7 @@ class KFoldCrossValidationTrainer:
                 DatasetType, datapath, transform, batch_sizes
             )
             self.trainer.nca = copy.deepcopy(self.model_prototype)
-            self.trainer.model_path = experiment_name
+            self.trainer.model_path = Path(experiment_name)
             summary = self.trainer.train(
                 dataloaders["train"],
                 dataloaders["val"],

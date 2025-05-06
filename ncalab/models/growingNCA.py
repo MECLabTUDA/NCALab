@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import Dict, List, Optional
 
 import torch  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
@@ -50,7 +50,7 @@ class GrowingNCAModel(BasicNCAModel):
         )
         self.plot_function = show_batch_growing
 
-    def loss(self, x: torch.Tensor, y: torch.Tensor):
+    def loss(self, image: torch.Tensor, label: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
         Implements a simple MSE loss between target and prediction.
 
@@ -59,7 +59,7 @@ class GrowingNCAModel(BasicNCAModel):
 
         :returns [Tensor]: MSE Loss
         """
-        loss = F.mse_loss(x[..., : self.num_image_channels], y)
+        loss = F.mse_loss(image[..., : self.num_image_channels], label)
         return {"total": loss}
 
     def validate(self, *args, **kwargs):

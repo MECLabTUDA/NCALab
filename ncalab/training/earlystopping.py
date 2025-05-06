@@ -13,7 +13,7 @@ class EarlyStopping:
         """
         self.patience = patience
         self.min_delta = min_delta
-        self.best_accuracy = 0
+        self.best_accuracy = 0.0
         self.counter = 0
 
     def done(self):

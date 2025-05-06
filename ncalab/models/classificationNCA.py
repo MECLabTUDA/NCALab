@@ -107,34 +107,36 @@ class ClassificationNCAModel(BasicNCAModel):
                 return y_pred
             return y_pred
 
-    def loss(self, x: torch.Tensor, target: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def loss(self, image: torch.Tensor, label: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
         Return the classification loss. For pixel-wise ("self-classifying") problems,
         such as self-classifying MNIST, we compute the Cross-Entropy loss.
         For image-wise classification, MSE loss is returned.
 
-        Args:
-            x (_type_): _description_
-            target (_type_): _description_
+        :param image [torch.Tensor]: Input image, BWHC.
+        :param label [torch.Tensor]: Ground truth.
 
-        Returns:
-            _type_: _description_
+        :returns: Dictionary of identifiers mapped to computed losses.
         """
         # x: B W H C
-        class_channels = x[..., self.num_image_channels + self.num_hidden_channels :]
+        class_channels = image[
+            ..., self.num_image_channels + self.num_hidden_channels :
+        ]
 
         # Create one-hot ground truth tensor, where all pixels of the predicted class are
         # active in the respective classification channel.
         if self.pixel_wise_loss:
-            y = torch.ones((x.shape[0], x.shape[1], x.shape[2])).to(self.device)
+            y = torch.ones((image.shape[0], image.shape[1], image.shape[2])).to(
+                self.device
+            )
             # if binary images are classified: mask with first image channel
             if self.num_image_channels == 1:
-                mask = x[..., 0] > 0
+                mask = image[..., 0] > 0
             # TODO: mask alpha channel if available
             else:
                 mask = torch.Tensor([1.0])
-            for i in range(x.shape[0]):
-                y[i] *= target[i]
+            for i in range(image.shape[0]):
+                y[i] *= label[i]
             loss_ce = (
                 F.cross_entropy(
                     class_channels.permute(0, 3, 1, 2),  # B W H C --> B C W H
@@ -151,7 +153,7 @@ class ClassificationNCAModel(BasicNCAModel):
             loss_mse = (
                 F.mse_loss(
                     y_pred.float(),
-                    F.one_hot(target.squeeze(), num_classes=self.num_classes).float(),
+                    F.one_hot(label.squeeze(), num_classes=self.num_classes).float(),
                     reduction="none",
                 )
             ).mean()
@@ -163,11 +165,13 @@ class ClassificationNCAModel(BasicNCAModel):
             "classification": loss_classification,
         }
 
-    def metrics(
-        self,
-        pred: torch.Tensor,
-        label: torch.Tensor
-    ):
+    def metrics(self, pred: torch.Tensor, label: torch.Tensor):
+        """
+        Return dict of standard evaluation metrics.
+
+        :param pred [torch.Tensor]: Predicted image.
+        :param label [torch.Tensor]: Ground truth label.
+        """
         accuracy_macro_metric = MulticlassAccuracy(
             average="macro", num_classes=self.num_classes
         )
@@ -193,7 +197,6 @@ class ClassificationNCAModel(BasicNCAModel):
             "accuracy_micro": accuracy_micro,
             "f1": f1,
             "auroc": auroc,
-            "prediction": y_prob,
         }
 
     def get_meta_dict(self) -> dict:

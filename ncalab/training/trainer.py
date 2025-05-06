@@ -2,7 +2,7 @@ from __future__ import annotations
 import copy
 import logging
 from pathlib import Path, PosixPath  # for type hint
-from typing import Callable, Optional
+from typing import Callable, Dict, Optional, List
 
 import numpy as np
 
@@ -30,7 +30,7 @@ class BasicNCATrainer:
     def __init__(
         self,
         nca: BasicNCAModel,
-        model_path: Optional[str | Path | PosixPath] = None,
+        model_path: Path | PosixPath,
         gradient_clipping: bool = False,
         steps_range: tuple = (90, 110),
         steps_validation: int = 100,
@@ -178,7 +178,7 @@ class BasicNCATrainer:
             save_every = 1
         assert save_every > 0
 
-        # Use default plot function for NCA flavor if none is explicitly given
+        # Use default plot function for NCA flavor if no override is explicitly given
         if not plot_function:
             if self.nca.plot_function:
                 plot_function = self.nca.plot_function
@@ -278,7 +278,7 @@ class BasicNCATrainer:
                     torch.save(self.nca.state_dict(), self.model_path)
 
                 if dataloader_val:
-                    all_metrics = {}
+                    all_metrics: Dict[str, List[float]] = {}
                     for sample in dataloader_val:
                         x, y = sample
                         # TODO: move validation/inference steps parameter to NCA model itself
@@ -289,22 +289,24 @@ class BasicNCATrainer:
                             if name not in all_metrics:
                                 all_metrics[name] = []
                             all_metrics[name].append(metrics[name])
+                    avg_metrics: Dict[str, float] = {}
                     for name in all_metrics:
-                        all_metrics[name] = np.mean(all_metrics[name])
+                        avg_metrics[name] = float(np.mean(all_metrics[name]))
                         if summary_writer is not None:
                             summary_writer.add_scalar(
-                                f"Acc/Val/{name}", all_metrics[name], iteration
+                                f"Acc/Val/{name}", avg_metrics[name], iteration
                             )
-                    val_acc = all_metrics.get(self.nca.validation_metric, 0)
-                    if val_acc > best_acc:
-                        logging.info(
-                            f"Accuracy improvement: {best_acc:.5f} --> {val_acc:.5f}"
-                        )
-                        logging.info(f"  In Epoch {iteration}")
-                        if best_path:
-                            torch.save(self.nca.state_dict(), best_path)
-                        best_acc = val_acc
-                        best_model = copy.deepcopy(self.nca)
+                    if self.nca.validation_metric in avg_metrics:
+                        val_acc = avg_metrics.get(self.nca.validation_metric, 0)
+                        if val_acc > best_acc:
+                            logging.info(
+                                f"Accuracy improvement: {best_acc:.5f} --> {val_acc:.5f}"
+                            )
+                            logging.info(f"  In Epoch {iteration}")
+                            if best_path:
+                                torch.save(self.nca.state_dict(), best_path)
+                            best_acc = val_acc
+                            best_model = copy.deepcopy(self.nca)
                     if earlystopping is not None:
                         earlystopping.step(val_acc)
         # After training: Compute metrics on test set for training summary
@@ -316,8 +318,7 @@ class BasicNCATrainer:
                     metrics.update(
                         best_model.metrics(
                             image.to(self.nca.device),
-                            label.to(self.nca.device),
-                            self.steps_validation,
+                            label.to(self.nca.device)
                         )
                     )
         return TrainingSummary(best_acc, best_path, metrics)
