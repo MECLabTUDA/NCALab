@@ -165,7 +165,7 @@ class ClassificationNCAModel(BasicNCAModel):
             "classification": loss_classification,
         }
 
-    def metrics(self, pred: torch.Tensor, label: torch.Tensor):
+    def metrics(self, pred: torch.Tensor, label: torch.Tensor) -> Dict[str, float]:
         """
         Return dict of standard evaluation metrics.
 

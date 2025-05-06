@@ -72,7 +72,7 @@ class SplitDefinition:
         self.dataloader_test = None
 
     @staticmethod
-    def read(path: PosixPath):
+    def read(path: PosixPath) -> "SplitDefinition":
         """
         Reads json files with split definitions, similar to those created by nnUNet.
 
@@ -105,7 +105,7 @@ class SplitDefinition:
         # TODO validate structure
         return sd
 
-    def __len__(self):
+    def __len__(self) -> int:
         return len(self.folds)
 
     def __getitem__(self, idx) -> TrainValRecord:

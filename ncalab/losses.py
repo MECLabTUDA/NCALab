@@ -11,17 +11,10 @@ class DiceScore(nn.Module):
         super(DiceScore, self).__init__()
 
     def forward(
-        self, x: torch.Tensor, y: torch.Tensor, smooth: float = 1
+        self, x: torch.Tensor, y: torch.Tensor, smooth: float = 1.0
     ) -> torch.Tensor:
         """
-
-        Args:
-            input (_type_): _description_
-            target (_type_): _description_
-            smooth (int, optional): _description_. Defaults to 1.
-
-        Returns:
-            _type_: _description_
+        :returns: Dice score as Tensor
         """
         x = torch.sigmoid(x)
         x = torch.flatten(x)

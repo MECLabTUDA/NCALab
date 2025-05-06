@@ -16,7 +16,7 @@ class EarlyStopping:
         self.best_accuracy = 0.0
         self.counter = 0
 
-    def done(self):
+    def done(self) -> bool:
         """
         Checks whether the training can be stopped.
 
