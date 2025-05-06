@@ -212,7 +212,7 @@ class BasicNCATrainer:
                 x_previous = None
 
             for i, sample in enumerate(gen):
-                x, y = sample
+                x, y = sample  # x: BCWH
 
                 # Typically, our dataloader supplies a binary, grayscale, RGB or RGBA image.
                 # But the NCA operates on multiple hidden channels and output channels, so we
@@ -220,7 +220,6 @@ class BasicNCATrainer:
                 x = pad_input(x, self.nca, noise=self.nca.pad_noise)
                 # Call model-specific input preparation hook
                 x = self.nca.prepare_input(x)
-                x = x.permute(0, 2, 3, 1)  # B C W H --> B W H C
 
                 if (
                     self.p_retain_pool > 0.0
@@ -230,8 +229,8 @@ class BasicNCATrainer:
                     # Batch sizes might be incompatible if DataLoader has drop_last set to False (default).
                     # Retention is not applied in this case.
                     if x_previous.shape[0] == x.shape[0]:
-                        x[:, :, :, self.nca.num_image_channels :] = x_previous[
-                            :, :, :, self.nca.num_image_channels :
+                        x[:, self.nca.num_image_channels :, :, :] = x_previous[
+                            :, self.nca.num_image_channels :, :, :
                         ]
                     else:
                         raise Exception(
@@ -282,15 +281,8 @@ class BasicNCATrainer:
                     all_metrics = {}
                     for sample in dataloader_val:
                         x, y = sample
-                        x = pad_input(x, self.nca, noise=self.nca.pad_noise)
-                        # Call model-specific input preparation hook
-                        x = self.nca.prepare_input(x)
-                        x = x.permute(0, 2, 3, 1)  # --> B W H C
-                        metrics, _ = self.nca.validate(
-                            x.to(self.nca.device),
-                            y.to(self.nca.device),
-                            self.steps_validation,
-                        )
+                        # TODO: move validation/inference steps parameter to NCA model itself
+                        metrics, _ = self.nca.validate(x, y, self.steps_validation)
                         for name in metrics:
                             if name == "prediction":
                                 continue

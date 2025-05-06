@@ -29,11 +29,11 @@ def pad_input(x, nca, noise: bool = True):
     channels required by the NCA model. Pads with either Gaussian noise or zeros,
     depending on "noise" parameter. Gaussian noise has mean of 0.5 and sigma 0.225.
 
-    :param x [torch.Tensor]: Input image tensor.
+    :param x [torch.Tensor]: Input image tensor, BCWH.
     :param nca [BasicNCAModel]: NCA model definition.
     :param noise [bool]: Whether to pad with noise. Otherwise zeros. Defaults to True.
 
-    :returns: Input tensor, padded along the channel dimension.
+    :returns: Input tensor, BCWH, padded along the channel dimension.
     """
     if x.shape[1] < nca.num_channels:
         x = F.pad(
