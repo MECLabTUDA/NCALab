@@ -58,7 +58,7 @@ def search_growing_emoji(
         use_alive_mask=True,
     )
     # No need to search trainer parameters, but we could do that
-    trainer_params = ParameterSet(max_epochs=1000)
+    trainer_params = ParameterSet(max_epochs=100)
 
     # Set up hyperparameter search (grid search)
     search = ParameterSearch(device, GrowingNCAModel, model_params, trainer_params)

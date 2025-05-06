@@ -14,6 +14,7 @@ root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
 from ncalab import (
+    AutoStepper,
     GrowingNCADataset,
     GrowingNCAModel,
     BasicNCATrainer,
@@ -54,12 +55,15 @@ def train_growing_emoji(
     # Select device, try to use GPU or fall back to CPU
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
+    autostepper = AutoStepper()
+
     # Create NCA model definition
     nca = GrowingNCAModel(
         device,
         num_image_channels=4,
         num_hidden_channels=hidden_channels,
         use_alive_mask=True,
+        autostepper=autostepper,
     )
 
     # Create dataset containing a single growing emoji
