@@ -1,9 +1,11 @@
-from .basicNCA import BasicNCAModel
-from ..losses import DiceBCELoss
-from ..visualization import show_batch_binary_segmentation
+from typing import Optional, Dict
 
 import torch  # type: ignore[import-untyped]
 import segmentation_models_pytorch as smp  # type: ignore[import-untyped]
+
+from .basicNCA import AutoStepper, BasicNCAModel
+from ..losses import DiceBCELoss
+from ..visualization import show_batch_binary_segmentation
 
 
 class SegmentationNCAModel(BasicNCAModel):
@@ -23,6 +25,7 @@ class SegmentationNCAModel(BasicNCAModel):
         hidden_size: int = 128,
         num_learned_filters: int = 2,
         pad_noise: bool = True,
+        autostepper: Optional[AutoStepper] = None,
     ):
         """
         Instantiate an image segmentation model based on NCA.
@@ -48,6 +51,7 @@ class SegmentationNCAModel(BasicNCAModel):
             immutable_image_channels=True,
             num_learned_filters=num_learned_filters,
             pad_noise=pad_noise,
+            autostepper=autostepper,
         )
         self.plot_function = show_batch_binary_segmentation
         self.validation_metric = "Dice"

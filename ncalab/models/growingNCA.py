@@ -1,11 +1,11 @@
-from typing import List
+from typing import List, Optional
 
 import torch  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
 
 import numpy as np
 
-from .basicNCA import BasicNCAModel
+from .basicNCA import AutoStepper, BasicNCAModel
 from ..visualization import show_batch_growing
 
 
@@ -18,6 +18,7 @@ class GrowingNCAModel(BasicNCAModel):
         fire_rate: float = 0.5,
         hidden_size: int = 128,
         use_alive_mask: bool = False,
+        autostepper: Optional[AutoStepper] = None,
         **kwargs,
     ):
         """
@@ -44,6 +45,7 @@ class GrowingNCAModel(BasicNCAModel):
             use_alive_mask=use_alive_mask,
             immutable_image_channels=False,
             pad_noise=False,
+            autostepper=autostepper,
             **kwargs,
         )
         self.plot_function = show_batch_growing

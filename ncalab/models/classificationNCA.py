@@ -1,11 +1,11 @@
-from typing import Dict
+from typing import Dict, Optional
 
 import torch  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
 
 from torcheval.metrics import MulticlassAccuracy, MulticlassAUROC, MulticlassF1Score  # type: ignore[import-untyped]
 
-from .basicNCA import BasicNCAModel
+from .basicNCA import AutoStepper, BasicNCAModel
 
 
 class ClassificationNCAModel(BasicNCAModel):
@@ -23,6 +23,7 @@ class ClassificationNCAModel(BasicNCAModel):
         pixel_wise_loss: bool = False,
         filter_padding: str = "reflect",
         pad_noise: bool = False,
+        autostepper: Optional[AutoStepper] = None,
     ):
         """
         :param device [torch.device]: Compute device.
@@ -50,6 +51,7 @@ class ClassificationNCAModel(BasicNCAModel):
             learned_filters,
             filter_padding=filter_padding,
             pad_noise=pad_noise,
+            autostepper=autostepper,
         )
         self.num_classes = num_classes
         self.pixel_wise_loss = pixel_wise_loss
