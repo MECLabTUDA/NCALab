@@ -11,6 +11,7 @@ Welcome to NCALab's documentation!
    example_selfclass
    training
    kfold
+   search
 
 
 Indices and tables
