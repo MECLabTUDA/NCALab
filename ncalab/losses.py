@@ -4,17 +4,24 @@ import torch.nn.functional as F  # type: ignore[import-untyped]
 
 
 class DiceScore(nn.Module):
-    """ """
+    """
+    Pytorch Module that computes the Dice overlap score between two images.
+    """
 
     def __init__(self):
-        """"""
+        """
+        Constructor.
+        """
         super(DiceScore, self).__init__()
 
     def forward(
         self, x: torch.Tensor, y: torch.Tensor, smooth: float = 1.0
     ) -> torch.Tensor:
         """
-        :returns: Dice score as Tensor
+        :param x [torch.Tensor]: Reference Input
+        :param y [torch.Tensor]: Other Input
+
+        :returns [torch.Tensor]: Dice score as Tensor
         """
         x = torch.sigmoid(x)
         x = torch.flatten(x)
@@ -27,26 +34,25 @@ class DiceScore(nn.Module):
 
 class DiceBCELoss(nn.Module):
     """
-    Combination of Dice and BCE Loss.
+    Combination of Dice and BCE Loss between two images.
     """
 
     def __init__(self):
-        """_summary_"""
+        """
+        Constructor.
+        """
         super(DiceBCELoss, self).__init__()
         self.dicescore = DiceScore()
 
     def forward(
-        self, x: torch.Tensor, y: torch.Tensor, smooth: float = 1
+        self, x: torch.Tensor, y: torch.Tensor, smooth: float = 1.0
     ) -> torch.Tensor:
-        """_summary_
+        """
+        :param x [torch.Tensor]: Reference Input.
+        :param y [torch.Tensor]: Other Input.
+        :param smooth [float]: Smoothing factor. Defaults to 1.0
 
-        Args:
-            input (_type_): _description_
-            target (_type_): _description_
-            smooth (int, optional): _description_. Defaults to 1.
-
-        Returns:
-            torch.Tensor: Combination of Dice and BCE loss
+        :returns: Combination of Dice and BCE loss
         """
         x = torch.sigmoid(x)
         x = torch.flatten(x)
