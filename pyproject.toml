@@ -4,14 +4,10 @@ version = "0.1.0"
 description = "Training code and pre-trained models for Neural Cellular Automata on different datasets and tasks"
 readme = "README.md"
 requires-python = ">=3.12"
-packages = ["ncalab"]
-maintainters = [
-    { name = "Henry J. Krumb", email = "henry_john.krumb@tu-darmstadt.de" },
-]
 license = "MIT"
 classifiers = [
     "Programming Language :: Python :: 3.12",
-    "Development Status :: 3 - Alpha",
+    "Development Status :: 3 - Alpha"
 ]
 dependencies = [
     "absl-py==2.2.2",
@@ -220,3 +216,7 @@ dependencies = [
 [project.urls]
 Documentation = "https://ncalab.readthedocs.io/en/latest/"
 Repository = "https://github.com/MECLabTUDA/NCAlab"
+
+
+[tool.setuptools]
+packages = [ "ncalab", ]
