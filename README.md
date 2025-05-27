@@ -39,6 +39,8 @@ So far, the following example tasks are implemented in NCALab:
   * Image Segmentation:
     * Endoscopic polyp segmentation (Kvasir-SEG, public)
     * Capsule endoscopic bleeding segmentation (KID2 dataset, proprietary)
+  * Monocular Depth Estimation
+    * Capsule endoscopic monocular depth estimation
 
 
 You can find those example tasks inside the `tasks/` directory and its subfolders.
