@@ -34,36 +34,44 @@ class BasicNCATrainer:
         gradient_clipping: bool = False,
         steps_range: tuple = (90, 110),
         steps_validation: int = 100,
-        lr: float = 16e-4,
+        lr: Optional[float] = None,
         lr_gamma: float = 0.9999,
         adam_betas=(0.9, 0.99),
         batch_repeat: int = 2,
         truncate_backprop: bool = False,
         max_epochs: int = 200,
         p_retain_pool: float = 0.0,
+        optimizer_method: str = "adamw",
     ):
         """
         Initialize trainer object.
 
-        Args:
-            nca (BasicNCAModel): NCA model instance to train.
-            model_path (Optional[str  |  Path  |  PosixPath], optional): Path to saved models. If None, models are not saved. Defaults to None.
-            gradient_clipping (bool, optional): Whether to clip gradients. Defaults to False.
-            steps_range (tuple, optional): Inclusive range of NCA time steps, randomized in each forward pass. Defaults to (90, 110).
-            steps_validation (int, optional): Number of steps to use during validation. Defaults to 100.
-            lr (float, optional): Initial learning rate. Defaults to 16e-4.
-            lr_gamma (float, optional): Exponential learning rate decay. Defaults to 0.9999.
-            adam_betas (tuple, optional): Beta values for Adam optimizer. Defaults to (0.9, 0.99).
-            batch_repeat (int, optional): How often each batch will be duplicated. Defaults to 2.
-            truncate_backprop (bool, optional): Whether to truncate backpropagation. Defaults to False.
-            max_epochs (int, optional): Maximum number of epochs in training. Defaults to 200.
-            p_retain_pool (float, optional): Probability at which a sample will be retained. Defaults to 0.0.
+        :param nca (BasicNCAModel): NCA model instance to train.
+        :param model_path (Optional[str  |  Path  |  PosixPath], optional): Path to saved models. If None, models are not saved. Defaults to None.
+        :param gradient_clipping (bool, optional): Whether to clip gradients. Defaults to False.
+        :param steps_range (tuple, optional): Inclusive range of NCA time steps, randomized in each forward pass. Defaults to (90, 110).
+        :param steps_validation (int, optional): Number of steps to use during validation. Defaults to 100.
+        :param lr (float, optional): Initial learning rate. Defaults to 16e-4.
+        :param lr_gamma (float, optional): Exponential learning rate decay. Defaults to 0.9999.
+        :param adam_betas (tuple, optional): Beta values for Adam optimizer. Defaults to (0.9, 0.99).
+        :param batch_repeat (int, optional): How often each batch will be duplicated. Defaults to 2.
+        :param truncate_backprop (bool, optional): Whether to truncate backpropagation. Defaults to False.
+        :param max_epochs (int, optional): Maximum number of epochs in training. Defaults to 200.
+        :param p_retain_pool (float, optional): Probability at which a sample will be retained. Defaults to 0.0.
+        :param optimizer_method: Optimization method. Defaults to 'adamw'.
         """
         assert batch_repeat >= 1
-        assert lr > 0
         assert steps_range[0] < steps_range[1]
         assert max_epochs > 0
         assert p_retain_pool >= 0.0 and p_retain_pool <= 1.0
+        assert optimizer_method.lower() in (
+            "adam",
+            "adamw",
+            "adagrad",
+            "adafactor",
+            "rmsprop",
+            "sgd",
+        )
         self.nca = nca
         self.model_path = model_path
         self.gradient_clipping = gradient_clipping
@@ -76,6 +84,18 @@ class BasicNCATrainer:
         self.truncate_backprop = truncate_backprop
         self.max_epochs = max_epochs
         self.p_retain_pool = p_retain_pool
+        self.optimizer_method = optimizer_method
+        if lr is None:
+            if optimizer_method.lower() == "sgd":
+                self.lr = 1e-2
+            elif optimizer_method.lower() in ("adam", "adamw"):
+                self.lr = 16e-4
+            elif optimizer_method.lower() == "rmsprop":
+                self.lr = 1e-2
+            elif optimizer_method.lower() == "adagrad":
+                self.lr = 1e-2
+            else:
+                self.lr = 1e-2
 
     def info(self) -> str:
         """
@@ -96,6 +116,7 @@ class BasicNCATrainer:
             "truncate_backprop",
             "max_epochs",
             "p_retain_pool",
+            "optimizer_method",
         ):
             attribute_f = attribute.title().replace("_", " ")
             s += f"**{attribute_f}:** {getattr(self, attribute)}\n"
@@ -186,7 +207,22 @@ class BasicNCATrainer:
         if summary_writer is not None:
             summary_writer.add_text("Training Info", self.info())
 
-        optimizer = optim.Adam(self.nca.parameters(), lr=self.lr, betas=self.adam_betas)
+        if self.optimizer_method.lower() == "adamw":
+            optimizer = optim.AdamW(
+                self.nca.parameters(), lr=self.lr, betas=self.adam_betas
+            )
+        elif self.optimizer_method.lower() == "sgd":
+            optimizer = optim.SGD(self.nca.parameters(), lr=self.lr, momentum=0.9, nesterov=True)
+        elif self.optimizer_method.lower() == "rmsprop":
+            optimizer = optim.RMSprop(self.nca.parameters(), lr=self.lr)
+        elif self.optimizer_method.lower() == "adagrad":
+            optimizer = optim.Adagrad(self.nca.parameters(), lr=self.lr)
+        elif self.optimizer_method.lower() == "adafactor":
+            optimizer = optim.Adafactor(self.nca.parameters(), lr=self.lr)
+        else:
+            optimizer = optim.Adam(
+                self.nca.parameters(), lr=self.lr, betas=self.adam_betas
+            )
         scheduler = optim.lr_scheduler.ExponentialLR(optimizer, self.lr_gamma)
         best_acc = 0.0
         best_training_loss = np.inf
