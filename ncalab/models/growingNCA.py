@@ -100,6 +100,8 @@ class GrowingNCAModel(BasicNCAModel):
                             1,
                         )
                     )
+                    # next forward pass expects BCWH
+                    x = x.permute((0, 3, 1, 2))
                 return step_outs
             else:
                 x = self.forward(x, steps=steps)  # type: ignore[assignment]
