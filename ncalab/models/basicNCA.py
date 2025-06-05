@@ -1,4 +1,5 @@
 from __future__ import annotations
+import logging
 from typing import Callable, Optional, Dict, Tuple
 from os import PathLike
 
@@ -141,14 +142,13 @@ class BasicNCAModel(nn.Module):
             nn.Linear(
                 self.num_channels * (self.num_filters + 1), self.hidden_size, bias=True
             ),
-            # nn.LazyBatchNorm2d(),
             nn.ReLU(),
             nn.Linear(self.hidden_size, self.num_channels, bias=False),
         ).to(device)
 
         # initialize final layer with 0
         with torch.no_grad():
-            self.network[-1].weight.zero_()
+            self.network[-1].weight.data.fill_(0)
 
         self.meta: dict = {}
 
@@ -276,7 +276,8 @@ class BasicNCAModel(nn.Module):
                         cooldown += 1
                     if cooldown >= self.autostepper.plateau:
                         if self.autostepper.verbose:
-                            print(f"Breaking after {step} steps.")
+                            logging.info(f"Breaking after {step} steps.")
+                        x = x.permute((0, 2, 3, 1))  # --> BWHC
                         if return_steps:
                             return x, step
                         return x
@@ -354,7 +355,7 @@ class BasicNCAModel(nn.Module):
         """
         return {}
 
-    def predict(self, image: torch.Tensor, steps: int = 100):
+    def predict(self, image: torch.Tensor, steps: int = 100) -> torch.Tensor:
         """
         :param image [torch.Tensor]: Input image, BCWH.
 
