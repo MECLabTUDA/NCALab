@@ -44,6 +44,7 @@ class CascadeNCA(BasicNCAModel):
             use_laplace=backbone.use_laplace,
             pad_noise=backbone.pad_noise,
             autostepper=backbone.autostepper,
+            use_temporal_encoding=backbone.use_temporal_encoding,
         )
         self.loss = backbone.loss  # type: ignore[method-assign]
         self.get_meta_dict = backbone.get_meta_dict  # type: ignore[method-assign]
@@ -66,7 +67,7 @@ class CascadeNCA(BasicNCAModel):
         models = [backbone for _ in scales]
         self.models = nn.ModuleList(models)
 
-    def forward(self, x: torch.Tensor) -> torch.Tensor:  # type: ignore[override]
+    def forward(self, x: torch.Tensor, *args, **kwargs) -> torch.Tensor:  # type: ignore[override]
         """
         :param x [torch.Tensor]: Input image tensor, BCWH.
         :param steps [int]: Unused, as steps are defined in constructor.

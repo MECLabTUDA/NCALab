@@ -1,7 +1,6 @@
 from __future__ import annotations
 import logging
 from typing import Callable, Optional, Dict, Tuple
-from os import PathLike
 
 import numpy as np
 
@@ -66,6 +65,7 @@ class BasicNCAModel(nn.Module):
         kernel_size: int = 3,
         pad_noise: bool = False,
         autostepper: Optional[AutoStepper] = None,
+        use_temporal_encoding: bool = False,
     ):
         """
         Constructor.
@@ -106,6 +106,7 @@ class BasicNCAModel(nn.Module):
         self.dx_noise = dx_noise
         self.pad_noise = pad_noise
         self.autostepper = autostepper
+        self.use_temporal_encoding = use_temporal_encoding
 
         self.plot_function: Optional[Callable] = None
         self.validation_metric: Optional[str] = None
@@ -138,9 +139,14 @@ class BasicNCAModel(nn.Module):
                 self.filters.append(laplace)
             self.num_filters = len(self.filters)
 
+        input_vector_size = self.num_channels * self.num_filters
+        if self.use_temporal_encoding:
+            input_vector_size += self.num_filters
         self.network = nn.Sequential(
             nn.Linear(
-                self.num_channels * (self.num_filters + 1), self.hidden_size, bias=True
+                input_vector_size,
+                self.hidden_size,
+                bias=True,
             ),
             nn.ReLU(),
             nn.Linear(self.hidden_size, self.num_channels, bias=False),
@@ -175,7 +181,7 @@ class BasicNCAModel(nn.Module):
         )
         return mask
 
-    def _perceive(self, x):
+    def _perceive(self, x, step):
         def _perceive_with(x, weight):
             if isinstance(weight, nn.Conv2d):
                 return weight(x)
@@ -190,17 +196,23 @@ class BasicNCAModel(nn.Module):
 
         perception = [x]
         perception.extend([_perceive_with(x, w) for w in self.filters])
+        if self.use_temporal_encoding:
+            perception.append(
+                torch.mul(
+                    torch.ones((x.shape[0], 1, x.shape[2], x.shape[3])), step / 100
+                ).to(self.device)
+            )
         y = torch.cat(perception, 1)
         return y
 
-    def _update(self, x: torch.Tensor):
+    def _update(self, x: torch.Tensor, step):
         """
         :param x [torch.Tensor]: Input tensor, BCWH
         """
         assert x.shape[1] == self.num_channels
 
         # Perception
-        dx = self._perceive(x)
+        dx = self._perceive(x, step)
 
         # Compute delta from FFNN network
         dx = dx.permute(0, 2, 3, 1)  # B C W H --> B W H C
@@ -246,7 +258,7 @@ class BasicNCAModel(nn.Module):
         """
         if self.autostepper is None:
             for step in range(steps):
-                x = self._update(x)
+                x = self._update(x, step)
             x = x.permute((0, 2, 3, 1))  # --> BWHC
             if return_steps:
                 return x, steps
@@ -290,7 +302,7 @@ class BasicNCAModel(nn.Module):
                 :,
             ]
             # single inference time step
-            x = self._update(x)
+            x = self._update(x, step)
             # set current hidden state
             hidden_i = x[
                 :,

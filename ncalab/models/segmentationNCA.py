@@ -26,6 +26,7 @@ class SegmentationNCAModel(BasicNCAModel):
         num_learned_filters: int = 2,
         pad_noise: bool = True,
         autostepper: Optional[AutoStepper] = None,
+        **kwargs,
     ):
         """
         Instantiate an image segmentation model based on NCA.
@@ -52,6 +53,7 @@ class SegmentationNCAModel(BasicNCAModel):
             num_learned_filters=num_learned_filters,
             pad_noise=pad_noise,
             autostepper=autostepper,
+            **kwargs,
         )
         self.plot_function = show_batch_binary_segmentation
         self.validation_metric = "Dice"

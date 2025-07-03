@@ -82,8 +82,10 @@ class GrowingNCAModel(BasicNCAModel):
         :returns [np.ndarray]: Image channels of the output image.
         """
         with torch.no_grad():
-            x = torch.zeros((1, width, height, self.num_channels)).to(self.device)
-            x[:, width // 2, height // 2, 3:] = 1.0
+            self.eval()
+            x = torch.zeros((1, self.num_channels, width, height)).to(self.device)
+            # set seed in center
+            x[:, 3:, width // 2, height // 2] = 1.0
 
             if save_steps:
                 step_outs = []

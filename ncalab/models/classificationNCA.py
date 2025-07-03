@@ -24,6 +24,7 @@ class ClassificationNCAModel(BasicNCAModel):
         filter_padding: str = "reflect",
         pad_noise: bool = False,
         autostepper: Optional[AutoStepper] = None,
+        **kwargs,
     ):
         """
         :param device [torch.device]: Compute device.
@@ -52,6 +53,7 @@ class ClassificationNCAModel(BasicNCAModel):
             filter_padding=filter_padding,
             pad_noise=pad_noise,
             autostepper=autostepper,
+            **kwargs,
         )
         self.num_classes = num_classes
         self.pixel_wise_loss = pixel_wise_loss

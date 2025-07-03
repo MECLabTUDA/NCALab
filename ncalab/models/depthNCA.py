@@ -73,6 +73,7 @@ class DepthNCAModel(BasicNCAModel):
         num_learned_filters: int = 2,
         autostepper: Optional[AutoStepper] = None,
         pad_noise: bool = False,
+        **kwargs,
     ):
         """
         NCA model for monocular depth estimation.
@@ -90,6 +91,7 @@ class DepthNCAModel(BasicNCAModel):
             kernel_size=3,
             autostepper=autostepper,
             pad_noise=pad_noise,
+            **kwargs,
         )
         self.plot_function = show_batch_depth
         self.vignette = None
