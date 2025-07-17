@@ -38,7 +38,6 @@ class BasicNCATrainer:
         lr_gamma: float = 0.9999,
         adam_betas=(0.9, 0.99),
         batch_repeat: int = 2,
-        truncate_backprop: bool = False,
         max_epochs: int = 200,
         p_retain_pool: float = 0.0,
         optimizer_method: str = "adamw",
@@ -55,7 +54,6 @@ class BasicNCATrainer:
         :param lr_gamma (float, optional): Exponential learning rate decay. Defaults to 0.9999.
         :param adam_betas (tuple, optional): Beta values for Adam optimizer. Defaults to (0.9, 0.99).
         :param batch_repeat (int, optional): How often each batch will be duplicated. Defaults to 2.
-        :param truncate_backprop (bool, optional): Whether to truncate backpropagation. Defaults to False.
         :param max_epochs (int, optional): Maximum number of epochs in training. Defaults to 200.
         :param p_retain_pool (float, optional): Probability at which a sample will be retained. Defaults to 0.0.
         :param optimizer_method: Optimization method. Defaults to 'adamw'.
@@ -77,11 +75,9 @@ class BasicNCATrainer:
         self.gradient_clipping = gradient_clipping
         self.steps_range = steps_range
         self.steps_validation = steps_validation
-        self.lr = lr
         self.lr_gamma = lr_gamma
         self.adam_betas = adam_betas
         self.batch_repeat = batch_repeat
-        self.truncate_backprop = truncate_backprop
         self.max_epochs = max_epochs
         self.p_retain_pool = p_retain_pool
         self.optimizer_method = optimizer_method
@@ -96,6 +92,8 @@ class BasicNCATrainer:
                 self.lr = 1e-2
             else:
                 self.lr = 1e-2
+        else:
+            self.lr = lr
 
     def info(self) -> str:
         """
@@ -113,7 +111,6 @@ class BasicNCATrainer:
             "gradient_clipping",
             "adam_betas",
             "batch_repeat",
-            "truncate_backprop",
             "max_epochs",
             "p_retain_pool",
             "optimizer_method",
@@ -148,13 +145,7 @@ class BasicNCATrainer:
         self.nca.train()
         optimizer.zero_grad()
         x_pred = x.clone().to(self.nca.device)
-        if self.truncate_backprop:
-            for step in range(steps):
-                x_pred = self.nca(x_pred, steps=1)
-                if step < steps - 10:
-                    x_pred.detach()
-        else:
-            x_pred = self.nca(x_pred, steps=steps)
+        x_pred = self.nca(x_pred, steps=steps)
         losses = self.nca.loss(x_pred, y.to(device))
         losses["total"].backward()
 
