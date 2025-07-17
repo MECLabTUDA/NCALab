@@ -80,7 +80,7 @@ def show_batch_classification(x_seed, x_pred, y_true, nca):
     images = np.ones((batch_size, image_width, image_height))
     hidden_channels = x_pred[..., nca.num_image_channels : -nca.num_output_channels]
     class_channels = x_pred[..., nca.num_image_channels + nca.num_hidden_channels :]
-    images = x_seed[:, :, :, : nca.num_image_channels].astype(np.float32)
+    images = x_pred[:, :, :, : nca.num_image_channels].astype(np.float32)
     show_image_row(ax[0], np.clip(images, 0, 1))
 
     for i in range(batch_size):
@@ -101,7 +101,7 @@ def show_batch_classification(x_seed, x_pred, y_true, nca):
     images = np.ones((batch_size, image_width, image_height))
     class_channels = x_pred[..., nca.num_image_channels + nca.num_hidden_channels :]
     y_pred = np.argmax(class_channels, axis=-1)
-    images = (x_seed[:, :, :, 0] > 0).astype(np.float32)
+    images = (x_seed[:, 0, :, :] > 0).astype(np.float32)
     for i in range(batch_size):
         images[i, :, :] *= y_pred[i] + 1
     images -= 1
@@ -120,7 +120,8 @@ def show_batch_binary_segmentation(x_seed, x_pred, y_true, nca):
     )
 
     # 1st row: input image
-    images = x_seed[..., : nca.num_image_channels]
+    images = x_seed[:, : nca.num_image_channels, :, :]
+    images = np.permute_dims(images, (0, 2, 3, 1))
     show_image_row(ax[0], np.clip(images, 0.0, 1.0), label="Image")
 
     # 2nd row: true segmentation
@@ -128,7 +129,7 @@ def show_batch_binary_segmentation(x_seed, x_pred, y_true, nca):
     show_image_row(ax[1], np.clip(masks_true, 0.0, 1.0), cmap="gray", label="GT Mask")
 
     # 3rd row: prediction
-    masks_pred = x_pred[..., -nca.num_classes :]
+    masks_pred = x_pred[..., -nca.num_output_channels :]
     show_image_row(ax[2], np.clip(masks_pred, 0.0, 1.0), cmap="gray", label="Pred.")
 
     figure.subplots_adjust(wspace=-0.8, hspace=0)
