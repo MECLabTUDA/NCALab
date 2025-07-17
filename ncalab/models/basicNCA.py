@@ -139,9 +139,9 @@ class BasicNCAModel(nn.Module):
                 self.filters.append(laplace)
             self.num_filters = len(self.filters)
 
-        input_vector_size = self.num_channels * self.num_filters
+        input_vector_size = self.num_channels * (self.num_filters + 1)
         if self.use_temporal_encoding:
-            input_vector_size += self.num_filters
+            input_vector_size += 1
         self.network = nn.Sequential(
             nn.Linear(
                 input_vector_size,

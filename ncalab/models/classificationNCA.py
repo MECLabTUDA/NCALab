@@ -15,7 +15,7 @@ class ClassificationNCAModel(BasicNCAModel):
         num_image_channels: int,
         num_hidden_channels: int,
         num_classes: int,
-        fire_rate: float = 0.5,
+        fire_rate: float = 0.8,
         hidden_size: int = 128,
         use_alive_mask: bool = False,
         immutable_image_channels: bool = True,
@@ -31,7 +31,7 @@ class ClassificationNCAModel(BasicNCAModel):
         :param num_image_channels [int]: _description_
         :param num_hidden_channels [int]: _description_
         :param num_classes [int]: _description_
-        :param fire_rate [float]: _description_. Defaults to 0.5.
+        :param fire_rate [float]: _description_. Defaults to 0.8.
         :param hidden_size [int]: _description_. Defaults to 128.
         :param use_alive_mask [bool]: _description_. Defaults to False.
         :param immutable_image_channels [bool]: _description_. Defaults to True.
@@ -149,12 +149,12 @@ class ClassificationNCAModel(BasicNCAModel):
             ).mean()
             loss_classification = loss_ce
         else:
-            y_pred = F.softmax(class_channels, dim=-1)  # softmax along channel dim
-            y_pred = torch.mean(y_pred, dim=1)  # average W
-            y_pred = torch.mean(y_pred, dim=1)  # average H
+            y_pred = class_channels
+            y_pred = torch.mean(y_pred, dim=1)
+            y_pred = torch.mean(y_pred, dim=1)
             loss_mse = (
                 F.mse_loss(
-                    y_pred.float(),
+                    F.softmax(y_pred, dim=-1).float(),
                     F.one_hot(label.squeeze(), num_classes=self.num_classes).float(),
                     reduction="none",
                 )
@@ -171,7 +171,7 @@ class ClassificationNCAModel(BasicNCAModel):
         """
         Return dict of standard evaluation metrics.
 
-        :param pred [torch.Tensor]: Predicted image.
+        :param pred [torch.Tensor]: Predicted image (BCWH).
         :param label [torch.Tensor]: Ground truth label.
         """
         accuracy_macro_metric = MulticlassAccuracy(
@@ -183,8 +183,12 @@ class ClassificationNCAModel(BasicNCAModel):
         auroc_metric = MulticlassAUROC(num_classes=self.num_classes)
         f1_metric = MulticlassF1Score(num_classes=self.num_classes)
 
-        y_prob = pred[..., -self.num_output_channels :]
-        y_true = label.squeeze()
+        class_channels = pred[:, -self.num_output_channels :, :, :]
+        y_prob = class_channels
+        y_prob = torch.mean(y_prob, dim=2)
+        y_prob = torch.mean(y_prob, dim=2)
+        y_prob = F.softmax(y_prob, dim=1)
+        y_true = label.squeeze(1)
         accuracy_macro_metric.update(y_prob, y_true)
         accuracy_micro_metric.update(y_prob, y_true)
         auroc_metric.update(y_prob, y_true)
