@@ -42,7 +42,7 @@ However, the training dynamics of NCAs are not yet fully understood, and there i
 
 # Statement of Need
 
-NCAs are recently gaining attention in medical imaging, where they are deployed for various modalities in different downstream tasks, including 3D prostate segmentation on MRI [@kalkhof2023med] [@kalkhof2023m3d], image registration [@ranem2024ncamorph] or image synthesis [@kalkhof2024frequencytime,@kalkhof2025parameterefficient].
+NCAs are recently gaining attention in medical imaging, where they are deployed for various modalities in different downstream tasks, including 3D prostate segmentation on MRI [@kalkhof2023mednca] [@kalkhof2023m3dnca], image registration [@ranem2024ncamorph] or image synthesis [@kalkhof2024frequencytime,@kalkhof2025parameterefficient].
 In most cases, they outperform other Convolutional Neural Network or Vision Transformer architectures in terms of model size and robustness, while yielding similarly accurate predictions.
 However, there is no unified framework or reference implementation for training, evaluating and experimentation with NCAs.
 
