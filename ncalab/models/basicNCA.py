@@ -143,13 +143,23 @@ class BasicNCAModel(nn.Module):
         if self.use_temporal_encoding:
             input_vector_size += 1
         self.network = nn.Sequential(
-            nn.Linear(
-                input_vector_size,
-                self.hidden_size,
+            nn.Conv2d(
+                in_channels=input_vector_size,
+                out_channels=self.hidden_size,
                 bias=True,
+                stride=1,
+                padding=0,
+                kernel_size=1,
             ),
             nn.ReLU(),
-            nn.Linear(self.hidden_size, self.num_channels, bias=False),
+            nn.Conv2d(
+                in_channels=self.hidden_size,
+                out_channels=self.num_channels,
+                bias=False,
+                stride=1,
+                padding=0,
+                kernel_size=1,
+            ),
         ).to(device)
 
         # initialize final layer with 0
@@ -215,23 +225,20 @@ class BasicNCAModel(nn.Module):
         dx = self._perceive(x, step)
 
         # Compute delta from FFNN network
-        dx = dx.permute(0, 2, 3, 1)  # B C W H --> B W H C
         dx = self.network(dx)
 
         # Stochastic weight update
         fire_rate = self.fire_rate
-        stochastic = torch.rand([dx.size(0), dx.size(1), dx.size(2), 1]) < fire_rate
+        stochastic = torch.rand([dx.size(0), 1, dx.size(2), dx.size(3)]) < fire_rate
         stochastic = stochastic.float().to(self.device)
         dx = dx * stochastic
 
-        dx += self.dx_noise * torch.randn([dx.size(0), dx.size(1), dx.size(2), 1]).to(
+        dx += self.dx_noise * torch.randn([dx.size(0), 1, dx.size(2), dx.size(3)]).to(
             self.device
         )
 
         if self.immutable_image_channels:
-            dx[..., : self.num_image_channels] *= 0
-
-        dx = dx.permute(0, 3, 1, 2)  # B W H C --> B C W H
+            dx[:, : self.num_image_channels, :, :] *= 0
         x = x + dx
 
         # Alive masking
