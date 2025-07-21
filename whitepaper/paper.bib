@@ -1,25 +1,63 @@
-@inproceedings{kalkhof2023med,
-  title={Med-nca: Robust and lightweight segmentation with neural cellular automata},
-  author={Kalkhof, John and Gonz{\'a}lez, Camila and Mukhopadhyay, Anirban},
-  booktitle={International Conference on Information Processing in Medical Imaging},
-  pages={705--716},
-  year={2023},
-  organization={Springer}
+@article{kalkhof2023m3dnca,
+  title = {{{M3D-NCA}}: {{Robust 3D Segmentation}} with {{Built-in Quality Control}}},
+  author = {Kalkhof, John and Mukhopadhyay, A.},
+  year = {2023},
+  journal = {International Conference on Medical Image Computing and Computer-Assisted Intervention},
+  volume = {abs/2309.02954},
+  keywords = {NCA}
 }
-@inproceedings{kalkhof2023m3d,
-  title={M3D-NCA: Robust 3D Segmentation with Built-In Quality Control},
-  author={Kalkhof, John and Mukhopadhyay, Anirban},
-  booktitle={International Conference on Medical Image Computing and Computer-Assisted Intervention},
-  pages={169--178},
-  year={2023},
-  organization={Springer}
+
+@article{kalkhof2023mednca,
+  title = {Med-{{NCA}}: {{Robust}} and {{Lightweight Segmentation}} with {{Neural Cellular Automata}}},
+  author = {Kalkhof, John and Gonz'alez, Camila and Mukhopadhyay, A.},
+  year = {2023},
+  journal = {Information Processing in Medical Imaging},
+  pages = {705--716},
+  keywords = {Application:Medical Imaging,Dataset:Decathlon,Neural Cellular Automata,Subject:Hippocampus,Subject:Prostate,tagme,Task:Segmentation}
 }
-@article{mordvintsev2020growing,
-  title={Growing neural cellular automata},
-  author={Mordvintsev, Alexander and Randazzo, Ettore and Niklasson, Eyvind and Levin, Michael},
-  journal={Distill},
-  volume={5},
-  number={2},
-  pages={e23},
-  year={2020}
+
+@misc{kalkhof2024frequencytime,
+  title = {Frequency-{{Time Diffusion}} with {{Neural Cellular Automata}}},
+  author = {Kalkhof, John and K{\"u}hn, Arlene and Frisch, Yannik and Mukhopadhyay, Anirban},
+  year = {2024},
+  month = may,
+  number = {arXiv:2401.06291},
+  eprint = {2401.06291},
+  primaryclass = {cs},
+  publisher = {arXiv},
+  doi = {10.48550/arXiv.2401.06291},
+  urldate = {2025-07-10},
+  abstract = {Despite considerable success, large Denoising Diffusion Models (DDMs) with UNet backbone pose practical challenges, particularly on limited hardware and in processing gigapixel images. To address these limitations, we introduce two Neural Cellular Automata (NCA)-based DDMs: Diff-NCA and FourierDiff-NCA. Capitalizing on the local communication capabilities of NCA, Diff-NCA significantly reduces the parameter counts of NCA-based DDMs. Integrating Fourier-based diffusion enables global communication early in the diffusion process. This feature is particularly valuable in synthesizing complex images with important global features, such as the CelebA dataset. We demonstrate that even a 331k parameter Diff-NCA can generate 512x512 pathology slices, while FourierDiff-NCA (1.1m parameters) reaches a three times lower FID score of 43.86, compared to the four times bigger UNet (3.94m parameters) with a score of 128.2. Additionally, FourierDiff-NCA can perform diverse tasks such as super-resolution, out-of-distribution image synthesis, and inpainting without explicit training.},
+  archiveprefix = {arXiv},
+  keywords = {Application:Medical Imaging,Dataset:CelebA,Neural Cellular Automata,Subject:Digital Pathology,Task:Synthesis},
+  file = {/home/hjkrumb-local/snap/zotero-snap/common/Zotero/storage/LF4TXQBB/Kalkhof et al. - 2024 - Frequency-Time Diffusion with Neural Cellular Automata.pdf;/home/hjkrumb-local/snap/zotero-snap/common/Zotero/storage/VR8LNLU4/2401.html}
+}
+
+@article{kalkhof2025parameterefficient,
+  title = {Parameter-Efficient Diffusion with Neural Cellular Automata},
+  author = {Kalkhof, John and K{\"u}hn, Arlene and Frisch, Yannik and Mukhopadhyay, Anirban},
+  year = {2025},
+  month = may,
+  journal = {npj Unconventional Computing},
+  volume = {2},
+  number = {1},
+  pages = {10},
+  publisher = {Nature Publishing Group},
+  issn = {3004-8672},
+  doi = {10.1038/s44335-025-00026-4},
+  urldate = {2025-07-10},
+  abstract = {Traditional Denoising Diffusion Models (DDMs) with UNet backbones are over-parameterized, compromising their effectiveness on limited hardware and in processing gigapixel images. To address this inefficiency, we introduce two Neural Cellular Automata (NCA)-based DDMs: Diff-NCA and FourierDiff-NCA. Leveraging the efficient local communication of NCA, Diff-NCA drastically reduces parameter counts, effectively generating 512 {\texttimes} 512 pathology slices with just 336k parameters. Extending this approach, FourierDiff-NCA integrates Fourier-based diffusion to facilitate early global communication, essential for handling complex datasets such as CelebA. With only 1.1 m parameters, it achieves a more than two times lower FID score of 49.48 compared to the four times larger UNet, which scores 128.2. This performance disparity underscores the utility of NCA-based methods in enhancing parameter efficiency. FourierDiff-NCA also demonstrates versatility by performing tasks such as super-resolution, out-of-distribution image synthesis, and inpainting without task-specific training.},
+  copyright = {2025 The Author(s)},
+  langid = {english},
+  keywords = {Application:Medical Imaging,Dataset:BCSS,Dataset:CelebA,Neural Cellular Automata,Subject:Digital Pathology,tagme,Task:Image Synthesis},
+  file = {/home/hjkrumb-local/snap/zotero-snap/common/Zotero/storage/MWFCTSNA/Kalkhof et al. - 2025 - Parameter-efficient diffusion with neural cellular automata.pdf}
+}
+
+@article{ranem2024ncamorph,
+  title = {{{NCA-Morph}}: {{Medical Image Registration}} with {{Neural Cellular Automata}}},
+  author = {Ranem, Amin and Kalkhof, John and Mukhopadhyay, Anirban},
+  year = {2024},
+  journal = {British Machine Vision Conference},
+  volume = {abs/2410.22265},
+  keywords = {Application:Medical Imaging,Neural Cellular Automata,tagme,Task:Registration}
 }
