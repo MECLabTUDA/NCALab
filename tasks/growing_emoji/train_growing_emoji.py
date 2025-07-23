@@ -23,6 +23,7 @@ from ncalab import (
     NCALab_banner,
     print_mascot,
     fix_random_seed,
+    Pool,
 )
 
 from growing_utils import get_emoji_image
@@ -55,7 +56,7 @@ def train_growing_emoji(
     # Select device, try to use GPU or fall back to CPU
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
-    autostepper = AutoStepper()
+    pool = Pool(6, damage=True)
 
     # Create NCA model definition
     nca = GrowingNCAModel(
@@ -63,7 +64,6 @@ def train_growing_emoji(
         num_image_channels=4,
         num_hidden_channels=hidden_channels,
         use_alive_mask=True,
-        autostepper=autostepper,
     )
 
     # Create dataset containing a single growing emoji
@@ -73,7 +73,10 @@ def train_growing_emoji(
 
     # Create Trainer and run training
     trainer = BasicNCATrainer(
-        nca, WEIGHTS_PATH / "ncalab_growing_emoji.pth", max_epochs=max_epochs
+        nca,
+        WEIGHTS_PATH / "ncalab_growing_emoji.pth",
+        max_epochs=max_epochs,
+        pool=pool,
     )
     trainer.train(dataloader_train, summary_writer=writer, save_every=100)
     writer.close()
