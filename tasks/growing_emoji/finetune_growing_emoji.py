@@ -23,7 +23,7 @@ from ncalab import (
     BasicNCATrainer,
     WEIGHTS_PATH,
     get_compute_device,
-    NCALab_banner,
+    print_NCALab_banner,
     print_mascot,
     fix_random_seed,
 )
@@ -32,7 +32,7 @@ from ncalab import (
 def finetune_growing_emoji(
     batch_size: int, hidden_channels: int, gpu: bool, gpu_index: int
 ):
-    NCALab_banner()
+    print_NCALab_banner()
     print_mascot(
         "Things are getting really exciting now!\n"
         "You're about to finetune a pre-trained NCA\n"

@@ -1,2 +1,5 @@
 # search results
 *.csv
+
+# generated figures
+figures/

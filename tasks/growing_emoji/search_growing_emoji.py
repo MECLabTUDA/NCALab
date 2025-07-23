@@ -15,7 +15,7 @@ from ncalab import (
     GrowingNCADataset,
     GrowingNCAModel,
     get_compute_device,
-    NCALab_banner,
+    print_NCALab_banner,
     print_mascot,
     ParameterSearch,
     ParameterSet,
@@ -35,7 +35,7 @@ def search_growing_emoji(
     Main function to run the "growing emoji search" example task.
     """
     # Display prologue
-    NCALab_banner()
+    print_NCALab_banner()
     print_mascot(
         "You are about to run a hyperparameter search.\n"
         "\n"

@@ -14,14 +14,12 @@ root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
 from ncalab import (
-    AutoStepper,
     GrowingNCADataset,
     GrowingNCAModel,
     BasicNCATrainer,
     WEIGHTS_PATH,
     get_compute_device,
-    NCALab_banner,
-    print_mascot,
+    print_NCALab_banner,
     fix_random_seed,
     Pool,
 )
@@ -38,20 +36,11 @@ def train_growing_emoji(
     :param batch_size [int]: Minibatch size.
     :param hidden_channels [int]: Hidden channels the NCA will use.
     """
-    # Display prologue
-    NCALab_banner()
-    print_mascot(
-        "You are about to run the growing lizard emoji example,\n"
-        "a true NCA classic! To learn more about it, visit:\n"
-        "\n"
-        "https://distill.pub/2020/growing-ca/ \n"
-        "(Ctrl+click to open URL)\n"
-    )
-    print()
+    print_NCALab_banner()
     fix_random_seed()
 
     # Create tensorboard summary writer
-    writer = SummaryWriter(comment="Growing NCA (Lizard)")
+    writer = SummaryWriter(comment=" Growing NCA (Lizard)")
 
     # Select device, try to use GPU or fall back to CPU
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")

@@ -1,11 +1,18 @@
 #!/usr/bin/env python3
 import os
 import sys
+from pathlib import Path
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from ncalab import GrowingNCAModel, WEIGHTS_PATH, get_compute_device
+from ncalab import (
+    GrowingNCAModel,
+    WEIGHTS_PATH,
+    get_compute_device,
+    print_NCALab_banner,
+    fix_random_seed,
+)
 
 import click
 
@@ -13,6 +20,10 @@ import torch
 
 import matplotlib.pyplot as plt  # type: ignore[import-untyped]
 import matplotlib.animation as animation  # type: ignore[import-untyped]
+
+TASK_PATH = Path(__file__).parent
+FIGURE_PATH = TASK_PATH / "figures"
+FIGURE_PATH.mkdir(exist_ok=True)
 
 
 @click.command()
@@ -23,6 +34,9 @@ import matplotlib.animation as animation  # type: ignore[import-untyped]
     "--gpu-index", type=int, default=0, help="Index of GPU to use, if --gpu in use."
 )
 def eval_growing_emoji(gpu: bool, gpu_index: int):
+    print_NCALab_banner()
+    fix_random_seed()
+
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
     nca = GrowingNCAModel(
@@ -60,7 +74,9 @@ def eval_growing_emoji(gpu: bool, gpu_index: int):
         repeat=True,
         repeat_delay=3000,
     )
-    animation_fig.save("artwork/growing_emoji.gif")
+    out_path = FIGURE_PATH / "growing_emoji.gif"
+    animation_fig.save(out_path)
+    click.secho(f"Done. You'll find the generated GIF in {out_path} .")
 
 
 if __name__ == "__main__":

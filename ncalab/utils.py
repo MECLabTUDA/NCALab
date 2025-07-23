@@ -61,7 +61,7 @@ def pad_input(x: torch.Tensor, nca: "BasicNCAModel", noise: bool = True) -> torc
     return x
 
 
-def NCALab_banner():
+def print_NCALab_banner():
     """
     Show NCALab banner on terminal.
     """
