@@ -20,6 +20,10 @@ jobs:
 
     steps:
     - uses: actions/checkout@v3
+    - name: Install uv
+      uses: astral-sh/setup-uv@v6
+      with:
+          version: "0.8.2"
     - name: Set up Python ${{ matrix.python-version }}
       uses: actions/setup-python@v3
       with:
@@ -29,15 +33,14 @@ jobs:
         python -m pip install --upgrade pip
         python -m pip install flake8 pytest
         python -m pip install mypy types-tqdm types-requests types-click
-        if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
     - name: Lint with flake8
       run: |
         # stop the build if there are Python syntax errors or undefined names
-        flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --max-complexity=50 --exit-zero
+        uv run flake8 . --count --select=E9,F63,F7,F82 --show-source --statistics --max-complexity=50 --exit-zero
     - name: Test with pytest
       run: |
-        python -m pytest
+        uv run pytest tests
     - name: Type checking with mypy
       run: |
-        python -m mypy ncalab
-        python -m mypy tests
+        uv run mypy ncalab
+        uv run mypy tests
