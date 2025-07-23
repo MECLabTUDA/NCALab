@@ -1,7 +1,7 @@
 import copy
 import json
 from pathlib import Path, PosixPath
-from typing import Any, Dict, List, Type, Optional
+from typing import Dict, List, Type
 
 from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader
