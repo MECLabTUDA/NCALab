@@ -30,7 +30,8 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Lint with ruff
       run: |
-        uv run ruff
+        uv run ruff check ncalab
+        uv run ruff check tests
     - name: Test with pytest
       run: |
         uv run pytest tests
