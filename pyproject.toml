@@ -209,6 +209,7 @@ dependencies = [
     "lion-pytorch>=0.2.3",
     "plyfile>=1.1",
     "twine>=6.1.0",
+    "ruff>=0.12.4",
 ]
 
 
