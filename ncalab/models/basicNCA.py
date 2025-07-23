@@ -66,6 +66,7 @@ class BasicNCAModel(nn.Module):
         pad_noise: bool = False,
         autostepper: Optional[AutoStepper] = None,
         use_temporal_encoding: bool = False,
+
     ):
         """
         Constructor.

@@ -3,7 +3,8 @@ from typing import Dict, Optional
 import torch  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
 
-from torcheval.metrics import MulticlassAccuracy, MulticlassAUROC, MulticlassF1Score  # type: ignore[import-untyped]
+import torchmetrics
+import torchmetrics.classification
 
 from .basicNCA import AutoStepper, BasicNCAModel
 
@@ -174,14 +175,18 @@ class ClassificationNCAModel(BasicNCAModel):
         :param pred [torch.Tensor]: Predicted image (BCWH).
         :param label [torch.Tensor]: Ground truth label.
         """
-        accuracy_macro_metric = MulticlassAccuracy(
+        accuracy_macro_metric = torchmetrics.classification.MulticlassAccuracy(
             average="macro", num_classes=self.num_classes
         )
-        accuracy_micro_metric = MulticlassAccuracy(
+        accuracy_micro_metric = torchmetrics.classification.MulticlassAccuracy(
             average="micro", num_classes=self.num_classes
         )
-        auroc_metric = MulticlassAUROC(num_classes=self.num_classes)
-        f1_metric = MulticlassF1Score(num_classes=self.num_classes)
+        auroc_metric = torchmetrics.classification.MulticlassAUROC(
+            num_classes=self.num_classes
+        )
+        f1_metric = torchmetrics.classification.MulticlassF1Score(
+            num_classes=self.num_classes
+        )
 
         class_channels = pred[:, -self.num_output_channels :, :, :]
         y_prob = class_channels

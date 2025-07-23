@@ -786,7 +786,7 @@ wheels = [
 
 [[package]]
 name = "google-api-core"
-version = "2.24.2"
+version = "2.25.1"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "google-auth" },
@@ -795,23 +795,23 @@ dependencies = [
     { name = "protobuf" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/09/5c/085bcb872556934bb119e5e09de54daa07873f6866b8f0303c49e72287f7/google_api_core-2.24.2.tar.gz", hash = "sha256:81718493daf06d96d6bc76a91c23874dbf2fac0adbbf542831b805ee6e974696", size = 163516 }
+sdist = { url = "https://files.pythonhosted.org/packages/dc/21/e9d043e88222317afdbdb567165fdbc3b0aad90064c7e0c9eb0ad9955ad8/google_api_core-2.25.1.tar.gz", hash = "sha256:d2aaa0b13c78c61cb3f4282c464c046e45fbd75755683c9c525e6e8f7ed0a5e8", size = 165443 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/46/95/f472d85adab6e538da2025dfca9e976a0d125cc0af2301f190e77b76e51c/google_api_core-2.24.2-py3-none-any.whl", hash = "sha256:810a63ac95f3c441b7c0e43d344e372887f62ce9071ba972eacf32672e072de9", size = 160061 },
+    { url = "https://files.pythonhosted.org/packages/14/4b/ead00905132820b623732b175d66354e9d3e69fcf2a5dcdab780664e7896/google_api_core-2.25.1-py3-none-any.whl", hash = "sha256:8a2a56c1fef82987a524371f99f3bd0143702fecc670c72e600c1cda6bf8dbb7", size = 160807 },
 ]
 
 [[package]]
 name = "google-auth"
-version = "2.39.0"
+version = "2.40.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "cachetools" },
     { name = "pyasn1-modules" },
     { name = "rsa" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/cb/8e/8f45c9a32f73e786e954b8f9761c61422955d23c45d1e8c347f9b4b59e8e/google_auth-2.39.0.tar.gz", hash = "sha256:73222d43cdc35a3aeacbfdcaf73142a97839f10de930550d89ebfe1d0a00cde7", size = 274834 }
+sdist = { url = "https://files.pythonhosted.org/packages/9e/9b/e92ef23b84fa10a64ce4831390b7a4c2e53c0132568d99d4ae61d04c8855/google_auth-2.40.3.tar.gz", hash = "sha256:500c3a29adedeb36ea9cf24b8d10858e152f2412e3ca37829b3fa18e33d63b77", size = 281029 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ce/12/ad37a1ef86006d0a0117fc06a4a00bd461c775356b534b425f00dde208ea/google_auth-2.39.0-py2.py3-none-any.whl", hash = "sha256:0150b6711e97fb9f52fe599f55648950cc4540015565d8fbb31be2ad6e1548a2", size = 212319 },
+    { url = "https://files.pythonhosted.org/packages/17/63/b19553b658a1692443c62bd07e5868adaa0ad746a0751ba62c59568cd45b/google_auth-2.40.3-py2.py3-none-any.whl", hash = "sha256:1370d4593e86213563547f97a92752fc658456fe4514c809544f330fed45a7ca", size = 216137 },
 ]
 
 [[package]]
@@ -842,7 +842,7 @@ wheels = [
 
 [[package]]
 name = "google-cloud-storage"
-version = "3.1.0"
+version = "3.2.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "google-api-core" },
@@ -852,9 +852,9 @@ dependencies = [
     { name = "google-resumable-media" },
     { name = "requests" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f3/08/52143124415a889bbab60a8ecede1e31ea0e8d992ca078317886f26dc3be/google_cloud_storage-3.1.0.tar.gz", hash = "sha256:944273179897c7c8a07ee15f2e6466a02da0c7c4b9ecceac2a26017cb2972049", size = 7666527 }
+sdist = { url = "https://files.pythonhosted.org/packages/52/5b/6d4627484248e018a926dde114c4034656570da9c1c438e3db061fa42de5/google_cloud_storage-3.2.0.tar.gz", hash = "sha256:decca843076036f45633198c125d1861ffbf47ebf5c0e3b98dcb9b2db155896c", size = 7669611 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/13/b8/c99c965659f45efa73080477c49ffddf7b9aecb00806be8422560bb5b824/google_cloud_storage-3.1.0-py2.py3-none-any.whl", hash = "sha256:eaf36966b68660a9633f03b067e4a10ce09f1377cae3ff9f2c699f69a81c66c6", size = 174861 },
+    { url = "https://files.pythonhosted.org/packages/be/48/823ce62cf29d04db6508971a0db13a72c1c9faf67cea2c206b1c9c9f1f02/google_cloud_storage-3.2.0-py3-none-any.whl", hash = "sha256:ff7a9a49666954a7c3d1598291220c72d3b9e49d9dfcf9dfaecb301fc4fb0b24", size = 176133 },
 ]
 
 [[package]]
@@ -1401,15 +1401,17 @@ wheels = [
 ]
 
 [[package]]
-name = "lion-pytorch"
-version = "0.2.3"
+name = "lightning-utilities"
+version = "0.14.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "torch" },
+    { name = "packaging" },
+    { name = "setuptools" },
+    { name = "typing-extensions" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/30/8b/b7afad06d3ace3eecf8d7b63f9f3bbab450039320fa63c7febaa5fe73765/lion_pytorch-0.2.3.tar.gz", hash = "sha256:42ba117ce857e9dd6c67c727e22e575671fd72e441900af137b05e7ee5c8fd88", size = 6990 }
+sdist = { url = "https://files.pythonhosted.org/packages/0f/bb/63a6a8c9e7a96b6ba92647fa5b1595c2dbee29f8178705adb4704d82ecba/lightning_utilities-0.14.3.tar.gz", hash = "sha256:37e2f83f273890052955a44054382c211a303012ee577619efbaa5df9e65e9f5", size = 30346 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/3c/3a/17394e7c09a6796887d12435a7711f6bf6321efacd3e635fc69fcf6dfc70/lion_pytorch-0.2.3-py3-none-any.whl", hash = "sha256:a1f0cb6ddb46c1f5e130b985d2759c33c178195ef88b216621cb4177c6284f81", size = 6565 },
+    { url = "https://files.pythonhosted.org/packages/1a/c1/31b3184cba7b257a4a3b5ca5b88b9204ccb7aa02fe3c992280899293ed54/lightning_utilities-0.14.3-py3-none-any.whl", hash = "sha256:4ab9066aa36cd7b93a05713808901909e96cc3f187ea6fd3052b2fd91313b468", size = 28894 },
 ]
 
 [[package]]
@@ -1768,15 +1770,7 @@ dependencies = [
     { name = "fsspec" },
     { name = "gast" },
     { name = "gcsfs" },
-    { name = "google-api-core" },
-    { name = "google-auth" },
-    { name = "google-auth-oauthlib" },
-    { name = "google-cloud-core" },
-    { name = "google-cloud-storage" },
-    { name = "google-crc32c" },
     { name = "google-pasta" },
-    { name = "google-resumable-media" },
-    { name = "googleapis-common-protos" },
     { name = "grpcio" },
     { name = "gviz-api" },
     { name = "h5py" },
@@ -1800,7 +1794,6 @@ dependencies = [
     { name = "kiwisolver" },
     { name = "lazy-loader" },
     { name = "libclang" },
-    { name = "lion-pytorch" },
     { name = "markdown" },
     { name = "markdown-it-py" },
     { name = "markupsafe" },
@@ -1909,7 +1902,7 @@ dependencies = [
     { name = "tokenizers" },
     { name = "torch" },
     { name = "torch-tb-profiler" },
-    { name = "torcheval" },
+    { name = "torchmetrics" },
     { name = "torchvision" },
     { name = "tornado" },
     { name = "tqdm" },
@@ -1972,15 +1965,7 @@ requires-dist = [
     { name = "fsspec", specifier = "==2025.3.2" },
     { name = "gast", specifier = "==0.6.0" },
     { name = "gcsfs", specifier = "==2025.3.2" },
-    { name = "google-api-core", specifier = "==2.24.2" },
-    { name = "google-auth", specifier = "==2.39.0" },
-    { name = "google-auth-oauthlib", specifier = "==1.2.2" },
-    { name = "google-cloud-core", specifier = "==2.4.3" },
-    { name = "google-cloud-storage", specifier = "==3.1.0" },
-    { name = "google-crc32c", specifier = "==1.7.1" },
     { name = "google-pasta", specifier = "==0.2.0" },
-    { name = "google-resumable-media", specifier = "==2.7.2" },
-    { name = "googleapis-common-protos", specifier = "==1.70.0" },
     { name = "grpcio", specifier = "==1.72.0" },
     { name = "gviz-api", specifier = "==1.10.0" },
     { name = "h5py", specifier = "==3.12.1" },
@@ -2004,7 +1989,6 @@ requires-dist = [
     { name = "kiwisolver", specifier = "==1.4.8" },
     { name = "lazy-loader", specifier = "==0.4" },
     { name = "libclang", specifier = "==18.1.1" },
-    { name = "lion-pytorch", specifier = ">=0.2.3" },
     { name = "markdown", specifier = "==3.8" },
     { name = "markdown-it-py", specifier = "==3.0.0" },
     { name = "markupsafe", specifier = "==3.0.2" },
@@ -2113,7 +2097,7 @@ requires-dist = [
     { name = "tokenizers", specifier = "==0.21.1" },
     { name = "torch", specifier = "==2.7.1" },
     { name = "torch-tb-profiler", specifier = "==0.4.3" },
-    { name = "torcheval", specifier = "==0.0.7" },
+    { name = "torchmetrics", specifier = ">=1.7.4" },
     { name = "torchvision", specifier = "==0.22.1" },
     { name = "tornado", specifier = "==6.5" },
     { name = "tqdm", specifier = "==4.67.1" },
@@ -4103,15 +4087,18 @@ wheels = [
 ]
 
 [[package]]
-name = "torcheval"
-version = "0.0.7"
+name = "torchmetrics"
+version = "1.7.4"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
-    { name = "typing-extensions" },
+    { name = "lightning-utilities" },
+    { name = "numpy" },
+    { name = "packaging" },
+    { name = "torch" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/f2/65/8f895a132d385c3bc60023a45501637aff63b98629cf45ce47a2035c0cc3/torcheval-0.0.7.tar.gz", hash = "sha256:a498dec34137bc66c9cf1adc7353a46c604dd62255884c72dcb4e2e4fc2cd7e9", size = 100912 }
+sdist = { url = "https://files.pythonhosted.org/packages/96/80/bcf680d3d7de7646707884ed7ce0859c83be33380239971a97255147184f/torchmetrics-1.7.4.tar.gz", hash = "sha256:506a1a5c7c304cd77ba323ca4b009e46b814fd2be9dcf0f4ccc2e5c0f5b4b0c1", size = 567802 }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/e4/de/e7abc784b00de9d05999657d29187f1f7a3406ed10ecaf164de06482608f/torcheval-0.0.7-py3-none-any.whl", hash = "sha256:20cc34dac7aa9b32f942c8a9f014d1d02098631b6cd0b102c078600577017956", size = 179200 },
+    { url = "https://files.pythonhosted.org/packages/70/19/2d8db70030d3472dad5d49136770af949f5ed597df2c1a6a509dadc5d57d/torchmetrics-1.7.4-py3-none-any.whl", hash = "sha256:9298ad0e893b0cf2956bee95b0f7eecdc65205ab84ddb4f6762eff157c240518", size = 963504 },
 ]
 
 [[package]]
