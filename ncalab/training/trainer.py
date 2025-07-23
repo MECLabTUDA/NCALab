@@ -19,6 +19,7 @@ from ..models.basicNCA import BasicNCAModel  # for type hint
 from ..utils import pad_input
 
 from .earlystopping import EarlyStopping
+from .pool import Pool
 from .trainingsummary import TrainingSummary
 
 
@@ -39,8 +40,8 @@ class BasicNCATrainer:
         adam_betas=(0.9, 0.99),
         batch_repeat: int = 2,
         max_epochs: int = 200,
-        p_retain_pool: float = 0.0,
         optimizer_method: str = "adamw",
+        pool: Optional[Pool] = None,
     ):
         """
         Initialize trainer object.
@@ -55,13 +56,11 @@ class BasicNCATrainer:
         :param adam_betas (tuple, optional): Beta values for Adam optimizer. Defaults to (0.9, 0.99).
         :param batch_repeat (int, optional): How often each batch will be duplicated. Defaults to 2.
         :param max_epochs (int, optional): Maximum number of epochs in training. Defaults to 200.
-        :param p_retain_pool (float, optional): Probability at which a sample will be retained. Defaults to 0.0.
         :param optimizer_method: Optimization method. Defaults to 'adamw'.
         """
         assert batch_repeat >= 1
         assert steps_range[0] < steps_range[1]
         assert max_epochs > 0
-        assert p_retain_pool >= 0.0 and p_retain_pool <= 1.0
         assert optimizer_method.lower() in (
             "adam",
             "adamw",
@@ -79,7 +78,6 @@ class BasicNCATrainer:
         self.adam_betas = adam_betas
         self.batch_repeat = batch_repeat
         self.max_epochs = max_epochs
-        self.p_retain_pool = p_retain_pool
         self.optimizer_method = optimizer_method
         if lr is None:
             if optimizer_method.lower() == "sgd":
@@ -94,6 +92,7 @@ class BasicNCATrainer:
                 self.lr = 1e-2
         else:
             self.lr = lr
+        self.pool = pool
 
     def info(self) -> str:
         """
@@ -112,7 +111,6 @@ class BasicNCATrainer:
             "adam_betas",
             "batch_repeat",
             "max_epochs",
-            "p_retain_pool",
             "optimizer_method",
         ):
             attribute_f = attribute.title().replace("_", " ")
@@ -198,12 +196,15 @@ class BasicNCATrainer:
         if summary_writer is not None:
             summary_writer.add_text("Training Info", self.info())
 
+        optimizer: None | optim.Optimizer = None
         if self.optimizer_method.lower() == "adamw":
             optimizer = optim.AdamW(
                 self.nca.parameters(), lr=self.lr, betas=self.adam_betas
             )
         elif self.optimizer_method.lower() == "sgd":
-            optimizer = optim.SGD(self.nca.parameters(), lr=self.lr, momentum=0.9, nesterov=True)
+            optimizer = optim.SGD(
+                self.nca.parameters(), lr=self.lr, momentum=0.9, nesterov=True
+            )
         elif self.optimizer_method.lower() == "rmsprop":
             optimizer = optim.RMSprop(self.nca.parameters(), lr=self.lr)
         elif self.optimizer_method.lower() == "adagrad":
@@ -216,7 +217,7 @@ class BasicNCATrainer:
             )
         scheduler = optim.lr_scheduler.ExponentialLR(optimizer, self.lr_gamma)
         best_acc = 0.0
-        best_training_loss = np.inf
+        best_training_loss: float = np.inf
         best_model = self.nca
         if self.model_path:
             best_path = Path(self.model_path).with_suffix(".best.pth")
@@ -235,11 +236,9 @@ class BasicNCATrainer:
             if len(dataloader_train) > 3:
                 gen = tqdm(gen, desc="Batches")  # type: ignore[assignment]
 
+            all_losses = []
             # TRAINING
-            if self.p_retain_pool > 0.0:
-                x_previous = None
-
-            for i, sample in enumerate(gen):
+            for sample in gen:
                 x, y = sample  # x: BCWH
 
                 # Typically, our dataloader supplies a binary, grayscale, RGB or RGBA image.
@@ -248,23 +247,8 @@ class BasicNCATrainer:
                 x = pad_input(x, self.nca, noise=self.nca.pad_noise)
                 # Call model-specific input preparation hook
                 x = self.nca.prepare_input(x)
-
-                if (
-                    self.p_retain_pool > 0.0
-                    and x_previous is not None
-                    and np.random.random() <= self.p_retain_pool
-                ):
-                    # Batch sizes might be incompatible if DataLoader has drop_last set to False (default).
-                    # Retention is not applied in this case.
-                    if x_previous.shape[0] == x.shape[0]:
-                        x[:, self.nca.num_image_channels :, :, :] = x_previous[
-                            :, self.nca.num_image_channels :, :, :
-                        ]
-                    else:
-                        raise Exception(
-                            "Batch retention cannot be applied."
-                            "Make sure you set drop_last=True in your DataLoader."
-                        )
+                if self.pool is not None:
+                    x = self.pool.sample(x)
 
                 # Batch duplication, slightly stabelizes the training
                 if self.batch_repeat > 1:
@@ -281,16 +265,20 @@ class BasicNCATrainer:
                     total_batch_iterations,
                     summary_writer,
                 )
-                if self.p_retain_pool > 0.0:
-                    x_previous = x_pred
-                total_batch_iterations += 1
+                with torch.no_grad():
+                    total_batch_iterations += 1
+                    if self.pool is not None:
+                        self.pool.update(x_pred)
+                    all_losses.append(losses["total"].item())
 
             with torch.no_grad():
                 # SAVE TRAINING LOSS
-                if losses["total"].item() < best_training_loss:
-                    best_training_loss = losses["total"].item()
+                mean_training_loss = np.mean(all_losses).astype(float)
+                if mean_training_loss < best_training_loss:
+                    best_training_loss = mean_training_loss
 
                 # VISUALIZATION
+                # TODO visualize samples in training and validation batches
                 if (
                     plot_function
                     and summary_writer
@@ -339,8 +327,8 @@ class BasicNCATrainer:
                                 torch.save(self.nca.state_dict(), best_path)
                             best_acc = val_acc
                             best_model = copy.deepcopy(self.nca)
-                    if earlystopping is not None:
-                        earlystopping.step(val_acc)
+                        if earlystopping is not None:
+                            earlystopping.step(val_acc)
         # After training: Compute metrics on test set for training summary
         with torch.no_grad():
             metrics = {}

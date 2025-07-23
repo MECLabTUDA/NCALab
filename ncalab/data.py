@@ -9,10 +9,6 @@ class GrowingNCADataset(Dataset):
         image: np.ndarray,
         num_channels: int,
         batch_size: int = 8,
-        # TODO implement
-        use_pattern_pool: bool = False,
-        # TODO implement
-        damage: bool = False,
     ):
         """Dedicated dataset for "growing" tasks, like growing emoji.
 
