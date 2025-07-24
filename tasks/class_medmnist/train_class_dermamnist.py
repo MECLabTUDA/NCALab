@@ -11,6 +11,7 @@ from ncalab import (
     WEIGHTS_PATH,
     show_batch_classification,
     get_compute_device,
+    print_NCALab_banner,
 )
 
 import numpy as np
@@ -30,13 +31,21 @@ def train_class_dermamnist(
     gpu: bool,
     gpu_index: int,
 ):
-    gradient_clipping = False
-    pad_noise = False
-    alive_mask = False
+    print_NCALab_banner()
 
-    writer = SummaryWriter(
-        comment=f"c.hidden_{hidden_channels}_gc_{gradient_clipping}_noise_{pad_noise}_AM_{alive_mask}"
-    )
+    gradient_clipping = False
+    pad_noise = True
+    alive_mask = False
+    use_temporal_encoding = True
+
+    comment = ""
+    comment += f"hidden_{hidden_channels}"
+    comment += f"_gc_{gradient_clipping}"
+    comment += f"_noise_{pad_noise}"
+    comment += f"_AM_{alive_mask}"
+    comment += f"_TE_{use_temporal_encoding}"
+
+    writer = SummaryWriter(comment=comment)
 
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
@@ -47,6 +56,7 @@ def train_class_dermamnist(
             v2.ConvertImageDtype(dtype=torch.float32),
             transforms.RandomHorizontalFlip(),
             transforms.RandomVerticalFlip(),
+            transforms.Normalize((0.5,), (0.5,)),
         ]
     )
 
@@ -60,9 +70,9 @@ def train_class_dermamnist(
         ]
     )
     weight = 1.0 / class_sample_count_train
-    sample_weight_train = np.array([weight[t] for t in y_train])
+    sample_weight_train = [weight[int(t)].astype(float) for t in y_train]
     sampler_train = torch.utils.data.WeightedRandomSampler(
-        torch.from_numpy(sample_weight_train),
+        sample_weight_train,
         num_samples=len(dataset_train),
         replacement=True,
     )
@@ -77,14 +87,14 @@ def train_class_dermamnist(
         [len(np.where(dataset_val.labels == t)[0]) for t in np.sort(np.unique(y_val))]
     )
     weight = 1.0 / class_sample_count_val
-    sample_weight_val = np.array([weight[t] for t in y_val])
+    sample_weight_val = [weight[int(t)].astype(float) for t in y_val]
     sampler_val = torch.utils.data.WeightedRandomSampler(
-        torch.from_numpy(sample_weight_val),
+        sample_weight_val,
         num_samples=len(dataset_val),
         replacement=True,
     )
     loader_val = torch.utils.data.DataLoader(
-        dataset_val, sampler=sampler_val, batch_size=32
+        dataset_val, sampler=sampler_val, batch_size=len(dataset_val)
     )
 
     nca = ClassificationNCAModel(
@@ -93,18 +103,22 @@ def train_class_dermamnist(
         num_hidden_channels=hidden_channels,
         num_classes=7,
         use_alive_mask=alive_mask,
-        fire_rate=0.5,
+        fire_rate=0.8,
         pad_noise=pad_noise,
-        filter_padding="circular",
+        use_temporal_encoding=use_temporal_encoding,
+        filter_padding="zeros",
+        learned_filters=0,
+        use_laplace=True,
     )
+
     trainer = BasicNCATrainer(
         nca,
         WEIGHTS_PATH / "classification_dermamnist.pth",
         batch_repeat=2,
         max_epochs=1000,
         gradient_clipping=gradient_clipping,
-        steps_range=(64, 96),
-        steps_validation=72,
+        steps_range=(48, 49),
+        steps_validation=48,
     )
     trainer.train(
         loader_train,
@@ -117,7 +131,7 @@ def train_class_dermamnist(
 
 @click.command()
 @click.option("--batch-size", "-b", default=8, type=int)
-@click.option("--hidden-channels", "-H", default=12, type=int)
+@click.option("--hidden-channels", "-H", default=40, type=int)
 @click.option(
     "--gpu/--no-gpu", is_flag=True, default=True, help="Try using the GPU if available."
 )
