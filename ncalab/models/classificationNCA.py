@@ -121,6 +121,7 @@ class ClassificationNCAModel(BasicNCAModel):
 
         :returns: Dictionary of identifiers mapped to computed losses.
         """
+        assert image.shape[3] == self.num_channels
         # x: B W H C
         class_channels = image[
             ..., self.num_image_channels + self.num_hidden_channels :
@@ -135,9 +136,10 @@ class ClassificationNCAModel(BasicNCAModel):
             # if binary images are classified: mask with first image channel
             if self.num_image_channels == 1:
                 mask = image[..., 0] > 0
-            # TODO: mask alpha channel if available
+            # mask alpha channel / designated mask channel
             else:
-                mask = torch.Tensor([1.0])
+                mask = 1
+            #    mask = image[..., 3] > 0
             for i in range(image.shape[0]):
                 y[i] *= label[i]
             loss_ce = (
@@ -151,16 +153,16 @@ class ClassificationNCAModel(BasicNCAModel):
             loss_classification = loss_ce
         else:
             y_pred = class_channels
-            y_pred = torch.mean(y_pred, dim=1)
-            y_pred = torch.mean(y_pred, dim=1)
-            loss_mse = (
-                F.mse_loss(
-                    F.softmax(y_pred, dim=-1).float(),
-                    F.one_hot(label.squeeze(), num_classes=self.num_classes).float(),
+            y_pred = torch.mean(y_pred, dim=(1, 2))
+
+            loss_ce = (
+                F.cross_entropy(
+                    y_pred,
+                    label.squeeze(),
                     reduction="none",
                 )
             ).mean()
-            loss_classification = loss_mse
+            loss_classification = loss_ce
 
         loss = loss_classification
         return {
@@ -172,28 +174,31 @@ class ClassificationNCAModel(BasicNCAModel):
         """
         Return dict of standard evaluation metrics.
 
-        :param pred [torch.Tensor]: Predicted image (BCWH).
+        :param pred [torch.Tensor]: Predicted image (BWHC).
         :param label [torch.Tensor]: Ground truth label.
         """
         accuracy_macro_metric = torchmetrics.classification.MulticlassAccuracy(
             average="macro", num_classes=self.num_classes
-        )
+        ).to(self.device)
         accuracy_micro_metric = torchmetrics.classification.MulticlassAccuracy(
             average="micro", num_classes=self.num_classes
-        )
+        ).to(self.device)
         auroc_metric = torchmetrics.classification.MulticlassAUROC(
             num_classes=self.num_classes
-        )
+        ).to(self.device)
         f1_metric = torchmetrics.classification.MulticlassF1Score(
             num_classes=self.num_classes
-        )
+        ).to(self.device)
 
-        class_channels = pred[:, -self.num_output_channels :, :, :]
+        assert (
+            pred.shape[3] == self.num_channels
+        ), "Prediction tensor must be in BWHC order"
+
+        class_channels = pred[..., self.num_image_channels + self.num_hidden_channels :]
         y_prob = class_channels
-        y_prob = torch.mean(y_prob, dim=2)
-        y_prob = torch.mean(y_prob, dim=2)
-        y_prob = F.softmax(y_prob, dim=1)
+        y_prob = torch.mean(y_prob, dim=(1, 2))
         y_true = label.squeeze(1)
+
         accuracy_macro_metric.update(y_prob, y_true)
         accuracy_micro_metric.update(y_prob, y_true)
         auroc_metric.update(y_prob, y_true)
