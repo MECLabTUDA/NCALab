@@ -1,5 +1,4 @@
 from __future__ import annotations
-import logging
 from typing import Callable, Optional, Dict, Tuple
 
 import numpy as np
@@ -8,39 +7,8 @@ import torch  # type: ignore[import-untyped]
 import torch.nn as nn  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
 
+from ..autostepper import AutoStepper
 from ..utils import pad_input
-
-
-class AutoStepper:
-    """
-    Helps selecting number of timesteps based on NCA activity.
-    """
-
-    def __init__(
-        self,
-        min_steps: int = 10,
-        max_steps: int = 100,
-        plateau: int = 5,
-        verbose: bool = False,
-        threshold: float = 1e-2,
-    ):
-        """
-        Constructor.
-
-        :param min_steps [int]: Minimum number of timesteps to always execute. Defaults to 10.
-        :param max_steps [int]: Terminate after maximum number of steps. Defaults to 100.
-        :param plateau [int]: _description_. Defaults to 5.
-        :param verbose [bool]: Whether to communicate. Defaults to False.
-         threshold (float, optional): _description_. Defaults to 1e-2.
-        """
-        assert min_steps >= 1
-        assert plateau >= 1
-        assert max_steps > min_steps
-        self.min_steps = min_steps
-        self.max_steps = max_steps
-        self.plateau = plateau
-        self.verbose = verbose
-        self.threshold = threshold
 
 
 class BasicNCAModel(nn.Module):
@@ -192,7 +160,7 @@ class BasicNCAModel(nn.Module):
         )
         return mask
 
-    def _perceive(self, x, step):
+    def _perceive(self, x, step) -> torch.Tensor:
         def _perceive_with(x, weight):
             if isinstance(weight, nn.Conv2d):
                 return weight(x)
@@ -213,11 +181,13 @@ class BasicNCAModel(nn.Module):
                     torch.ones((x.shape[0], 1, x.shape[2], x.shape[3])), step / 100
                 ).to(self.device)
             )
-        y = torch.cat(perception, 1)
-        return y
+        dx = torch.cat(perception, 1)
+        return dx
 
     def _update(self, x: torch.Tensor, step):
         """
+        Compute residual cell update.
+
         :param x [torch.Tensor]: Input tensor, BCWH
         """
         assert x.shape[1] == self.num_channels
@@ -234,22 +204,9 @@ class BasicNCAModel(nn.Module):
         stochastic = stochastic.float().to(self.device)
         dx = dx * stochastic
 
-        dx += self.dx_noise * torch.randn([dx.size(0), 1, dx.size(2), dx.size(3)]).to(
-            self.device
-        )
-
         if self.immutable_image_channels:
             dx[:, : self.num_image_channels, :, :] *= 0
-        x = x + dx
-
-        # Alive masking
-        if self.use_alive_mask:
-            life_mask = self.__alive(x)
-            life_mask = life_mask
-            x = x.permute(1, 0, 2, 3)  # B C W H --> C B W H
-            x = x * life_mask.float()
-            x = x.permute(1, 0, 2, 3)  # C B W H --> B C W H
-        return x
+        return dx
 
     def forward(
         self,
@@ -266,13 +223,10 @@ class BasicNCAModel(nn.Module):
         """
         if self.autostepper is None:
             for step in range(steps):
-                x = self._update(x, step)
-            x = x.permute((0, 2, 3, 1))  # --> BWHC
-            if return_steps:
-                return x, steps
-            return x
+                dx = self._update(x, step)
+                x = x + dx
+            return x, steps
 
-        cooldown = 0
         # invariant: auto_min_steps > 0, so both of these will be defined when used
         hidden_i: torch.Tensor | None = None
         hidden_i_1: torch.Tensor | None = None
@@ -290,17 +244,8 @@ class BasicNCAModel(nn.Module):
                         * hidden_i.shape[2]
                         * hidden_i.shape[3]
                     )
-                    if score >= self.autostepper.threshold:
-                        cooldown = 0
-                    else:
-                        cooldown += 1
-                    if cooldown >= self.autostepper.plateau:
-                        if self.autostepper.verbose:
-                            logging.info(f"Breaking after {step} steps.")
-                        x = x.permute((0, 2, 3, 1))  # --> BWHC
-                        if return_steps:
-                            return x, step
-                        return x
+                    if self.autostepper.check(step, score):
+                        return x, step
             # save previous hidden state
             hidden_i_1 = x[
                 :,
@@ -310,7 +255,16 @@ class BasicNCAModel(nn.Module):
                 :,
             ]
             # single inference time step
-            x = self._update(x, step)
+            dx = self._update(x, step)
+            x = x + dx
+
+            # Alive masking
+            if self.use_alive_mask:
+                life_mask = self.__alive(x)
+                life_mask = life_mask
+                x = x.permute(1, 0, 2, 3)  # B C W H --> C B W H
+                x = x * life_mask.float()
+                x = x.permute(1, 0, 2, 3)  # C B W H --> B C W H
             # set current hidden state
             hidden_i = x[
                 :,
@@ -319,10 +273,7 @@ class BasicNCAModel(nn.Module):
                 :,
                 :,
             ]
-        x = x.permute((0, 2, 3, 1))  # --> BWHC
-        if return_steps:
-            return x, self.autostepper.max_steps
-        return x
+        return x, self.autostepper.max_steps
 
     def loss(self, image: torch.Tensor, label: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
