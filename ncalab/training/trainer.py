@@ -145,6 +145,7 @@ class BasicNCATrainer:
         x_pred = x.clone().to(self.nca.device)
         x_pred, _ = self.nca(x_pred, steps=steps)
         losses = self.nca.loss(x_pred, y.to(device))
+
         losses["total"].backward()
 
         if self.gradient_clipping:
@@ -240,7 +241,8 @@ class BasicNCATrainer:
             # TRAINING
             for sample in gen:
                 x, y = sample  # x: BCWH, y: BWHC
-                y = y.permute(0, 3, 1, 2)
+                if len(y.shape) == 4:
+                    y = y.permute(0, 3, 1, 2)
 
                 # Typically, our dataloader supplies a binary, grayscale, RGB or RGBA image.
                 # But the NCA operates on multiple hidden channels and output channels, so we

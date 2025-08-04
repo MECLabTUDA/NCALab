@@ -60,12 +60,12 @@ def test_depth_training():
             nca, None, max_epochs=3
         )
     except Exception as e:
-        pytest.fail(e)
+        pytest.fail(str(e))
 
     try:
         trainer.train(dataloader_train, save_every=100)
     except Exception as e:
-        pytest.fail(e)
+        pytest.fail(str(e))
 
 
 def test_depth_training_with_validation():
@@ -90,9 +90,9 @@ def test_depth_training_with_validation():
             nca, None, max_epochs=3
         )
     except Exception as e:
-        pytest.fail(e)
+        pytest.fail(str(e))
 
     try:
         trainer.train(dataloader_train, dataloader_val, save_every=100)
     except Exception as e:
-        pytest.fail(e)
+        pytest.fail(str(e))

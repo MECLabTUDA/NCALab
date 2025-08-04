@@ -101,16 +101,18 @@ class DepthNCAModel(BasicNCAModel):
 
     def loss(self, image: torch.Tensor, label: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
-        :param image [torch.Tensor]: Input image, BWHC.
+        :param image [torch.Tensor]: Input image, BCWH.
         :param label [torch.Tensor]: Ground truth.
 
         :returns: Dictionary of identifiers mapped to computed losses.
         """
-        out_channels = image[..., self.num_image_channels + self.num_hidden_channels :]
-        y_pred = out_channels.permute(0, 3, 1, 2).squeeze(1)
+        out_channels = image[
+            :, self.num_image_channels + self.num_hidden_channels :, :, :
+        ]
+        y_pred = out_channels.squeeze(1)
 
         assert y_pred.shape == label.shape
-        B, W, H = y_pred.shape
+        _, W, H = y_pred.shape
 
         t_gt = torch.median(torch.median(label, dim=1)[0], dim=1)[0]
         t_pred = torch.median(torch.median(y_pred, dim=1)[0], dim=1)[0]
@@ -153,10 +155,12 @@ class DepthNCAModel(BasicNCAModel):
         Return dict of standard evaluation metrics.
         Needs to include special item 'prediction', containing the predicted image (all channels).
 
-        :param pred [torch.Tensor]: Predicted image, BWHC.
+        :param pred [torch.Tensor]: Predicted image, BCWH.
         :param label [torch.Tensor]: Ground truth label.
 
         :returns [Dict]: Dict of metrics, mapped by their names.
         """
-        s = ssim(pred[..., -1].unsqueeze(1), label.unsqueeze(1), data_range=1.0).item()
+        s = ssim(
+            pred[:, -1, :, :].unsqueeze(1), label.unsqueeze(1), data_range=1.0
+        ).item()
         return {"ssim": s}

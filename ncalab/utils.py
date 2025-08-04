@@ -30,7 +30,9 @@ def get_compute_device(device: str = "cuda:0") -> torch.device:
     return d
 
 
-def pad_input(x: torch.Tensor, nca: "BasicNCAModel", noise: bool = True) -> torch.Tensor:
+def pad_input(
+    x: torch.Tensor, nca: "BasicNCAModel", noise: bool = True
+) -> torch.Tensor:
     """
     Pads input tensor along channel dimension to match the expected number of
     channels required by the NCA model. Pads with either Gaussian noise or zeros,

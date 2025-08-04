@@ -6,11 +6,25 @@ import torch.nn as nn  # type: ignore[import-untyped]
 from .basicNCA import BasicNCAModel
 
 
-def upscale(image: torch.Tensor, scale: float):
+def upscale(image: torch.Tensor, scale: float) -> torch.Tensor:
+    """
+    _summary_
+
+    :param image [torch.Tensor]: BCWH
+    :param scale [float]:
+    :return: _description_
+    """
     return nn.Upsample(scale_factor=scale, mode="nearest")(image)
 
 
-def downscale(image: torch.Tensor, scale: float):
+def downscale(image: torch.Tensor, scale: float) -> torch.Tensor:
+    """
+    _summary_
+
+    :param image [torch.Tensor]: BCWH
+    :param scale [float]:
+    :return: _description_
+    """
     return nn.Upsample(scale_factor=1 / scale, mode="bilinear", align_corners=True)(
         image
     )
@@ -77,10 +91,10 @@ class CascadeNCA(BasicNCAModel):
         for i, (model, scale, scale_steps) in enumerate(
             zip(self.models, self.scales, self.steps)
         ):
-            x_pred = model(x_scaled, steps=scale_steps)  # BWHC
+            x_pred, _ = model(x_scaled, steps=scale_steps)  # BCWH
             if i < len(self.scales) - 1:
                 x_scaled = upscale(
-                    x_pred.permute(0, 3, 1, 2), scale / self.scales[i + 1]
+                    x_pred, scale / self.scales[i + 1]
                 )
                 # replace input with downscaled variant of original image
                 x_scaled[:, : model.num_image_channels, :, :] = downscale(
@@ -97,21 +111,20 @@ class CascadeNCA(BasicNCAModel):
         ):
             x_in = x_scaled
             for _ in range(scale_steps):
-                x_pred = model(x_in, steps=1)  # BWHC
+                x_pred, _ = model(x_in, steps=1)  # BCWH
                 step_outputs.append(
-                    upscale(x_pred.permute(0, 3, 1, 2), scale).permute(0, 2, 3, 1)
+                    upscale(x_pred, scale)
                 )
-                x_in = x_pred.permute(0, 3, 1, 2)
+                x_in = x_pred
             if i < len(self.scales) - 1:
                 x_scaled = upscale(
-                    x_pred.permute(0, 3, 1, 2), scale / self.scales[i + 1]
+                    x_pred, scale / self.scales[i + 1]
                 )
                 # replace input with downscaled variant of original image
                 x_scaled[:, : model.num_image_channels, :, :] = downscale(
                     x[:, : model.num_image_channels, :, :],
                     self.scales[i + 1],
                 )
-
         return step_outputs
 
     def validate(self, image: torch.Tensor, label: torch.Tensor, steps: int = 1):
@@ -131,7 +144,7 @@ class CascadeNCA(BasicNCAModel):
         for i, (model, scale, scale_steps) in enumerate(
             zip(self.models, self.scales, self.steps)
         ):
-            if len(label.shape) == 4:
+            if len(label.shape) == 3:
                 y_scaled = downscale(label.unsqueeze(1), scale).squeeze(1)
             else:
                 y_scaled = label
@@ -142,7 +155,7 @@ class CascadeNCA(BasicNCAModel):
             )
             if i < len(self.scales) - 1:
                 x_scaled = upscale(
-                    x_pred.permute(0, 3, 1, 2), scale / self.scales[i + 1]
+                    x_pred, scale / self.scales[i + 1]
                 )
                 # replace input channel with downscaled variant of original image
                 x_scaled[:, : model.num_image_channels, :, :] = downscale(

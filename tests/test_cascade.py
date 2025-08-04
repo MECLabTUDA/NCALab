@@ -62,9 +62,9 @@ def test_cascade_depth_training_with_validation():
     try:
         trainer = BasicNCATrainer(cascade, None, max_epochs=3)
     except Exception as e:
-        pytest.fail(e)
+        pytest.fail(str(e))
 
     try:
         trainer.train(dataloader_train, dataloader_val, save_every=100)
     except Exception as e:
-        pytest.fail(e)
+        pytest.fail(str(e))
