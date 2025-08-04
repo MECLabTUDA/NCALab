@@ -104,10 +104,10 @@ def print_mascot(message: str):
 """
 Default random seed to use within this project.
 """
-__DEFAULT_RANDOM_SEED = 1337
+DEFAULT_RANDOM_SEED = 1337
 
 
-def fix_random_seed(seed: int = __DEFAULT_RANDOM_SEED):
+def fix_random_seed(seed: int = DEFAULT_RANDOM_SEED):
     """
     Fixes the random seed for all pseudo-random number generators,
     including Python-native, Numpy and Pytorch.
