@@ -16,7 +16,7 @@ from matplotlib.figure import Figure  # type: ignore[import-untyped]
 from tqdm import tqdm  # type: ignore[import-untyped]
 
 from ..models.basicNCA import BasicNCAModel  # for type hint
-from ..utils import pad_input
+from ..utils import pad_input, unwrap
 
 from .earlystopping import EarlyStopping
 from .pool import Pool
@@ -40,7 +40,7 @@ class BasicNCATrainer:
         adam_betas=(0.9, 0.99),
         batch_repeat: int = 2,
         max_epochs: int = 200,
-        optimizer_method: str = "adamw",
+        optimizer_method: str = "adam",
         pool: Optional[Pool] = None,
     ):
         """
@@ -143,7 +143,7 @@ class BasicNCATrainer:
         self.nca.train()
         optimizer.zero_grad()
         x_pred = x.clone().to(self.nca.device)
-        x_pred = self.nca(x_pred, steps=steps)
+        x_pred, _ = self.nca(x_pred, steps=steps)
         losses = self.nca.loss(x_pred, y.to(device))
         losses["total"].backward()
 
@@ -239,7 +239,8 @@ class BasicNCATrainer:
             all_losses = []
             # TRAINING
             for sample in gen:
-                x, y = sample  # x: BCWH
+                x, y = sample  # x: BCWH, y: BWHC
+                y = y.permute(0, 3, 1, 2)
 
                 # Typically, our dataloader supplies a binary, grayscale, RGB or RGBA image.
                 # But the NCA operates on multiple hidden channels and output channels, so we
@@ -265,6 +266,7 @@ class BasicNCATrainer:
                     total_batch_iterations,
                     summary_writer,
                 )
+                assert "total" in losses, "Model: Loss dict must contain 'total' item."
                 with torch.no_grad():
                     total_batch_iterations += 1
                     if self.pool is not None:
@@ -297,15 +299,13 @@ class BasicNCATrainer:
                 if self.model_path:
                     torch.save(self.nca.state_dict(), self.model_path)
 
-                if dataloader_val:
+                if dataloader_val is not None:
                     all_metrics: Dict[str, List[float]] = {}
                     for sample in dataloader_val:
                         x, y = sample
                         # TODO: move validation/inference steps parameter to NCA model itself
-                        metrics, _ = self.nca.validate(x, y, self.steps_validation)
+                        metrics, _ = unwrap(self.nca.validate(x, y, self.steps_validation))
                         for name in metrics:
-                            if name == "prediction":
-                                continue
                             if name not in all_metrics:
                                 all_metrics[name] = []
                             all_metrics[name].append(metrics[name])

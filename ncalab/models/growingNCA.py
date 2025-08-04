@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Tuple
 
 import torch  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
@@ -54,20 +54,24 @@ class GrowingNCAModel(BasicNCAModel):
         """
         Implements a simple MSE loss between target and prediction.
 
-        :param x [Tensor]: Prediction
-        :param y [Tensor]: Target
+        :param x [Tensor]: Prediction, BCWH
+        :param y [Tensor]: Target, BCWH
 
         :returns [Tensor]: MSE Loss
         """
-        loss = F.mse_loss(image[..., : self.num_image_channels], label)
+        assert image.shape[1] == self.num_channels
+        assert label.shape[1] == self.num_image_channels
+        loss = F.mse_loss(image[:, : self.num_image_channels, :, :], label)
         return {"total": loss}
 
-    def validate(self, *args, **kwargs):
+    def validate(
+        self, image: torch.Tensor, label: torch.Tensor, steps: int
+    ) -> Optional[Tuple[Dict[str, float], torch.Tensor]]:
         """
         We typically don't validate during training of Growing NCA,
         because there is only a single sample in the training set.
         """
-        pass
+        return None
 
     def grow(
         self, width: int, height: int, steps: int = 100, save_steps=False
@@ -90,10 +94,10 @@ class GrowingNCAModel(BasicNCAModel):
             if save_steps:
                 step_outs = []
                 for _ in range(steps):
-                    x = self.forward(x, steps=1)  # type: ignore[assignment]
+                    x, _ = self.forward(x, steps=1)  # type: ignore[assignment]
                     step_outs.append(
                         np.clip(
-                            x[..., : self.num_image_channels]
+                            x[:, : self.num_image_channels, :, :]
                             .squeeze()
                             .detach()
                             .cpu()
@@ -102,11 +106,11 @@ class GrowingNCAModel(BasicNCAModel):
                             1,
                         )
                     )
-                    # next forward pass expects BCWH
-                    x = x.permute((0, 3, 1, 2))
                 return step_outs
             else:
-                x = self.forward(x, steps=steps)  # type: ignore[assignment]
-            out_np = x[..., : self.num_image_channels].detach().cpu().numpy().squeeze(0)
+                x, _ = self.forward(x, steps=steps)  # type: ignore[assignment]
+            out_np = (
+                x[:, : self.num_image_channels, :, :].detach().cpu().numpy().squeeze(0)
+            )
             out_np = np.clip(out_np, 0, 1)
             return out_np

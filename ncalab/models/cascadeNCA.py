@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 
 import torch  # type: ignore[import-untyped]
 import torch.nn as nn  # type: ignore[import-untyped]
@@ -40,14 +40,12 @@ class CascadeNCA(BasicNCAModel):
             backbone.use_alive_mask,
             backbone.immutable_image_channels,
             backbone.num_learned_filters,
-            backbone.dx_noise,
             use_laplace=backbone.use_laplace,
             pad_noise=backbone.pad_noise,
             autostepper=backbone.autostepper,
             use_temporal_encoding=backbone.use_temporal_encoding,
         )
         self.loss = backbone.loss  # type: ignore[method-assign]
-        self.get_meta_dict = backbone.get_meta_dict  # type: ignore[method-assign]
         self.finetune = backbone.finetune  # type: ignore[method-assign]
         self.prepare_input = backbone.prepare_input  # type: ignore[method-assign]
         self.plot_function = backbone.plot_function  # type: ignore[method-assign]
@@ -67,11 +65,14 @@ class CascadeNCA(BasicNCAModel):
         models = [backbone for _ in scales]
         self.models = nn.ModuleList(models)
 
-    def forward(self, x: torch.Tensor, *args, **kwargs) -> torch.Tensor:  # type: ignore[override]
+    def forward(
+        self, x: torch.Tensor, *args, **kwargs
+    ) -> torch.Tensor | Tuple[torch.Tensor, int]:  # type: ignore[override]
         """
         :param x [torch.Tensor]: Input image tensor, BCWH.
         :param steps [int]: Unused, as steps are defined in constructor.
         """
+        assert len(self.scales) > 0
         x_scaled = downscale(x, self.scales[0])
         for i, (model, scale, scale_steps) in enumerate(
             zip(self.models, self.scales, self.steps)
@@ -86,7 +87,7 @@ class CascadeNCA(BasicNCAModel):
                     x[:, : model.num_image_channels, :, :],
                     self.scales[i + 1],
                 )
-        return x_pred
+        return x_pred, sum(self.steps)
 
     def record_steps(self, x: torch.Tensor):
         step_outputs = []
@@ -130,7 +131,10 @@ class CascadeNCA(BasicNCAModel):
         for i, (model, scale, scale_steps) in enumerate(
             zip(self.models, self.scales, self.steps)
         ):
-            y_scaled = downscale(label.unsqueeze(1), scale).squeeze(1)
+            if len(label.shape) == 4:
+                y_scaled = downscale(label.unsqueeze(1), scale).squeeze(1)
+            else:
+                y_scaled = label
             metrics, x_pred = model.validate(
                 x_scaled,
                 y_scaled,

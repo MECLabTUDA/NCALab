@@ -10,6 +10,12 @@ class TrainingSummary:
         self.best_training_loss = best_training_loss
         self.metrics = metrics
 
+    def load(self, path):
+        pass
+
+    def save(self, path):
+        pass
+
     def to_dict(self) -> Dict:
         return dict(
             best_acc=self.best_acc,

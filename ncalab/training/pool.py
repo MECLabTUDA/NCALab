@@ -12,9 +12,9 @@ class Pool:
 
     def update(self, batch: torch.Tensor):
         """
-        :param batch: BWHC
+        :param batch: BCWH
         """
-        self.batch = batch.permute(0, 3, 1, 2)
+        self.batch = torch.clone(batch)
 
     def sample(self, seed: torch.Tensor) -> torch.Tensor:
         """

@@ -27,14 +27,12 @@ class BasicNCAModel(nn.Module):
         use_alive_mask: bool = False,
         immutable_image_channels: bool = True,
         num_learned_filters: int = 2,
-        dx_noise: float = 0.0,
         filter_padding: str = "circular",
         use_laplace: bool = False,
         kernel_size: int = 3,
         pad_noise: bool = False,
         autostepper: Optional[AutoStepper] = None,
         use_temporal_encoding: bool = False,
-
     ):
         """
         Constructor.
@@ -48,7 +46,6 @@ class BasicNCAModel(nn.Module):
         :param use_alive_mask [bool]: Whether to use alive masking during training. Defaults to False.
         :param immutable_image_channels [bool]: If image channels should be fixed during inference, which is the case for most segmentation or classification problems. Defaults to True.
         :param num_learned_filters [int]: Number of learned filters. If zero, use two sobel filters instead. Defaults to 2.
-        :param dx_noise [float]:
         :param filter_padding [str]: Padding type to use. Might affect reliance on spatial cues. Defaults to "circular".
         :param use_laplace [bool]: Whether to use Laplace filter (only if num_learned_filters == 0)
         :param kernel_size [int]: Filter kernel size (only for learned filters)
@@ -72,42 +69,19 @@ class BasicNCAModel(nn.Module):
         self.immutable_image_channels = immutable_image_channels
         self.num_learned_filters = num_learned_filters
         self.use_laplace = use_laplace
-        self.dx_noise = dx_noise
+        self.kernel_size = kernel_size
+        self.filter_padding = filter_padding
         self.pad_noise = pad_noise
         self.autostepper = autostepper
         self.use_temporal_encoding = use_temporal_encoding
 
+        # set by subclassing functions
         self.plot_function: Optional[Callable] = None
         self.validation_metric: Optional[str] = None
-        self.filters: list | nn.ModuleList = []
 
-        if num_learned_filters > 0:
-            self.num_filters = num_learned_filters
-            filters = []
-            for _ in range(num_learned_filters):
-                filters.append(
-                    nn.Conv2d(
-                        self.num_channels,
-                        self.num_channels,
-                        kernel_size=kernel_size,
-                        stride=1,
-                        padding=(kernel_size // 2),
-                        padding_mode=filter_padding,
-                        groups=self.num_channels,
-                        bias=False,
-                    ).to(self.device)
-                )
-            self.filters = nn.ModuleList(filters)
-        else:
-            sobel_x = np.outer([1, 2, 1], [-1, 0, 1]) / 8.0
-            sobel_y = sobel_x.T
-            laplace = np.array([[0, 1, 0], [1, -4, 1], [0, 1, 0]])
-            self.filters.append(sobel_x)
-            self.filters.append(sobel_y)
-            if self.use_laplace:
-                self.filters.append(laplace)
-            self.num_filters = len(self.filters)
+        self._define_filters(num_learned_filters)
 
+        # define model structure
         input_vector_size = self.num_channels * (self.num_filters + 1)
         if self.use_temporal_encoding:
             input_vector_size += 1
@@ -135,7 +109,39 @@ class BasicNCAModel(nn.Module):
         with torch.no_grad():
             self.network[-1].weight.data.fill_(0)
 
-        self.meta: dict = {}
+    def _define_filters(self, num_learned_filters: int):
+        """
+        Define list of perception filters, based on parameters passed in constructor.
+
+        :param num_learned_filters [int]: Number of learned filters in perception filter bank.
+        """
+        self.filters: list | nn.ModuleList = []
+        if num_learned_filters > 0:
+            self.num_filters = num_learned_filters
+            filters = []
+            for _ in range(num_learned_filters):
+                filters.append(
+                    nn.Conv2d(
+                        self.num_channels,
+                        self.num_channels,
+                        kernel_size=self.kernel_size,
+                        stride=1,
+                        padding=(self.kernel_size // 2),
+                        padding_mode=self.filter_padding,
+                        groups=self.num_channels,
+                        bias=False,
+                    ).to(self.device)
+                )
+            self.filters = nn.ModuleList(filters)
+        else:
+            sobel_x = np.outer([1, 2, 1], [-1, 0, 1]) / 8.0
+            sobel_y = sobel_x.T
+            laplace = np.array([[0, 1, 0], [1, -4, 1], [0, 1, 0]])
+            self.filters.append(sobel_x)
+            self.filters.append(sobel_y)
+            if self.use_laplace:
+                self.filters.append(laplace)
+            self.num_filters = len(self.filters)
 
     def prepare_input(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -212,14 +218,12 @@ class BasicNCAModel(nn.Module):
         self,
         x: torch.Tensor,
         steps: int = 1,
-        return_steps: bool = False,
     ) -> torch.Tensor | Tuple[torch.Tensor, int]:
         """
         :param x [torch.Tensor]: Input image, padded along the channel dimension, BCWH.
         :param steps [int]: Time steps in forward pass.
-        :param return_steps [bool]: Whether to return number of steps we took.
 
-        :returns: Output image, BWHC
+        :returns: Output image (BCWH)
         """
         if self.autostepper is None:
             for step in range(steps):
@@ -277,30 +281,18 @@ class BasicNCAModel(nn.Module):
 
     def loss(self, image: torch.Tensor, label: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
-        Compute loss.
-        Needs to be overloaded by any subclass.
+        Compute loss. Needs to be overloaded by any subclass.
+        Please note that the returned dict needs to hold "total" key in which the
+        total loss is stored, which is typically a weighted sum of other losses.
+        The total loss is backpropagated, whereas the other losses are sent to
+        tensorboard.
 
-        :param image [torch.Tensor]: Input image, BWHC.
-        :param label [torch.Tensor]: Ground truth.
+        :param image [torch.Tensor]: Input image, BCWH.
+        :param label [torch.Tensor]: Ground truth, BCWH.
 
         :returns: Dictionary of identifiers mapped to computed losses.
         """
         return NotImplemented
-
-    def get_meta_dict(self) -> dict:
-        return dict(
-            device=str(self.device),
-            num_image_channels=self.num_image_channels,
-            num_hidden_channels=self.num_hidden_channels,
-            num_output_channels=self.num_output_channels,
-            fire_rate=self.fire_rate,
-            hidden_size=self.hidden_size,
-            use_alive_mask=self.use_alive_mask,
-            immutable_image_channels=self.immutable_image_channels,
-            num_learned_filters=self.num_learned_filters,
-            dx_noise=self.dx_noise,
-            **self.meta,
-        )
 
     def finetune(self):
         """
@@ -317,9 +309,8 @@ class BasicNCAModel(nn.Module):
     def metrics(self, pred: torch.Tensor, label: torch.Tensor) -> Dict[str, float]:
         """
         Return dict of standard evaluation metrics.
-        Needs to include special item 'prediction', containing the predicted image (all channels).
 
-        :param pred [torch.Tensor]: Predicted image, BWHC.
+        :param pred [torch.Tensor]: Predicted image, BCWH.
         :param label [torch.Tensor]: Ground truth label.
 
         :returns [Dict]: Dict of metrics, mapped by their names.
@@ -330,7 +321,7 @@ class BasicNCAModel(nn.Module):
         """
         :param image [torch.Tensor]: Input image, BCWH.
 
-        :returns [torch.Tensor]: Output image, BWHC
+        :returns [torch.Tensor]: Output image, BCWH
         """
         assert steps >= 1
         assert image.shape[1] <= self.num_channels
@@ -339,18 +330,18 @@ class BasicNCAModel(nn.Module):
             x = image.clone()
             x = pad_input(x, self, noise=self.pad_noise)
             x = self.prepare_input(x)
-            x = self.forward(x, steps=steps)  # type: ignore[assignment]
+            x, _ = self.forward(x, steps=steps)  # type: ignore[assignment]
             return x
 
     def validate(
         self, image: torch.Tensor, label: torch.Tensor, steps: int
-    ) -> Tuple[Dict[str, float], torch.Tensor]:
+    ) -> Optional[Tuple[Dict[str, float], torch.Tensor]]:
         """
         :param image [torch.Tensor]: Input image, BCWH
         :param label [torch.Tensor]: Ground truth label
         :param steps [int]: Inference steps
 
-        :returns [Tuple[float, torch.Tensor]]: Validation metric, predicted image BWHC
+        :returns [Tuple[float, torch.Tensor]]: Validation metric, predicted image BCWH
         """
         pred = self.predict(image.to(self.device), steps=steps)
         metrics = self.metrics(pred, label.to(self.device))

@@ -10,6 +10,8 @@ import torch.nn.functional as F  # type: ignore[import-untyped]
 
 from pytorch_msssim import ssim  # type: ignore[import-untyped]
 
+# TODO use torchmetrics ssim
+
 
 class SmoothnessLoss(nn.Module):
     """ """
@@ -97,19 +99,24 @@ class DepthNCAModel(BasicNCAModel):
         self.vignette = None
         self.validation_metric = "ssim"
 
-    def loss(self, x, y) -> Dict[str, torch.Tensor]:
-        """ """
-        out_channels = x[..., self.num_image_channels + self.num_hidden_channels :]
+    def loss(self, image: torch.Tensor, label: torch.Tensor) -> Dict[str, torch.Tensor]:
+        """
+        :param image [torch.Tensor]: Input image, BWHC.
+        :param label [torch.Tensor]: Ground truth.
+
+        :returns: Dictionary of identifiers mapped to computed losses.
+        """
+        out_channels = image[..., self.num_image_channels + self.num_hidden_channels :]
         y_pred = out_channels.permute(0, 3, 1, 2).squeeze(1)
 
-        assert y_pred.shape == y.shape
+        assert y_pred.shape == label.shape
         B, W, H = y_pred.shape
 
-        t_gt = torch.median(torch.median(y, dim=1)[0], dim=1)[0]
+        t_gt = torch.median(torch.median(label, dim=1)[0], dim=1)[0]
         t_pred = torch.median(torch.median(y_pred, dim=1)[0], dim=1)[0]
 
         # Scale-Shift Invariant MSE Loss
-        y_SSI = y.permute(1, 2, 0) - t_gt
+        y_SSI = label.permute(1, 2, 0) - t_gt
         s_gt = torch.abs(y_SSI) / (W * H)
         s_gt = torch.sum(torch.sum(s_gt, dim=0), dim=0)
         # y_SSI = torch.div(y_SSI, s_gt)
@@ -123,13 +130,13 @@ class DepthNCAModel(BasicNCAModel):
 
         ssim_function = ssim
         loss_ssim = 1 - ssim_function(
-            y_pred.unsqueeze(1), y.unsqueeze(1), data_range=1.0
+            y_pred.unsqueeze(1), label.unsqueeze(1), data_range=1.0
         )
 
         loss_tv_function = SmoothnessLoss().to(self.device)
         loss_tv = loss_tv_function(
             y_pred.unsqueeze(1),
-            y.unsqueeze(1),
+            label.unsqueeze(1),
         )
 
         loss_depthmap_function = nn.MSELoss()

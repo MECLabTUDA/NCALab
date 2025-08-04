@@ -15,9 +15,26 @@ def show_image_row(
     label: str = "",
     colorbar: bool = False,
 ):
-    """ """
+    """
+    _summary_
+
+    :param ax: _description_
+    :param images: _description_
+    :param vmin: _description_, defaults to None
+    :param vmax: _description_, defaults to None
+    :param cmap: _description_, defaults to None
+    :param overlays: _description_, defaults to None
+    :param overlay_vmin: _description_, defaults to None
+    :param overlay_vmax: _description_, defaults to None
+    :param overlay_cmap: _description_, defaults to None
+    :param label: _description_, defaults to ""
+    :param colorbar: _description_, defaults to False
+    """
     for j in range(len(images)):
         image = images[j]
+        # if channel dimension is first (CWH), permute to (WHC)
+        if image.shape[0] in (1, 3, 4):
+            image = np.transpose(image, (1, 2, 0))
         im = ax[j].imshow(image, vmin=vmin, vmax=vmax, cmap=cmap)
         if colorbar and j == len(images) - 1:
             plt.colorbar(im, ax=ax[j])
@@ -37,16 +54,30 @@ def show_image_row(
 
 
 def show_batch_binary_image_classification(x_seed, x_pred, y_true, nca):
+    """
+    _summary_
+
+    :param x_seed: _description_
+    :type x_seed: _type_
+    :param x_pred: _description_
+    :type x_pred: _type_
+    :param y_true: _description_
+    :type y_true: _type_
+    :param nca: _description_
+    :type nca: _type_
+    :return: _description_
+    :rtype: _type_
+    """
     batch_size = x_pred.shape[0]
-    image_width = x_pred.shape[1]
-    image_height = x_pred.shape[2]
+    image_width = x_pred.shape[2]
+    image_height = x_pred.shape[3]
 
     figure, ax = plt.subplots(
         2, batch_size, figsize=[batch_size * 2, 5], tight_layout=True
     )
 
     # 1st row: input image
-    images = (x_seed[:, :, :, 0] > 0).astype(np.float32)
+    images = (x_seed[:, 0, :, :] > 0).astype(np.float32)
     for i in range(batch_size):
         images[i, :, :] *= y_true[i] + 1
     images -= 1
@@ -54,23 +85,36 @@ def show_batch_binary_image_classification(x_seed, x_pred, y_true, nca):
 
     # 2nd row: prediction
     images = np.ones((batch_size, image_width, image_height))
-    class_channels = x_pred[..., nca.num_image_channels + nca.num_hidden_channels :]
+    class_channels = x_pred[:, nca.num_image_channels + nca.num_hidden_channels :, :, :]
     y_pred = np.argmax(class_channels, axis=-1)
-    images = (x_seed[:, :, :, 0] > 0).astype(np.float32)
+    images = (x_seed[:, 0, :, :] > 0).astype(np.float32)
     for i in range(batch_size):
         images[i, :, :] *= y_pred[i] + 1
     images -= 1
     show_image_row(ax[1], images, vmin=-1, vmax=nca.num_classes, cmap="Set3")
 
     figure.subplots_adjust(wspace=-0.8, hspace=0)
-
     return figure
 
 
 def show_batch_classification(x_seed, x_pred, y_true, nca):
+    """
+    _summary_
+
+    :param x_seed: _description_
+    :type x_seed: _type_
+    :param x_pred: _description_
+    :type x_pred: _type_
+    :param y_true: _description_
+    :type y_true: _type_
+    :param nca: _description_
+    :type nca: _type_
+    :return: _description_
+    :rtype: _type_
+    """
     batch_size = x_pred.shape[0]
-    image_width = x_pred.shape[1]
-    image_height = x_pred.shape[2]
+    image_width = x_pred.shape[2]
+    image_height = x_pred.shape[3]
 
     figure, ax = plt.subplots(
         3, batch_size, figsize=[batch_size * 2, 5], tight_layout=True
@@ -78,8 +122,8 @@ def show_batch_classification(x_seed, x_pred, y_true, nca):
 
     # 1st row: input image
     images = np.ones((batch_size, image_width, image_height))
-    hidden_channels = x_pred[..., nca.num_image_channels : -nca.num_output_channels]
-    class_channels = x_pred[..., nca.num_image_channels + nca.num_hidden_channels :]
+    hidden_channels = x_pred[:, nca.num_image_channels : -nca.num_output_channels, :, :]
+    class_channels = x_pred[:, nca.num_image_channels + nca.num_hidden_channels :, :, :]
     images = x_pred[:, :, :, : nca.num_image_channels].astype(np.float32)
     show_image_row(ax[0], np.clip(images, 0, 1))
 
@@ -99,8 +143,8 @@ def show_batch_classification(x_seed, x_pred, y_true, nca):
 
     # 3rd row: predicted classes per pixel
     images = np.ones((batch_size, image_width, image_height))
-    class_channels = x_pred[..., nca.num_image_channels + nca.num_hidden_channels :]
-    y_pred = np.argmax(class_channels, axis=-1)
+    class_channels = x_pred[:, nca.num_image_channels + nca.num_hidden_channels :, :, :]
+    y_pred = np.argmax(class_channels, axis=1)
     images = (x_seed[:, 0, :, :] > 0).astype(np.float32)
     for i in range(batch_size):
         images[i, :, :] *= y_pred[i] + 1
@@ -173,11 +217,11 @@ def show_batch_growing(x_seed, x_pred, y_true, nca):
     )
 
     # 1st row: true image
-    images = y_true[..., : nca.num_image_channels]
+    images = y_true[:, : nca.num_image_channels, :, :]
     show_image_row(ax[0], images)
 
     # 2nd row: prediction
-    images = x_pred[..., : nca.num_image_channels]
+    images = x_pred[:, : nca.num_image_channels, :, :]
     show_image_row(ax[1], np.clip(images, 0.0, 1.0))
 
     figure.subplots_adjust(wspace=-0.8, hspace=0)
