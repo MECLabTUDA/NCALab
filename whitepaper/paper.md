@@ -82,7 +82,7 @@ Until now, NCALab provides the following key features:
 
 # Ongoing Research
 
-A conference paper utilizing NCALab was recently accepted for presentation in [IPCAI 2025](https://ipcai.org), and will soon be published in IJCARS.
+A conference paper utilizing NCALab was recently accepted for presentation in [IPCAI 2025](https://ipcai.org), and was published in the _International Journal of Computer-Assisted Radiology and Surgery_ (@krumb2025encapsulate).
 
 
 # Acknowledgements
