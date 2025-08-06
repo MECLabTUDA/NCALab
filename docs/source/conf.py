@@ -11,6 +11,7 @@
 # documentation root, use os.path.abspath to make it absolute, like shown here.
 from pathlib import Path
 import sys
+from typing import List
 
 module_path = Path(__file__).parents[2].resolve()
 sys.path.insert(0, module_path.as_posix())
@@ -39,7 +40,7 @@ templates_path = ["_templates"]
 # List of patterns, relative to source directory, that match files and
 # directories to ignore when looking for source files.
 # This pattern also affects html_static_path and html_extra_path.
-exclude_patterns = []
+exclude_patterns: List[str] = []
 
 
 # -- Options for HTML output -------------------------------------------------
