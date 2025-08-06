@@ -11,7 +11,7 @@ build:
     python: "3.12"
   commands:
     - pip install uv
-    - uv run python -m sphinx docs $READTHEDOCS_OUTPUT/html -b html -W
+    - uv run sphinx-build -b html docs/source $READTHEDOCS_OUTPUT/html -W
 
 # Build documentation in the "docs/" directory with Sphinx
 sphinx:
