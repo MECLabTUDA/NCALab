@@ -16,6 +16,7 @@ from matplotlib.figure import Figure  # type: ignore[import-untyped]
 from tqdm import tqdm  # type: ignore[import-untyped]
 
 from ..models.basicNCA import BasicNCAModel  # for type hint
+from ..prediction import Prediction
 from ..utils import pad_input, unwrap
 
 from .earlystopping import EarlyStopping
@@ -126,7 +127,7 @@ class BasicNCATrainer:
         scheduler: torch.optim.lr_scheduler.LRScheduler,
         total_batch_iterations: int,
         summary_writer,
-    ) -> Tuple[torch.Tensor, Dict[str, torch.Tensor]]:
+    ) -> Tuple[Prediction, Dict[str, torch.Tensor]]:
         """
         Run a single training iteration.
 
@@ -142,10 +143,9 @@ class BasicNCATrainer:
         device = self.nca.device
         self.nca.train()
         optimizer.zero_grad()
-        x_pred = x.clone().to(self.nca.device)
-        x_pred, _ = self.nca(x_pred, steps=steps)
-        losses = self.nca.loss(x_pred, y.to(device))
-
+        x_in = x.clone().to(self.nca.device)
+        prediction = self.nca(x_in, steps=steps)
+        losses = self.nca.loss(prediction.output_image, y.to(device))
         losses["total"].backward()
 
         if self.gradient_clipping:
@@ -157,7 +157,7 @@ class BasicNCATrainer:
                 summary_writer.add_scalar(
                     f"Loss/train_{key}", losses[key], total_batch_iterations
                 )
-        return x_pred, losses
+        return prediction, losses
 
     def train(
         self,
@@ -242,7 +242,7 @@ class BasicNCATrainer:
             for sample in gen:
                 x, y = sample  # x: BCWH, y: BWHC
                 if len(y.shape) == 4:
-                    y = y.permute(0, 3, 1, 2)
+                    y = y.permute(0, 3, 1, 2) # BWHC --> BCWH
 
                 # Typically, our dataloader supplies a binary, grayscale, RGB or RGBA image.
                 # But the NCA operates on multiple hidden channels and output channels, so we
@@ -259,7 +259,7 @@ class BasicNCATrainer:
                     y = torch.cat(self.batch_repeat * [y])
 
                 steps = np.random.randint(*self.steps_range)
-                x_pred, losses = self.train_iteration(
+                prediction, losses = self.train_iteration(
                     x,
                     y,
                     steps,
@@ -272,7 +272,7 @@ class BasicNCATrainer:
                 with torch.no_grad():
                     total_batch_iterations += 1
                     if self.pool is not None:
-                        self.pool.update(x_pred)
+                        self.pool.update(prediction.output_image)
                     all_losses.append(losses["total"].item())
 
             with torch.no_grad():
@@ -290,7 +290,7 @@ class BasicNCATrainer:
                 ):
                     figure = plot_function(
                         x.detach().cpu().numpy(),
-                        x_pred.detach().cpu().numpy(),
+                        prediction.output_image.detach().cpu().numpy(),
                         y.detach().cpu().numpy(),
                         self.nca,
                     )

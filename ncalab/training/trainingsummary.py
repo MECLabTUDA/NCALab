@@ -1,3 +1,4 @@
+import os
 from typing import Dict
 
 import pandas as pd
@@ -10,10 +11,10 @@ class TrainingSummary:
         self.best_training_loss = best_training_loss
         self.metrics = metrics
 
-    def load(self, path):
+    def load(self, path: os.PathLike | str):
         pass
 
-    def save(self, path):
+    def save(self, path: os.PathLike | str):
         pass
 
     def to_dict(self) -> Dict:

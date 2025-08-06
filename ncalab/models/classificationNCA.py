@@ -18,7 +18,6 @@ class ClassificationNCAModel(BasicNCAModel):
         num_classes: int,
         fire_rate: float = 0.8,
         use_alive_mask: bool = False,
-        immutable_image_channels: bool = True,
         pixel_wise_loss: bool = False,
         filter_padding: str = "reflect",
         pad_noise: bool = False,
@@ -31,7 +30,6 @@ class ClassificationNCAModel(BasicNCAModel):
         :param num_classes [int]: _description_
         :param fire_rate [float]: _description_. Defaults to 0.8.
         :param use_alive_mask [bool]: _description_. Defaults to False.
-        :param immutable_image_channels [bool]: _description_. Defaults to True.
         :param pixel_wise_loss [bool]: Whether a prediction per pixel is desired, like in self-classifying MNIST. Defaults to False.
         :param filter_padding [str]: _description_. Defaults to "reflect".
         :param pad_noise [bool]: _description_. Defaults to False.
@@ -41,16 +39,17 @@ class ClassificationNCAModel(BasicNCAModel):
             num_image_channels,
             num_hidden_channels,
             num_classes,
-            fire_rate,
-            use_alive_mask,
-            immutable_image_channels,
+            fire_rate=fire_rate,
+            use_alive_mask=use_alive_mask,
+            immutable_image_channels=True,
+            plot_function=None,
+            validation_metric="accuracy_micro",
             filter_padding=filter_padding,
             pad_noise=pad_noise,
             **kwargs,
         )
         self.num_classes = num_classes
         self.pixel_wise_loss = pixel_wise_loss
-        self.validation_metric = "accuracy_micro"
 
     def classify(
         self, image: torch.Tensor, steps: int = 100, reduce: bool = False
@@ -66,16 +65,9 @@ class ClassificationNCAModel(BasicNCAModel):
         """
         with torch.no_grad():
             x = image.clone()
-            x = self(x, steps=steps)
-            hidden_channels = x[
-                ...,
-                self.num_image_channels : self.num_image_channels
-                + self.num_hidden_channels,
-            ]
-
-            class_channels = x[
-                ..., self.num_image_channels + self.num_hidden_channels :
-            ]
+            prediction = self(x, steps=steps)
+            hidden_channels = prediction.hidden_channels
+            class_channels = prediction.output_channels
 
             # mask inactive pixels
             for i in range(image.shape[0]):
@@ -86,9 +78,9 @@ class ClassificationNCAModel(BasicNCAModel):
             # mask away pixels with the binary image used as a mask
             if self.num_image_channels == 1:
                 for i in range(image.shape[0]):
-                    mask = image[i, ..., 0]
+                    mask = image[i, 0, :, :]
                     for c in range(self.num_classes):
-                        class_channels[i, :, :, c] *= mask
+                        class_channels[i, c, :, :] *= mask
 
             # Average over all pixels if a single categorial prediction is desired
             y_pred = F.softmax(class_channels, dim=-1)

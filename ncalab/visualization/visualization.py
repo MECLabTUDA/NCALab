@@ -1,3 +1,9 @@
+"""
+Functions for visualizing input images and predictions
+for various downstream tasks. These functions are used
+for tensorboard "images" tab.
+"""
+
 import matplotlib.pyplot as plt  # type: ignore[import-untyped]
 import numpy as np
 
@@ -14,28 +20,33 @@ def show_image_row(
     overlay_cmap=None,
     label: str = "",
     colorbar: bool = False,
+    x_index: bool = False,
 ):
     """
-    _summary_
+    Shows a row of images next to each other.
 
-    :param ax: _description_
-    :param images: _description_
-    :param vmin: _description_, defaults to None
-    :param vmax: _description_, defaults to None
-    :param cmap: _description_, defaults to None
+    :param ax: Axis object.
+    :param images: List of grayscale, RGB or RGBA images, can be CWH or WHC.
+    :param vmin: Minimum value to clip channel values, defaults to None
+    :param vmax: Maximum value to clip channel values, defaults to None
+    :param cmap: matplotlib colormap to apply, defaults to None
     :param overlays: _description_, defaults to None
     :param overlay_vmin: _description_, defaults to None
     :param overlay_vmax: _description_, defaults to None
     :param overlay_cmap: _description_, defaults to None
-    :param label: _description_, defaults to ""
-    :param colorbar: _description_, defaults to False
+    :param label: y-axis label next to first image, defaults to ""
+    :param colorbar: Whether to display a colorbar next to the last image, defaults to False
+    :param x_index: Whether to show the batch index below each image, defaults to False
     """
+    plt.rcParams["font.family"] = "sans-serif"
+    plt.rcParams["font.sans-serif"] = ["Calibri", "Arial"]
     for j in range(len(images)):
         image = images[j]
         # if channel dimension is first (CWH), permute to (WHC)
         if image.shape[0] in (1, 3, 4):
             image = np.transpose(image, (1, 2, 0))
         im = ax[j].imshow(image, vmin=vmin, vmax=vmax, cmap=cmap)
+        # show colorbar next to final image if enabled
         if colorbar and j == len(images) - 1:
             plt.colorbar(im, ax=ax[j])
         if overlays is not None:
@@ -46,11 +57,17 @@ def show_image_row(
                 cmap=overlay_cmap,
                 alpha=0.5,
                 colormap="jet",
+                edgecolors=(10 / 255, 10 / 255, 10 / 255),
             )
-        ax[j].axis("off")
-        ax[j].set_aspect("auto")
-    ax[0].set_ylabel(label)
-    # FIXME: label not shown
+        if x_index:
+            ax[j].set_xlabel(r"$\mathbf{" + f"{j}" + r"}$")
+        ax[j].set_xticks([])
+        ax[j].set_yticks([])
+        ax[j].set_aspect(1.0)
+        ax[j].xaxis.label.set_color((10 / 255, 10 / 255, 10 / 255))
+        ax[j].yaxis.label.set_color((10 / 255, 10 / 255, 10 / 255))
+        [spine.set_linewidth(2) for spine in ax[j].spines.values()]
+    ax[0].set_ylabel(r"$\mathbf{" + label + r"}$")
 
 
 def show_batch_binary_image_classification(x_seed, x_pred, y_true, nca):
@@ -58,15 +75,10 @@ def show_batch_binary_image_classification(x_seed, x_pred, y_true, nca):
     _summary_
 
     :param x_seed: _description_
-    :type x_seed: _type_
     :param x_pred: _description_
-    :type x_pred: _type_
     :param y_true: _description_
-    :type y_true: _type_
     :param nca: _description_
-    :type nca: _type_
     :return: _description_
-    :rtype: _type_
     """
     batch_size = x_pred.shape[0]
     image_width = x_pred.shape[2]
@@ -102,15 +114,10 @@ def show_batch_classification(x_seed, x_pred, y_true, nca):
     _summary_
 
     :param x_seed: _description_
-    :type x_seed: _type_
     :param x_pred: _description_
-    :type x_pred: _type_
     :param y_true: _description_
-    :type y_true: _type_
     :param nca: _description_
-    :type nca: _type_
     :return: _description_
-    :rtype: _type_
     """
     batch_size = x_pred.shape[0]
     image_width = x_pred.shape[2]
@@ -152,11 +159,22 @@ def show_batch_classification(x_seed, x_pred, y_true, nca):
     show_image_row(ax[2], images, vmin=-1, vmax=nca.num_classes, cmap="Set3")
 
     figure.subplots_adjust(wspace=-0.8, hspace=0)
-
     return figure
 
 
 def show_batch_binary_segmentation(x_seed, x_pred, y_true, nca):
+    """
+    Visualize batch of binary segmentation results.
+
+    :param x_seed: _description_
+    :param x_pred: _description_
+    :param y_true: _description_
+    :param nca: _description_
+    :return: _description_
+    """
+    plt.rcParams["font.family"] = "sans-serif"
+    plt.rcParams["font.sans-serif"] = ["Calibri", "Arial"]
+
     batch_size = x_pred.shape[0]
 
     figure, ax = plt.subplots(
@@ -166,22 +184,34 @@ def show_batch_binary_segmentation(x_seed, x_pred, y_true, nca):
     # 1st row: input image
     images = x_seed[:, : nca.num_image_channels, :, :]
     images = np.permute_dims(images, (0, 2, 3, 1))
-    show_image_row(ax[0], np.clip(images, 0.0, 1.0), label="Image")
+    show_image_row(ax[0], np.clip(images, 0.0, 1.0), label="INPUT")
 
     # 2nd row: true segmentation
     masks_true = y_true
-    show_image_row(ax[1], np.clip(masks_true, 0.0, 1.0), cmap="gray", label="GT Mask")
+    show_image_row(
+        ax[1], np.clip(masks_true, 0.0, 1.0), cmap="gray", label="GROUND TRUTH"
+    )
 
     # 3rd row: prediction
-    masks_pred = x_pred[..., -nca.num_output_channels :]
-    show_image_row(ax[2], np.clip(masks_pred, 0.0, 1.0), cmap="gray", label="Pred.")
+    masks_pred = x_pred[:, -nca.num_output_channels :, :, :]
+    show_image_row(
+        ax[2], np.clip(masks_pred, 0.0, 1.0), cmap="gray", label="PREDICTION"
+    )
 
-    figure.subplots_adjust(wspace=-0.8, hspace=0)
-
+    figure.subplots_adjust()
     return figure
 
 
 def show_batch_depth(x_seed, x_pred, y_true, nca):
+    """
+    _summary_
+
+    :param x_seed: _description_
+    :param x_pred: _description_
+    :param y_true: _description_
+    :param nca: _description_
+    :return: _description_
+    """
     batch_size = x_pred.shape[0]
 
     figure, ax = plt.subplots(
@@ -189,27 +219,43 @@ def show_batch_depth(x_seed, x_pred, y_true, nca):
     )
 
     # 1st row: input image
-    images = x_seed[..., : nca.num_image_channels]
-    show_image_row(ax[0], np.clip(images, 0.0, 1.0), label="Image")
+    images = x_seed[:, : nca.num_image_channels, :, :]
+    show_image_row(ax[0], np.clip(images, 0.0, 1.0), label="INPUT")
 
     # 2nd row: true segmentation
     images = y_true
     show_image_row(
-        ax[1], np.clip(images, 0.0, 1.0), cmap="magma", label="GT Depth", colorbar=True
+        ax[1],
+        np.clip(images, 0.0, 1.0),
+        cmap="magma",
+        label="GROUND TRUTH",
+        colorbar=True,
     )
 
     # 3rd row: prediction
-    images = x_pred[..., -1]
+    images = x_pred[:, -1, :, :]
     show_image_row(
-        ax[2], np.clip(images, 0.0, 1.0), cmap="magma", label="Pred.", colorbar=True
+        ax[2],
+        np.clip(images, 0.0, 1.0),
+        cmap="magma",
+        label="PREDICTION",
+        colorbar=True,
     )
 
     figure.subplots_adjust(wspace=-0.8, hspace=0)
-
     return figure
 
 
 def show_batch_growing(x_seed, x_pred, y_true, nca):
+    """
+    Show batch of growing NCA images and predictions.
+
+    :param x_seed: _description_
+    :param x_pred: _description_
+    :param y_true: _description_
+    :param nca: _description_
+    :return: _description_
+    """
     batch_size = x_pred.shape[0]
 
     figure, ax = plt.subplots(
@@ -218,12 +264,10 @@ def show_batch_growing(x_seed, x_pred, y_true, nca):
 
     # 1st row: true image
     images = y_true[:, : nca.num_image_channels, :, :]
-    show_image_row(ax[0], images)
+    show_image_row(ax[0], images, label="GROUND TRUTH")
 
     # 2nd row: prediction
     images = x_pred[:, : nca.num_image_channels, :, :]
-    show_image_row(ax[1], np.clip(images, 0.0, 1.0))
-
-    figure.subplots_adjust(wspace=-0.8, hspace=0)
-
+    show_image_row(ax[1], np.clip(images, 0.0, 1.0), label="PREDICTION", x_index=True)
+    figure.subplots_adjust(wspace=-0.0, hspace=-0.5)
     return figure

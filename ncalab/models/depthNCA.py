@@ -20,8 +20,6 @@ class SmoothnessLoss(nn.Module):
         super(SmoothnessLoss, self).__init__()
 
     def forward(self, depth_map: torch.Tensor, rgb_image: torch.Tensor):
-        """ """
-
         # Ensure the inputs are in the right shape
         assert depth_map.dim() == 4
         assert rgb_image.dim() == 4
@@ -65,6 +63,10 @@ class SmoothnessLoss(nn.Module):
 
 
 class DepthNCAModel(BasicNCAModel):
+    """
+    NCA model for monocular depth estimation.
+    """
+
     def __init__(
         self,
         device: torch.device,
@@ -77,13 +79,12 @@ class DepthNCAModel(BasicNCAModel):
         pad_noise: bool = False,
         **kwargs,
     ):
-        """
-        NCA model for monocular depth estimation.
-        """
         super(DepthNCAModel, self).__init__(
             device,
             num_image_channels,
             num_hidden_channels,
+            plot_function=show_batch_depth,
+            validation_metric="ssim",
             num_output_channels=1,
             fire_rate=fire_rate,
             hidden_size=hidden_size,
@@ -95,9 +96,7 @@ class DepthNCAModel(BasicNCAModel):
             pad_noise=pad_noise,
             **kwargs,
         )
-        self.plot_function = show_batch_depth
         self.vignette = None
-        self.validation_metric = "ssim"
 
     def loss(self, image: torch.Tensor, label: torch.Tensor) -> Dict[str, torch.Tensor]:
         """

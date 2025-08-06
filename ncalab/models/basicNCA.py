@@ -8,6 +8,7 @@ import torch.nn as nn  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
 
 from ..autostepper import AutoStepper
+from ..prediction import Prediction
 from ..utils import pad_input
 
 
@@ -22,6 +23,8 @@ class BasicNCAModel(nn.Module):
         num_image_channels: int,
         num_hidden_channels: int,
         num_output_channels: int,
+        plot_function: Optional[Callable] = None,
+        validation_metric: Optional[str] = None,
         fire_rate: float = 0.5,
         hidden_size: int = 128,
         use_alive_mask: bool = False,
@@ -74,14 +77,15 @@ class BasicNCAModel(nn.Module):
         self.pad_noise = pad_noise
         self.autostepper = autostepper
         self.use_temporal_encoding = use_temporal_encoding
-
-        # set by subclassing functions
-        self.plot_function: Optional[Callable] = None
-        self.validation_metric: Optional[str] = None
+        self.plot_function = plot_function
+        self.validation_metric = validation_metric
 
         self._define_filters(num_learned_filters)
 
         # define model structure
+        self._define_network()
+
+    def _define_network(self):
         input_vector_size = self.num_channels * (self.num_filters + 1)
         if self.use_temporal_encoding:
             input_vector_size += 1
@@ -103,7 +107,7 @@ class BasicNCAModel(nn.Module):
                 padding=0,
                 kernel_size=1,
             ),
-        ).to(device)
+        ).to(self.device)
 
         # initialize final layer with 0
         with torch.no_grad():
@@ -137,8 +141,7 @@ class BasicNCAModel(nn.Module):
             sobel_x = np.outer([1, 2, 1], [-1, 0, 1]) / 8.0
             sobel_y = sobel_x.T
             laplace = np.array([[0, 1, 0], [1, -4, 1], [0, 1, 0]])
-            self.filters.append(sobel_x)
-            self.filters.append(sobel_y)
+            self.filters.extend([sobel_x, sobel_y])
             if self.use_laplace:
                 self.filters.append(laplace)
             self.num_filters = len(self.filters)
@@ -154,7 +157,7 @@ class BasicNCAModel(nn.Module):
         """
         return x
 
-    def __alive(self, x):
+    def _alive(self, x):
         mask = (
             F.max_pool2d(
                 x[:, 3, :, :],
@@ -190,11 +193,12 @@ class BasicNCAModel(nn.Module):
         dx = torch.cat(perception, 1)
         return dx
 
-    def _update(self, x: torch.Tensor, step):
+    def _update(self, x: torch.Tensor, step: int) -> torch.Tensor:
         """
         Compute residual cell update.
 
         :param x [torch.Tensor]: Input tensor, BCWH
+        :param step [int]: Current timestep, required for computing temporal encoding.
         """
         assert x.shape[1] == self.num_channels
 
@@ -218,40 +222,33 @@ class BasicNCAModel(nn.Module):
         self,
         x: torch.Tensor,
         steps: int = 1,
-    ) -> torch.Tensor | Tuple[torch.Tensor, int]:
+    ) -> Prediction:
         """
         :param x [torch.Tensor]: Input image, padded along the channel dimension, BCWH.
         :param steps [int]: Time steps in forward pass.
 
-        :returns: Output image (BCWH)
+        :returns [Prediction]: Prediction object.
         """
         if self.autostepper is None:
             for step in range(steps):
                 dx = self._update(x, step)
                 x = x + dx
-            return x, steps
 
-        # invariant: auto_min_steps > 0, so both of these will be defined when used
-        hidden_i: torch.Tensor | None = None
-        hidden_i_1: torch.Tensor | None = None
+                # Alive masking
+                if self.use_alive_mask:
+                    life_mask = self._alive(x)
+                    life_mask = life_mask
+                    x = x.permute(1, 0, 2, 3)  # B C W H --> C B W H
+                    x = x * life_mask.float()
+                    x = x.permute(1, 0, 2, 3)  # C B W H --> B C W H
+            return Prediction(self, steps, x)
+
+
         for step in range(self.autostepper.max_steps):
-            with torch.no_grad():
-                if (
-                    step >= self.autostepper.min_steps
-                    and hidden_i is not None
-                    and hidden_i_1 is not None
-                ):
-                    # normalized absolute difference between two hidden states
-                    score = (hidden_i - hidden_i_1).abs().sum() / (
-                        hidden_i.shape[0]
-                        * hidden_i.shape[1]
-                        * hidden_i.shape[2]
-                        * hidden_i.shape[3]
-                    )
-                    if self.autostepper.check(step, score):
-                        return x, step
+            if self.autostepper.check(step):
+                return Prediction(self, step, x)
             # save previous hidden state
-            hidden_i_1 = x[
+            self.autostepper.hidden_i_1 = x[
                 :,
                 self.num_image_channels : self.num_image_channels
                 + self.num_hidden_channels,
@@ -264,20 +261,21 @@ class BasicNCAModel(nn.Module):
 
             # Alive masking
             if self.use_alive_mask:
-                life_mask = self.__alive(x)
+                life_mask = self._alive(x)
                 life_mask = life_mask
                 x = x.permute(1, 0, 2, 3)  # B C W H --> C B W H
                 x = x * life_mask.float()
                 x = x.permute(1, 0, 2, 3)  # C B W H --> B C W H
+
             # set current hidden state
-            hidden_i = x[
+            self.autostepper.hidden_i = x[
                 :,
                 self.num_image_channels : self.num_image_channels
                 + self.num_hidden_channels,
                 :,
                 :,
             ]
-        return x, self.autostepper.max_steps
+        return Prediction(self, self.autostepper.max_steps, x)
 
     def loss(self, image: torch.Tensor, label: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
@@ -317,11 +315,11 @@ class BasicNCAModel(nn.Module):
         """
         return {}
 
-    def predict(self, image: torch.Tensor, steps: int = 100) -> torch.Tensor:
+    def predict(self, image: torch.Tensor, steps: int = 100) -> Prediction:
         """
         :param image [torch.Tensor]: Input image, BCWH.
 
-        :returns [torch.Tensor]: Output image, BCWH
+        :returns [Prediction]: Prediction object.
         """
         assert steps >= 1
         assert image.shape[1] <= self.num_channels
@@ -330,19 +328,22 @@ class BasicNCAModel(nn.Module):
             x = image.clone()
             x = pad_input(x, self, noise=self.pad_noise)
             x = self.prepare_input(x)
-            x, _ = self.forward(x, steps=steps)  # type: ignore[assignment]
-            return x
+            prediction = self.forward(x, steps=steps)
+            return prediction
 
     def validate(
         self, image: torch.Tensor, label: torch.Tensor, steps: int
-    ) -> Optional[Tuple[Dict[str, float], torch.Tensor]]:
+    ) -> Optional[Tuple[Dict[str, float], Prediction]]:
         """
+        Make a prediction on an image of the validation set and return metrics computed
+        with respect to a labelled validation image.
+
         :param image [torch.Tensor]: Input image, BCWH
         :param label [torch.Tensor]: Ground truth label
         :param steps [int]: Inference steps
 
-        :returns [Tuple[float, torch.Tensor]]: Validation metric, predicted image BCWH
+        :returns [Tuple[float, Prediction]]: Validation metric, predicted image BCWH
         """
-        pred = self.predict(image.to(self.device), steps=steps)
-        metrics = self.metrics(pred, label.to(self.device))
-        return metrics, pred
+        prediction = self.predict(image.to(self.device), steps=steps)
+        metrics = self.metrics(prediction.output_image, label.to(self.device))
+        return metrics, prediction

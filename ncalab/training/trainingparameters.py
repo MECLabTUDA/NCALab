@@ -39,3 +39,27 @@ class TrainingParameters:
                 self._lr = 1e-2
         else:
             self._lr = lr
+        self._lr_gamma = lr_gamma
+        self._adam_betas = adam_betas
+
+    def info(self) -> str:
+        """
+        Shows a markdown-formatted info string with training parameters.
+        Useful for showing info on tensorboard to keep track of parameter changes.
+
+        :returns [str]: Markdown-formatted info string.
+        """
+        s = "BasicNCATrainer Info\n"
+        s += "-------------------\n"
+        for attribute in (
+            "_lr",
+            "_lr_gamma",
+            "_gradient_clipping",
+            "_adam_betas",
+            "_batch_repeat",
+            "_max_epochs",
+            "_optimizer_method",
+        ):
+            attribute_f = attribute.title().replace("_", " ")
+            s += f"**{attribute_f}:** {getattr(self, attribute)}\n"
+        return s

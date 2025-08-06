@@ -46,6 +46,8 @@ class SegmentationNCAModel(BasicNCAModel):
             num_image_channels,
             num_hidden_channels,
             num_output_channels=num_classes,
+            plot_function=show_batch_binary_segmentation,
+            validation_metric="Dice",
             fire_rate=fire_rate,
             hidden_size=hidden_size,
             use_alive_mask=False,
@@ -55,29 +57,28 @@ class SegmentationNCAModel(BasicNCAModel):
             autostepper=autostepper,
             **kwargs,
         )
-        self.plot_function = show_batch_binary_segmentation
-        self.validation_metric = "Dice"
+
 
     def loss(self, image: torch.Tensor, label: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
         Compute Dice + BCE loss.
 
-        :param image [torch.Tensor]: Input image, BWHC.
+        :param image [torch.Tensor]: Input image, BCWH.
         :param label [torch.Tensor]: Ground truth.
 
         :returns: Dictionary of identifiers mapped to computed losses.
         """
         assert len(image.shape) == 4, "Expecting a four-dimensional Tensor."
         assert (
-            image.shape[-1] == self.num_channels
-        ), "Image dimensions need to have BWHC order."
+            image.shape[1] == self.num_channels
+        ), "Image dimensions need to have BCWH order."
         class_channels = image[
-            ..., self.num_image_channels + self.num_hidden_channels :
+            :, self.num_image_channels + self.num_hidden_channels :, :, :
         ]
 
         loss_segmentation_function = DiceBCELoss()
         loss_segmentation = loss_segmentation_function(
-            class_channels.permute(0, 3, 1, 2),
+            class_channels,
             label,
         )
 
@@ -92,8 +93,8 @@ class SegmentationNCAModel(BasicNCAModel):
         :param label [torch.Tensor]: Ground truth label.
         """
         outputs = pred[
-            ..., self.num_image_channels + self.num_hidden_channels :
-        ].permute(0, 3, 1, 2)
+            :, self.num_image_channels + self.num_hidden_channels :, :, :
+        ]
         tp, fp, fn, tn = smp.metrics.get_stats(
             outputs.cpu(),
             label[:, None, :, :].cpu().long(),

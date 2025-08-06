@@ -1,6 +1,8 @@
 from __future__ import annotations
-import torch
+import os
 from pathlib import PosixPath, Path
+
+import torch
 
 from ..models.basicNCA import BasicNCAModel
 
@@ -34,12 +36,12 @@ def export_header(
 ):
     ## prepare preamble
     # guard
-    preamble = "#pragma once\n"
+    preamble = f"#pragma once{os.linesep}"
     # add imports if any
     if imports:
         for header in imports:
-            preamble += f'#include "{header}"'
-    preamble += "\n\n"
+            preamble += f'#include "{header}"{os.linesep}'
+    preamble += f"{os.linesep}{os.linesep}"
 
     with open(outfile, "w") as f:
         f.write(preamble)
