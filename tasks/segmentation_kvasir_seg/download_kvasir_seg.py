@@ -8,10 +8,8 @@ import hashlib
 import shutil
 
 import click
-import requests
+import requests  # type: ignore[import-untyped]
 import tqdm
-
-from pathlib import Path
 
 KVASIR_SEG_URL = "https://datasets.simula.no/downloads/kvasir-seg.zip"
 KVASIR_SEG_CHECKSUM = "03b30e21d584e04facf49397a2576738fd626815771afbbf788f74a7153478f7"

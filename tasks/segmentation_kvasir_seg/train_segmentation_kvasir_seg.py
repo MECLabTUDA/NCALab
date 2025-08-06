@@ -32,7 +32,7 @@ from torch.utils.data import Dataset, Subset
 
 
 class KvasirSegDataset(Dataset):
-    def __init__(self, path: Path | PosixPath, transform=None) -> None:
+    def __init__(self, path: Path | PosixPath, transform) -> None:
         super().__init__()
         self.path = path
         self.image_filenames = sorted((path / "Kvasir-SEG" / "images").glob("*.jpg"))
@@ -58,7 +58,7 @@ class KvasirSegDataset(Dataset):
 
 
 def train_segmentation_kvasir_seg(batch_size: int, hidden_channels: int):
-    writer = SummaryWriter()
+    writer = SummaryWriter(comment="Segmentation Kvasir-SEG")
 
     device = get_compute_device("cuda:0")
 
