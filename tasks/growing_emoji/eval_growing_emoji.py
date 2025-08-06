@@ -8,7 +8,6 @@ sys.path.append(root_dir)
 
 from ncalab import (
     GrowingNCAModel,
-    WEIGHTS_PATH,
     get_compute_device,
     print_NCALab_banner,
     fix_random_seed,
@@ -24,7 +23,8 @@ import matplotlib.animation as animation  # type: ignore[import-untyped]
 TASK_PATH = Path(__file__).parent
 FIGURE_PATH = TASK_PATH / "figures"
 FIGURE_PATH.mkdir(exist_ok=True)
-
+WEIGHTS_PATH = TASK_PATH / "weights"
+WEIGHTS_PATH.mkdir(exist_ok=True)
 
 @click.command()
 @click.option(
@@ -55,14 +55,14 @@ def eval_growing_emoji(gpu: bool, gpu_index: int):
 
     fig, ax = plt.subplots()
     fig.set_size_inches(2, 2)
-    im = ax.imshow(images[0], animated=True)
+    im = ax.imshow(images[0].transpose(1, 2, 0), animated=True)
     ax.set_axis_off()
     plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
     plt.margins(0, 0)
     plt.tight_layout()
 
     def update(i):
-        im.set_array(images[i])
+        im.set_array(images[i].transpose(1, 2, 0))
         return (im,)
 
     animation_fig = animation.FuncAnimation(

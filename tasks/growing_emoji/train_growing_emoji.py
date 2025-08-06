@@ -1,6 +1,7 @@
 #!/usr/bin/env python3
 import os
 import sys
+from pathlib import Path
 
 import click
 
@@ -17,7 +18,6 @@ from ncalab import (
     GrowingNCADataset,
     GrowingNCAModel,
     BasicNCATrainer,
-    WEIGHTS_PATH,
     get_compute_device,
     print_NCALab_banner,
     fix_random_seed,
@@ -25,6 +25,10 @@ from ncalab import (
 )
 
 from growing_utils import get_emoji_image
+
+TASK_PATH = Path(__file__).parent.resolve()
+WEIGHTS_PATH = TASK_PATH / "weights"
+WEIGHTS_PATH.mkdir(exist_ok=True)
 
 
 def train_growing_emoji(
