@@ -12,13 +12,11 @@ from ncalab import (
     SegmentationNCAModel,
     CascadeNCA,
     BasicNCATrainer,
-    WEIGHTS_PATH,
     get_compute_device,
     print_mascot,
 )
 
 from download_kvasir_seg import download_and_extract, KVASIR_SEG_PATH  # type: ignore[import-untyped]
-
 
 import albumentations as A  # type: ignore[import-untyped]
 from albumentations.pytorch import ToTensorV2  # type: ignore[import-untyped]
@@ -29,6 +27,10 @@ from sklearn.model_selection import train_test_split  # type: ignore[import-unty
 import torch
 from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import Dataset, Subset
+
+TASK_PATH = Path(__file__).parent.resolve()
+WEIGHTS_PATH = TASK_PATH / "weights"
+WEIGHTS_PATH.mkdir(exist_ok=True)
 
 
 class KvasirSegDataset(Dataset):
@@ -99,7 +101,7 @@ def train_segmentation_kvasir_seg(batch_size: int, hidden_channels: int):
         val_split, shuffle=True, batch_size=batch_size, drop_last=True
     )
 
-    trainer = BasicNCATrainer(cascade, WEIGHTS_PATH / "segmentation_kvasir_seg.pth")
+    trainer = BasicNCATrainer(cascade, WEIGHTS_PATH / "segmentation_kvasir_seg")
     trainer.train(
         loader_train,
         loader_val,
