@@ -1,4 +1,34 @@
-@article{kalkhof2023m3dnca,
+@article{hunter2007matplotlib,
+  title = {Matplotlib: {{A 2D}} Graphics Environment},
+  author = {Hunter, J. D.},
+  year = {2007},
+  journal = {Computing in Science \& Engineering},
+  volume = {9},
+  number = {3},
+  pages = {90--95},
+  publisher = {IEEE COMPUTER SOC},
+  doi = {10.1109/MCSE.2007.55},
+  abstract = {Matplotlib is a 2D graphics package used for Python for application development, interactive scripting, and publication-quality image generation across user interfaces and operating systems.}
+}
+
+@misc{jha2019kvasirseg,
+  title = {Kvasir-{{SEG}}: {{A Segmented Polyp Dataset}}},
+  shorttitle = {Kvasir-{{SEG}}},
+  author = {Jha, Debesh and Smedsrud, Pia H. and Riegler, Michael A. and Halvorsen, P{\aa}l and de Lange, Thomas and Johansen, Dag and Johansen, H{\aa}vard D.},
+  year = {2019},
+  month = nov,
+  number = {arXiv:1911.07069},
+  eprint = {1911.07069},
+  primaryclass = {eess},
+  publisher = {arXiv},
+  doi = {10.48550/arXiv.1911.07069},
+  urldate = {2025-08-12},
+  abstract = {Pixel-wise image segmentation is a highly demanding task in medical-image analysis. In practice, it is difficult to find annotated medical images with corresponding segmentation masks. In this paper, we present Kvasir-SEG: an open-access dataset of gastrointestinal polyp images and corresponding segmentation masks, manually annotated by a medical doctor and then verified by an experienced gastroenterologist. Moreover, we also generated the bounding boxes of the polyp regions with the help of segmentation masks. We demonstrate the use of our dataset with a traditional segmentation approach and a modern deep-learning based Convolutional Neural Network (CNN) approach. The dataset will be of value for researchers to reproduce results and compare methods. By adding segmentation masks to the Kvasir dataset, which only provide frame-wise annotations, we enable multimedia and computer vision researchers to contribute in the field of polyp segmentation and automatic analysis of colonoscopy images.},
+  archiveprefix = {arXiv},
+  keywords = {Computer Science - Computer Vision and Pattern Recognition,Electrical Engineering and Systems Science - Image and Video Processing}
+}
+
+@article{kalkhof2023m3dncaa,
   title = {{{M3D-NCA}}: {{Robust 3D Segmentation}} with {{Built-in Quality Control}}},
   author = {Kalkhof, John and Mukhopadhyay, A.},
   year = {2023},
@@ -29,10 +59,29 @@
   urldate = {2025-07-10},
   abstract = {Despite considerable success, large Denoising Diffusion Models (DDMs) with UNet backbone pose practical challenges, particularly on limited hardware and in processing gigapixel images. To address these limitations, we introduce two Neural Cellular Automata (NCA)-based DDMs: Diff-NCA and FourierDiff-NCA. Capitalizing on the local communication capabilities of NCA, Diff-NCA significantly reduces the parameter counts of NCA-based DDMs. Integrating Fourier-based diffusion enables global communication early in the diffusion process. This feature is particularly valuable in synthesizing complex images with important global features, such as the CelebA dataset. We demonstrate that even a 331k parameter Diff-NCA can generate 512x512 pathology slices, while FourierDiff-NCA (1.1m parameters) reaches a three times lower FID score of 43.86, compared to the four times bigger UNet (3.94m parameters) with a score of 128.2. Additionally, FourierDiff-NCA can perform diverse tasks such as super-resolution, out-of-distribution image synthesis, and inpainting without explicit training.},
   archiveprefix = {arXiv},
-  keywords = {Application:Medical Imaging,Dataset:CelebA,Neural Cellular Automata,Subject:Digital Pathology,Task:Synthesis},
+  keywords = {Application:Medical Imaging,Dataset:CelebA,Neural Cellular Automata,Subject:Digital Pathology,Task:Synthesis}
 }
 
-@article{krumb2025encapsulate,
+@article{kalkhof2025parameterefficient,
+  title = {Parameter-Efficient Diffusion with Neural Cellular Automata},
+  author = {Kalkhof, John and K{\"u}hn, Arlene and Frisch, Yannik and Mukhopadhyay, Anirban},
+  year = {2025},
+  month = may,
+  journal = {npj Unconventional Computing},
+  volume = {2},
+  number = {1},
+  pages = {10},
+  publisher = {Nature Publishing Group},
+  issn = {3004-8672},
+  doi = {10.1038/s44335-025-00026-4},
+  urldate = {2025-07-10},
+  abstract = {Traditional Denoising Diffusion Models (DDMs) with UNet backbones are over-parameterized, compromising their effectiveness on limited hardware and in processing gigapixel images. To address this inefficiency, we introduce two Neural Cellular Automata (NCA)-based DDMs: Diff-NCA and FourierDiff-NCA. Leveraging the efficient local communication of NCA, Diff-NCA drastically reduces parameter counts, effectively generating 512 {\texttimes} 512 pathology slices with just 336k parameters. Extending this approach, FourierDiff-NCA integrates Fourier-based diffusion to facilitate early global communication, essential for handling complex datasets such as CelebA. With only 1.1 m parameters, it achieves a more than two times lower FID score of 49.48 compared to the four times larger UNet, which scores 128.2. This performance disparity underscores the utility of NCA-based methods in enhancing parameter efficiency. FourierDiff-NCA also demonstrates versatility by performing tasks such as super-resolution, out-of-distribution image synthesis, and inpainting without task-specific training.},
+  copyright = {2025 The Author(s)},
+  langid = {english},
+  keywords = {Application:Medical Imaging,Dataset:BCSS,Dataset:CelebA,Neural Cellular Automata,Subject:Digital Pathology,tagme,Task:Image Synthesis}
+}
+
+@article{krumb2025encapsulatea,
   title = {{{eNCApsulate}}: Neural Cellular Automata for Precision Diagnosis on Capsule Endoscopes},
   shorttitle = {{{eNCApsulate}}},
   author = {Krumb, Henry John and Mukhopadhyay, Anirban},
@@ -44,7 +93,40 @@
   urldate = {2025-07-10},
   abstract = {Wireless capsule endoscopy (WCE) is a noninvasive imaging method for the entire gastrointestinal tract and is a pain-free alternative to traditional endoscopy. It generates extensive video data that requires significant review time, and localizing the capsule after ingestion is a challenge. Techniques like bleeding detection and depth estimation can help with localization of pathologies, but deep learning models are typically too large to run directly on the capsule.},
   langid = {english},
-  keywords = {Application:Medical Imaging,Dataset:KID2,Dataset:KvasirCapsule,Modality:WCE,Neural Cellular Automata,Subject:Intestine,Task:Depth Estimation,Task:Segmentation},
+  keywords = {Application:Medical Imaging,Dataset:KID2,Dataset:KvasirCapsule,Modality:WCE,Neural Cellular Automata,Subject:Intestine,Task:Depth Estimation,Task:Segmentation}
+}
+
+@article{mordvintsev2020growingb,
+  title = {Growing {{Neural Cellular Automata}}},
+  author = {Mordvintsev, Alexander and Randazzo, Ettore and Niklasson, Eyvind and Levin, Michael},
+  year = {2020},
+  month = feb,
+  journal = {Distill},
+  volume = {5},
+  number = {2},
+  pages = {e23},
+  issn = {2476-0757},
+  doi = {10.23915/distill.00023},
+  urldate = {2025-08-12},
+  abstract = {Training an end-to-end differentiable, self-organising cellular automata model of morphogenesis, able to both grow and regenerate specific patterns.},
+  langid = {english}
+}
+
+@misc{paszke2019pytorch,
+  title = {{{PyTorch}}: {{An Imperative Style}}, {{High-Performance Deep Learning Library}}},
+  shorttitle = {{{PyTorch}}},
+  author = {Paszke, Adam and Gross, Sam and Massa, Francisco and Lerer, Adam and Bradbury, James and Chanan, Gregory and Killeen, Trevor and Lin, Zeming and Gimelshein, Natalia and Antiga, Luca and Desmaison, Alban and K{\"o}pf, Andreas and Yang, Edward and DeVito, Zach and Raison, Martin and Tejani, Alykhan and Chilamkurthy, Sasank and Steiner, Benoit and Fang, Lu and Bai, Junjie and Chintala, Soumith},
+  year = {2019},
+  month = dec,
+  number = {arXiv:1912.01703},
+  eprint = {1912.01703},
+  primaryclass = {cs},
+  publisher = {arXiv},
+  doi = {10.48550/arXiv.1912.01703},
+  urldate = {2025-08-12},
+  abstract = {Deep learning frameworks have often focused on either usability or speed, but not both. PyTorch is a machine learning library that shows that these two goals are in fact compatible: it provides an imperative and Pythonic programming style that supports code as a model, makes debugging easy and is consistent with other popular scientific computing libraries, while remaining efficient and supporting hardware accelerators such as GPUs. In this paper, we detail the principles that drove the implementation of PyTorch and how they are reflected in its architecture. We emphasize that every aspect of PyTorch is a regular Python program under the full control of its user. We also explain how the careful and pragmatic implementation of the key components of its runtime enables them to work together to achieve compelling performance. We demonstrate the efficiency of individual subsystems, as well as the overall speed of PyTorch on several common benchmarks.},
+  archiveprefix = {arXiv},
+  keywords = {Computer Science - Machine Learning,Computer Science - Mathematical Software,Statistics - Machine Learning}
 }
 
 @article{ranem2024ncamorph,
@@ -54,4 +136,10 @@
   journal = {British Machine Vision Conference},
   volume = {abs/2410.22265},
   keywords = {Application:Medical Imaging,Neural Cellular Automata,tagme,Task:Registration}
+}
+
+@misc{torcheval,
+  title = {{{TorchEval}} --- {{TorchEval}} Main Documentation},
+  urldate = {2025-08-12},
+  howpublished = {https://docs.pytorch.org/torcheval/stable/}
 }

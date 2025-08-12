@@ -13,6 +13,8 @@ authors:
   - name: Richard Sattel
     orcid: 0009-0003-1060-3462
     affiliation: 1
+  - name: Jonathan Dewenter
+    affiliation: 1
   - name: Dennis Grotz
     affiliation: 1
   - name: Anirban Mukhopadhyay
@@ -32,26 +34,25 @@ bibliography: paper.bib
 
 # Summary
 
-
 Neural Cellular Automata (NCA) are lightweight neural network models that can be employed in various image analysis tasks such as image segmentation, classification and generation.
-These models are recently getting attention in the medical imaging community, thanks to their small size, their robustness and their overall versatility.
-In terms of accuracy, they are often on-par with state-of-the art models, while being orders of magnitude smaller in size.
+Initially proposed in 2020 [@mordvintsev2020growingb], these models are recently getting attention thanks to their small size, their robustness and their overall versatility.
+In terms of accuracy, they are often on-par with state-of-the art models for the respective downstream task, while being orders of magnitude smaller in size.
 However, the training dynamics of NCAs are not yet fully understood, and there is potential for investigating practical tweaks to increase accuracy, reduce VRAM requirements and increase the overall training stability.
 `NCALab` provides a unified and extensible research framework for training and evaluating NCAs, conducting hyperparameter searches and prototyping applications that build on NCAs for image processing.
 
 
 # Statement of Need
 
-NCAs are recently gaining attention in medical imaging, where they are deployed for various modalities in different downstream tasks, including 3D prostate segmentation on MRI [@kalkhof2023mednca] [@kalkhof2023m3dnca], image registration [@ranem2024ncamorph] or image synthesis [@kalkhof2024frequencytime,@kalkhof2025parameterefficient].
+NCAs are recently gaining attention especially in medical imaging, where they are deployed for various modalities in different downstream tasks, including 3D prostate segmentation on MRI [@kalkhof2023mednca] [@kalkhof2023m3dncaa], image registration [@ranem2024ncamorph] or image synthesis [@kalkhof2024frequencytime,@kalkhof2025parameterefficient].
 In most cases, they outperform other Convolutional Neural Network or Vision Transformer architectures in terms of model size and robustness, while yielding similarly accurate predictions.
 However, there is no unified framework or reference implementation for training, evaluating and experimentation with NCAs.
 
 Research code for Neural Cellular Automata is typically organized in individual repositories for each downstream task under investigation.
-Code bases often follow different approaches, even though the underlying architecture is universal; in most cases, it can be defined by the number of input channels, hidden channels and output channels and the weights of the trained network.
+Code bases often follow different approaches, even though the underlying architecture is in most parts universal; in most cases, it can be defined by the number of input channels, hidden channels and output channels and the weights of the trained network.
 
 The goal of NCALab is to provide a uniform and easy-to-use code base for various downstream tasks with NCAs in a shared project.
 Within minutes, researchers and practitioners should be able to create prototypes for their ideas, inspired by the numerous example tasks provided in this code repository.
-Code quality is ensured by unit tests and automated static code analysis through mypy (type checking) and flake8 (linting).
+Code quality is ensured by unit tests and automated static code analysis through mypy (type checking) and ruff (linting).
 
 # Features
 
@@ -60,8 +61,7 @@ NCALab provides dedicated models and example tasks for recurring image analysis 
 * Growing Neural Cellular Automata for emoji generation and other experiments
 * Pixel-wise image segmentation
 * Image classification
-* Per-pixel image classification
-* Monocular depth estimation
+* Per-pixel image classification (MNIST digits)
 
 Until now, NCALab provides the following key features:
 
@@ -73,20 +73,15 @@ Until now, NCALab provides the following key features:
 * Visualization and animation of the NCA inference process
 
 
-# Example use case: Training and Fine-Tuning
-
-```python
-
-```
-
-
 # Ongoing Research
 
-A conference paper utilizing NCALab was recently accepted for presentation in [IPCAI 2025](https://ipcai.org), and was published in the _International Journal of Computer-Assisted Radiology and Surgery_ (@krumb2025encapsulate).
+A conference paper utilizing NCALab was recently accepted for presentation in [IPCAI 2025](https://ipcai.org), and was published in the _International Journal of Computer-Assisted Radiology and Surgery_ [@krumb2025encapsulatea].
 
 
 # Acknowledgements
 
 This work is partially supported by Norwegian Research Council project number 322600 (Capsnetwork).
+
+NCALab depends on pytorch [@paszke2019pytorch], numpy, matplotlib [@hunter2007matplotlib].
 
 # References
