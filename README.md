@@ -1,6 +1,6 @@
 # NCALab
 
-NCALab makes it easy to create Neural Cellular Automata (NCA) implementations for various downstream tasks, such as image segmentation, classification and generation.
+NCALab makes it easy to create Neural Cellular Automata (NCA) implementations for various downstream tasks, such as image segmentation, classification and synthesis.
 
 
 ![docs](https://github.com/MECLabTUDA/NCAlab/actions/workflows/docs.yml/badge.svg)
@@ -45,18 +45,21 @@ So far, the following example tasks are implemented in NCALab:
 
 You can find those example tasks inside the `tasks/` directory and its subfolders.
 
+
+### Growing Lizard Example
+
 A good starting point to get started with NCAs is the famous Growing Lizard emoji example.
 
 
 ```bash
-python3 tasks/growing_emoji/train_growing_emoji.py
+uv run tasks/growing_emoji/train_growing_emoji.py
 ```
 
 
 Run this script to generate a GIF of the trained model's prediction:
 
 ```bash
-python3 tasks/growing_emoji/eval_growing_emoji.py
+uv run tasks/growing_emoji/eval_growing_emoji.py
 ```
 
 ![NCALab Logo](artwork/growing_emoji.gif)
@@ -67,22 +70,54 @@ python3 tasks/growing_emoji/eval_growing_emoji.py
 Run
 
 ```bash
+pip install ncalab
+```
+
+to install the latest release or
+
+```bash
 pip install git+https://github.com/MECLabTUDA/NCAlab
 ```
 
-to install the most recent version of NCALab.
+for the most recent commit of NCALab.
 We recommend to install NCALab in a virtual environment.
 
 
 ## Tensorboard integration
 
-We recommend your training progress in Tensorboard.
+We recommend you to monitor your training progress in Tensorboard.
 To launch tensorboard, run
 
 ```bash
-tensorboard --logdir=runs
+uv run tensorboard --logdir=runs
 ```
 
 in a separate terminal.
 Once it is running, it should show you the URL the tensorboard server is running on, which is [localhost:6006](https://localhost:6006) by default.
 Alternatively, you may use the tensorboard integration of your IDE.
+
+
+# For Developers
+
+Type checking:
+
+```bash
+uv run mypy ncalab
+```
+
+Static code analysis:
+
+```bash
+uv run ruff check ncalab
+```
+
+Testing:
+
+```bash
+uv run pytest
+```
+
+
+# How to Cite
+
+Coming soon.
