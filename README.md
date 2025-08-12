@@ -59,7 +59,7 @@ Run this script to generate a GIF of the trained model's prediction:
 uv run tasks/growing_emoji/eval_growing_emoji.py
 ```
 
-![NCALab Logo](artwork/growing_emoji.gif)
+![Animation of a growing lizard emoji](artwork/growing_emoji.gif)
 
 
 ### Installation
