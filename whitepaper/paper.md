@@ -38,7 +38,7 @@ Neural Cellular Automata (NCA) are lightweight neural network models that can be
 Initially proposed in 2020 [@mordvintsev2020growingb], these models are recently getting attention thanks to their small size, their robustness and their overall versatility.
 In terms of accuracy, they are often on-par with state-of-the art models for the respective downstream task, while being orders of magnitude smaller in size.
 However, the training dynamics of NCAs are not yet fully understood, and there is potential for investigating practical tweaks to increase accuracy, reduce VRAM requirements and increase the overall training stability.
-`NCALab` provides a unified and extensible research framework for training and evaluating NCAs, conducting hyperparameter searches and prototyping applications that build on NCAs for image processing.
+`NCALab` provides a unified and extensible research framework for training and evaluating NCAs, conducting structured hyperparameter searches and prototyping applications that use NCAs for image processing.
 
 
 # Statement of Need
@@ -52,8 +52,6 @@ Code bases often follow different approaches, even though the underlying archite
 
 The goal of NCALab is to provide a uniform and easy-to-use code base for various downstream tasks with NCAs in a shared project.
 Within minutes, researchers and practitioners should be able to create prototypes for their ideas, inspired by the numerous example tasks provided in this code repository.
-Code quality is ensured by unit tests ([pytest](https://pytest.org)) and automated static code analysis through [mypy](https://mypy-lang.org/) and [ruff](https://docs.astral.sh/ruff/).
-NCALab uses [uv](https://astral.sh/blog/uv) for fast and simplified dependency management.
 
 # Features
 
@@ -68,7 +66,7 @@ Until now, NCALab provides the following key features:
 
 * Simplified creation, loading and training of NCA models for different downstream image analysis tasks
 * Streamlined grid search for model and training hyperparameters
-* Tensorboard integration to easily monitor training progress
+* Tensorboard integration to monitor training progress
 * k-fold cross validation
 * Finetuning by re-training the final layer of an NCA
 * Visualization and animation of the NCA inference process
@@ -78,11 +76,16 @@ Until now, NCALab provides the following key features:
 
 A conference paper utilizing NCALab was recently accepted for presentation in [IPCAI 2025](https://ipcai.org), and was published in the _International Journal of Computer-Assisted Radiology and Surgery_ [@krumb2025encapsulatea].
 
+# Dependencies and Tooling
+
+NCALab mostly builds on pytorch [@paszke2019pytorch], numpy [@harris2020array] and matplotlib [@hunter2007matplotlib].
+Code quality is ensured by unit tests ([pytest](https://pytest.org)) and automated static code analysis through [mypy](https://mypy-lang.org/) and [ruff](https://docs.astral.sh/ruff/).
+The project uses [uv](https://astral.sh/blog/uv) for fast and simplified dependency management.
+Code documentation is generated through [Sphinx](https://www.sphinx-doc.org/en/master/index.html) and is automatically uploaded to [readthedocs](https://ncalab.readthedocs.io/en/latest/).
+Releases of NCALab can be downloaded from the Python Package Index ([pip](https://pypi.org/project/ncalab/)).
 
 # Acknowledgements
 
 This work is partially supported by Norwegian Research Council project number 322600 (Capsnetwork).
-
-NCALab builds upon pytorch [@paszke2019pytorch], numpy [@harris2020array] and matplotlib [@hunter2007matplotlib].
 
 # References
