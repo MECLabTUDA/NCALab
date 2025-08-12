@@ -74,7 +74,7 @@ def train_class_pathmnist(
         lambda_activity=lambda_activity,
         filter_padding="circular",
         pad_noise=pad_noise,
-        plot_function=VisualMultiImageClassification,
+        plot_function=VisualMultiImageClassification(),
     )
     trainer = BasicNCATrainer(
         nca,
