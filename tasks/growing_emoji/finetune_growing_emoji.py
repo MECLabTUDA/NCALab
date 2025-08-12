@@ -2,6 +2,7 @@
 # -*- coding: UTF-8 -*-
 import os
 import sys
+from pathlib import Path
 
 import click
 
@@ -21,13 +22,15 @@ from ncalab import (
     GrowingNCADataset,
     GrowingNCAModel,
     BasicNCATrainer,
-    WEIGHTS_PATH,
     get_compute_device,
     print_NCALab_banner,
     print_mascot,
     fix_random_seed,
 )
 
+TASK_PATH = Path(__file__).parent.resolve()
+WEIGHTS_PATH = TASK_PATH / "weights"
+WEIGHTS_PATH.mkdir(exist_ok=True)
 
 def finetune_growing_emoji(
     batch_size: int, hidden_channels: int, gpu: bool, gpu_index: int
@@ -66,7 +69,7 @@ def finetune_growing_emoji(
     # Run initial training
     writer = SummaryWriter(comment="Growing Emoji: Pre-Training")
     trainer = BasicNCATrainer(
-        nca, WEIGHTS_PATH / "growing_emoji_finetuned.pth", gradient_clipping=True
+        nca, WEIGHTS_PATH / "growing_emoji_finetuned", gradient_clipping=True
     )
     trainer.max_epochs = 5000
     trainer.train(loader_lizard, summary_writer=writer, save_every=100)
