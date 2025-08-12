@@ -283,9 +283,9 @@ class BasicNCATrainer:
                     summary_writer.add_figure("Training Batch", figure, iteration)
 
                 # VALIDATION
-                self.nca.eval()
-                val_acc = 0.0
                 if dataloader_val is not None:
+                    self.nca.eval()
+                    val_acc = 0.0
                     all_metrics: Dict[str, List[float]] = {}
                     for sample in dataloader_val:
                         x, y = sample
@@ -309,9 +309,10 @@ class BasicNCATrainer:
                         if earlystopping is not None:
                             earlystopping.step(val_acc)
                     history.update(iteration, self.nca, val_acc)
-                elif (iteration + 1) % save_every == 0:
+                else:
                     history.update(iteration, self.nca, 0, overwrite=True)
-                history.save()
+                if (iteration + 1) % save_every == 0:
+                    history.save()
         # After training: Compute metrics on test set for training summary
         with torch.no_grad():
             history.metrics = {}
