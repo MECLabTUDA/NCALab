@@ -5,6 +5,7 @@ tags:
   - Neural Cellular Automata
   - Image Generation
   - Medical Image Segmentation
+  - Medical Image Analysis
 authors:
   - name: Henry J. Krumb
     orcid: 0000-0001-8189-4752
@@ -23,7 +24,7 @@ authors:
 affiliations:
  - name: Technische Universität Darmstadt, Germany
    index: 1
-date: 3 April 2025
+date: 12 August 2025
 bibliography: paper.bib
 
 # Optional fields if submitting to a AAS journal too, see this blog post:
@@ -52,45 +53,49 @@ A systematic analysis is difficult, as the research code of NCA contributions is
 Code bases often follow different approaches, even though the underlying architecture is in most parts universal -- in most cases, it can be defined by the number of input channels, hidden channels and output channels and the weights of the trained network.
 Since there is currently no unified framework, deployment of NCA models in practical applications (or as part of other learning pipelines) remains difficult.
 
-The goal of NCALab is to provide a uniform and easy-to-use code base for various downstream tasks with NCAs as a packaged Python module.
+The goal of `NCALab` is to provide a uniform and easy-to-use code base for various downstream tasks with NCAs as a packaged Python module.
 Within minutes, researchers and practitioners should be able to create prototypes for their ideas, inspired by the example tasks provided in this code repository.
 
 
 # Features
 
-NCALab provides dedicated models and example tasks for image analysis tasks, such as:
+`NCALab` provides dedicated models and example tasks for image analysis tasks, such as:
 
-* Growing Neural Cellular Automata for emoji generation akin to Mordvintsev et al. [@mordvintsev2020growingb].
-* Per-pixel image classification (MNIST digits), similar to the work of Randazzo et al. [@randazzo2020selfclassifying].
-* Pixel-wise medical image segmentation (Endoscopic images, Kvasir-SEG [@jha2019kvasirseg]).
-* Multi-class medical image classification (MedMNIST [@yang2023medmnist]).
+* Growing Neural Cellular Automata for emoji generation from a single pixel, akin to Mordvintsev et al. [@mordvintsev2020growingb].
+* Self-classifying MNIST digits, similar to the work of Randazzo et al. [@randazzo2020selfclassifying].
+* Pixel-wise medical image segmentation of Endoscopic images on the Kvasir-SEG [@jha2019kvasirseg] dataset.
+* Multi-class medical image classification on subsets of the MedMNIST [@yang2023medmnist] image dataset.
 
 Until now, NCALab provides the following key features:
 
-* Simplified creation, loading and training of NCA models for different downstream image analysis tasks
+* Simplified creation, loading and training of NCA models for various image analysis tasks
 * Streamlined grid search for model and training hyperparameters
 * Tensorboard integration to monitor training progress
 * k-fold cross validation
+* Control over various hyperparameters of NCAs
 * Finetuning by re-training the final layer of an NCA
 * Visualization and animation of the NCA inference process
 
 
 # Ongoing Research
 
-A conference paper utilizing NCALab was recently accepted for presentation in [IPCAI 2025](https://ipcai.org), and was published in the _International Journal of Computer-Assisted Radiology and Surgery_ [@krumb2025encapsulatea].
-In this paper, NCALab is used to train models for image segmentation and monocular depth estimation.
+A conference paper utilizing `NCALab` was recently accepted for presentation in [IPCAI 2025](https://ipcai.org), and was published in the _International Journal of Computer-Assisted Radiology and Surgery_ [@krumb2025encapsulatea].
+In this paper, `NCALab` is used to train models for image segmentation and monocular depth estimation.
 The trained models are exported to C headers and ported to a microcontroller.
+
 
 # Dependencies and Tooling
 
-NCALab mostly builds on pytorch [@paszke2019pytorch], numpy [@harris2020array] and matplotlib [@hunter2007matplotlib].
+`NCALab` mostly builds on pytorch [@paszke2019pytorch], numpy [@harris2020array] and matplotlib [@hunter2007matplotlib].
 Code quality is ensured by unit tests ([pytest](https://pytest.org)) and automated static code analysis through [mypy](https://mypy-lang.org/) and [ruff](https://docs.astral.sh/ruff/).
 The project uses [uv](https://astral.sh/blog/uv) for fast and simplified dependency management.
 Code documentation is generated through [Sphinx](https://www.sphinx-doc.org/en/master/index.html) and is automatically uploaded to [readthedocs](https://ncalab.readthedocs.io/en/latest/).
-Releases of NCALab can be downloaded from the Python Package Index ([pip](https://pypi.org/project/ncalab/)).
+Releases of `NCALab` can be downloaded from the Python Package Index ([pip](https://pypi.org/project/ncalab/)).
+
 
 # Acknowledgements
 
 This work is partially supported by Norwegian Research Council project number 322600 (Capsnetwork).
+
 
 # References
