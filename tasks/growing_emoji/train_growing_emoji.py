@@ -71,7 +71,7 @@ def train_growing_emoji(
         max_epochs=max_epochs,
         pool=pool,
     )
-    trainer.train(dataloader_train, summary_writer=writer, save_every=100)
+    trainer.train(dataloader_train, summary_writer=writer, save_every=500)
     writer.close()
 
 

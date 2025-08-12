@@ -32,16 +32,14 @@ TASK_PATH = Path(__file__).parent.resolve()
 WEIGHTS_PATH = TASK_PATH / "weights"
 WEIGHTS_PATH.mkdir(exist_ok=True)
 
+
 def finetune_growing_emoji(
     batch_size: int, hidden_channels: int, gpu: bool, gpu_index: int
 ):
     print_NCALab_banner()
     print_mascot(
-        "Things are getting really exciting now!\n"
         "You're about to finetune a pre-trained NCA\n"
         "by adjusting only its final layer.\n"
-        "\n"
-        "That's pretty cool, isn't it?"
     )
     print()
 
@@ -68,11 +66,9 @@ def finetune_growing_emoji(
 
     # Run initial training
     writer = SummaryWriter(comment="Growing Emoji: Pre-Training")
-    trainer = BasicNCATrainer(
-        nca, WEIGHTS_PATH / "growing_emoji_finetuned", gradient_clipping=True
-    )
+    trainer = BasicNCATrainer(nca, WEIGHTS_PATH / "growing_emoji_finetuned")
     trainer.max_epochs = 5000
-    trainer.train(loader_lizard, summary_writer=writer, save_every=100)
+    trainer.train(loader_lizard, summary_writer=writer, save_every=500)
     writer.close()
 
     # So far so good.

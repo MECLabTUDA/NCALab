@@ -49,7 +49,7 @@ def eval_growing_emoji(gpu: bool, gpu_index: int):
 
     nca.load_state_dict(
         torch.load(
-            WEIGHTS_PATH / "ncalab_growing_emoji" / "ncalab_growing_emoji.pth",
+            WEIGHTS_PATH / "ncalab_growing_emoji" / "last_model.pth",
             weights_only=True,
         )
     )
