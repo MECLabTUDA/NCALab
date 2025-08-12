@@ -10,7 +10,8 @@ class GrowingNCADataset(Dataset):
         num_channels: int,
         batch_size: int = 8,
     ):
-        """Dedicated dataset for "growing" tasks, like growing emoji.
+        """
+        Dedicated dataset for "growing" tasks, like growing emoji.
 
         The idea is to train a model solely for the purpose to generate ("grow")
         a fixed image. Hence, this Dataset class only stores multiple copies of the
