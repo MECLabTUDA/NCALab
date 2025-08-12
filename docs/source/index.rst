@@ -5,8 +5,8 @@ Welcome to NCALab's documentation!
    :maxdepth: 2
    :caption: Contents:
 
-   intro_ncalab
    intro_nca
+   intro_ncalab
    example_growing
    example_selfclass
    training
