@@ -2,7 +2,7 @@ from typing import Dict, Optional
 
 from .basicNCA import BasicNCAModel, AutoStepper
 
-from ..visualization import show_batch_depth
+from ..visualization import VisualDepthEstimation
 
 import torch  # type: ignore[import-untyped]
 import torch.nn as nn  # type: ignore[import-untyped]
@@ -83,7 +83,7 @@ class DepthNCAModel(BasicNCAModel):
             device,
             num_image_channels,
             num_hidden_channels,
-            plot_function=show_batch_depth,
+            plot_function=VisualDepthEstimation(),
             validation_metric="ssim",
             num_output_channels=1,
             fire_rate=fire_rate,

@@ -92,9 +92,7 @@ class CascadeNCA(BasicNCAModel):
         models = [backbone for _ in scales]
         self.models = nn.ModuleList(models)
 
-    def forward(
-        self, x: torch.Tensor, *args, **kwargs
-    ) -> Prediction:
+    def forward(self, x: torch.Tensor, *args, **kwargs) -> Prediction:
         """
         :param x [torch.Tensor]: Input image tensor, BCWH.
         :param steps [int]: Unused, as steps are defined in constructor.

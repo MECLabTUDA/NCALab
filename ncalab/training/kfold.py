@@ -7,7 +7,7 @@ from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader
 
 from .trainer import BasicNCATrainer
-from .trainingsummary import TrainingSummary
+from .traininghistory import TrainingHistory
 
 
 class TrainValRecord:
@@ -132,7 +132,7 @@ class KFoldCrossValidationTrainer:
         transform,
         batch_sizes: None | Dict = None,
         save_every: int | None = None,
-    ) -> List[TrainingSummary]:
+    ) -> List[TrainingHistory]:
         """
         Run training loop with a single function call.
 
@@ -143,12 +143,12 @@ class KFoldCrossValidationTrainer:
         :param save_every [int]: _description_. Defaults to None.
         :param plot_function: Plot function override. If None, use model's default. Defaults to None.
 
-        :returns [List[TrainingSummary]]: List of TrainingSummary objects, one per fold.
+        :returns [List[TrainingHistory]]: List of TrainingHistory objects, one per fold.
         """
         k = len(self.split)
         summaries = []
         for i in range(k):
-            experiment_name = f"{self.model_name}_fold{i:02d}.pth"
+            experiment_name = f"{self.model_name}_fold{i:02d}"
             writer = SummaryWriter(comment=experiment_name)
 
             dataloaders = self.split[i].dataloaders(

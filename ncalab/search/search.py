@@ -12,9 +12,7 @@ from ..training import BasicNCATrainer  # for type hint
 
 
 class ParameterSet:
-    """
-
-    """
+    """ """
 
     def __init__(self, **kwargs):
         """ """

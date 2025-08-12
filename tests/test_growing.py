@@ -31,13 +31,11 @@ def test_growing_training():
     dataloader_train = DataLoader(dataset, batch_size=8, shuffle=False)
 
     try:
-        trainer = BasicNCATrainer(
-            nca, None, max_epochs=3
-        )
+        trainer = BasicNCATrainer(nca, None, max_epochs=3)
     except Exception as e:
-        pytest.fail(e)
+        pytest.fail(str(e))
 
     try:
         trainer.train(dataloader_train, save_every=100)
     except Exception as e:
-        pytest.fail(e)
+        pytest.fail(str(e))

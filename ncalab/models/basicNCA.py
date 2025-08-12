@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Callable, Optional, Dict, Tuple
+from typing import Any, Dict, Optional, Tuple
 
 import numpy as np
 
@@ -10,6 +10,7 @@ import torch.nn.functional as F  # type: ignore[import-untyped]
 from ..autostepper import AutoStepper
 from ..prediction import Prediction
 from ..utils import pad_input
+from ..visualization import Visual
 
 
 class BasicNCAModel(nn.Module):
@@ -23,7 +24,7 @@ class BasicNCAModel(nn.Module):
         num_image_channels: int,
         num_hidden_channels: int,
         num_output_channels: int,
-        plot_function: Optional[Callable] = None,
+        plot_function: Optional[Visual] = None,
         validation_metric: Optional[str] = None,
         fire_rate: float = 0.5,
         hidden_size: int = 128,
@@ -46,7 +47,7 @@ class BasicNCAModel(nn.Module):
         :param num_output_channels [int]: Number of output channels.
         :param fire_rate [float]: Fire rate for stochastic weight update. Defaults to 0.5.
         :param hidden_size [int]: Number of neurons in hidden layer. Defaults to 128.
-        :param use_alive_mask [bool]: Whether to use alive masking during training. Defaults to False.
+        :param use_alive_mask [bool]: Whether to use alive masking (channel 3) during training. Defaults to False.
         :param immutable_image_channels [bool]: If image channels should be fixed during inference, which is the case for most segmentation or classification problems. Defaults to True.
         :param num_learned_filters [int]: Number of learned filters. If zero, use two sobel filters instead. Defaults to 2.
         :param filter_padding [str]: Padding type to use. Might affect reliance on spatial cues. Defaults to "circular".
@@ -80,16 +81,17 @@ class BasicNCAModel(nn.Module):
         self.plot_function = plot_function
         self.validation_metric = validation_metric
 
+        # define input filters
         self._define_filters(num_learned_filters)
 
         # define model structure
-        self._define_network()
+        self.network = self._define_network().to(self.device)
 
     def _define_network(self):
         input_vector_size = self.num_channels * (self.num_filters + 1)
         if self.use_temporal_encoding:
             input_vector_size += 1
-        self.network = nn.Sequential(
+        network = nn.Sequential(
             nn.Conv2d(
                 in_channels=input_vector_size,
                 out_channels=self.hidden_size,
@@ -107,11 +109,11 @@ class BasicNCAModel(nn.Module):
                 padding=0,
                 kernel_size=1,
             ),
-        ).to(self.device)
-
+        )
         # initialize final layer with 0
         with torch.no_grad():
-            self.network[-1].weight.data.fill_(0)
+            network[-1].weight.data.fill_(0)
+        return network
 
     def _define_filters(self, num_learned_filters: int):
         """
@@ -134,9 +136,9 @@ class BasicNCAModel(nn.Module):
                         padding_mode=self.filter_padding,
                         groups=self.num_channels,
                         bias=False,
-                    ).to(self.device)
+                    )
                 )
-            self.filters = nn.ModuleList(filters)
+            self.filters = nn.ModuleList(filters).to(self.device)
         else:
             sobel_x = np.outer([1, 2, 1], [-1, 0, 1]) / 8.0
             sobel_y = sobel_x.T
@@ -185,9 +187,13 @@ class BasicNCAModel(nn.Module):
         perception = [x]
         perception.extend([_perceive_with(x, w) for w in self.filters])
         if self.use_temporal_encoding:
+            normalization = 100
+            if self.autostepper is not None:
+                normalization = self.autostepper.max_steps
             perception.append(
                 torch.mul(
-                    torch.ones((x.shape[0], 1, x.shape[2], x.shape[3])), step / 100
+                    torch.ones((x.shape[0], 1, x.shape[2], x.shape[3])),
+                    step / normalization,
                 ).to(self.device)
             )
         dx = torch.cat(perception, 1)
@@ -242,7 +248,6 @@ class BasicNCAModel(nn.Module):
                     x = x * life_mask.float()
                     x = x.permute(1, 0, 2, 3)  # C B W H --> B C W H
             return Prediction(self, steps, x)
-
 
         for step in range(self.autostepper.max_steps):
             if self.autostepper.check(step):
@@ -347,3 +352,6 @@ class BasicNCAModel(nn.Module):
         prediction = self.predict(image.to(self.device), steps=steps)
         metrics = self.metrics(prediction.output_image, label.to(self.device))
         return metrics, prediction
+
+    def to_dict(self) -> Dict[str, Any]:
+        return dict()

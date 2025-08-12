@@ -7,7 +7,7 @@ import numpy as np
 
 from .basicNCA import AutoStepper, BasicNCAModel
 from ..prediction import Prediction
-from ..visualization import show_batch_growing
+from ..visualization import VisualGrowing
 
 
 class GrowingNCAModel(BasicNCAModel):
@@ -40,7 +40,7 @@ class GrowingNCAModel(BasicNCAModel):
             device,
             num_image_channels,
             num_hidden_channels,
-            plot_function=show_batch_growing,
+            plot_function=VisualGrowing(),
             num_output_channels=0,
             fire_rate=fire_rate,
             hidden_size=hidden_size,
@@ -99,11 +99,7 @@ class GrowingNCAModel(BasicNCAModel):
                     prediction = self.forward(x, steps=1)  # type: ignore[assignment]
                     step_outs.append(
                         np.clip(
-                            prediction.image_channels
-                            .squeeze(0)
-                            .detach()
-                            .cpu()
-                            .numpy(),
+                            prediction.image_channels.squeeze(0).detach().cpu().numpy(),
                             0,
                             1,
                         )
@@ -112,8 +108,6 @@ class GrowingNCAModel(BasicNCAModel):
                 return step_outs
             else:
                 prediction = self.forward(x, steps=steps)  # type: ignore[assignment]
-            out_np = (
-                prediction.image_channels.detach().cpu().numpy().squeeze(0)
-            )
+            out_np = prediction.image_channels.detach().cpu().numpy().squeeze(0)
             out_np = np.clip(out_np, 0, 1)
             return out_np

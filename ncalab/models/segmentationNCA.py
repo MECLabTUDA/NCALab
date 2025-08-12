@@ -5,7 +5,7 @@ import segmentation_models_pytorch as smp  # type: ignore[import-untyped]
 
 from .basicNCA import AutoStepper, BasicNCAModel
 from ..losses import DiceBCELoss
-from ..visualization import show_batch_binary_segmentation
+from ..visualization import VisualBinaryImageSegmentation
 
 
 class SegmentationNCAModel(BasicNCAModel):
@@ -46,7 +46,7 @@ class SegmentationNCAModel(BasicNCAModel):
             num_image_channels,
             num_hidden_channels,
             num_output_channels=num_classes,
-            plot_function=show_batch_binary_segmentation,
+            plot_function=VisualBinaryImageSegmentation(),
             validation_metric="Dice",
             fire_rate=fire_rate,
             hidden_size=hidden_size,
@@ -57,7 +57,6 @@ class SegmentationNCAModel(BasicNCAModel):
             autostepper=autostepper,
             **kwargs,
         )
-
 
     def loss(self, image: torch.Tensor, label: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
@@ -85,16 +84,14 @@ class SegmentationNCAModel(BasicNCAModel):
         loss = loss_segmentation
         return {"total": loss}
 
-    def metrics(self, pred: torch.Tensor, label: torch.Tensor):
+    def metrics(self, pred: torch.Tensor, label: torch.Tensor) -> Dict[str, float]:
         """
         Return dict of standard evaluation metrics.
 
         :param pred [torch.Tensor]: Predicted image.
         :param label [torch.Tensor]: Ground truth label.
         """
-        outputs = pred[
-            :, self.num_image_channels + self.num_hidden_channels :, :, :
-        ]
+        outputs = pred[:, self.num_image_channels + self.num_hidden_channels :, :, :]
         tp, fp, fn, tn = smp.metrics.get_stats(
             outputs.cpu(),
             label[:, None, :, :].cpu().long(),

@@ -6,8 +6,7 @@ import matplotlib.animation as animation  # type: ignore[import-untyped]
 
 class NCAAnimator:
     def __init__(self, nca, x, steps=100):
-        """
-        """
+        """ """
         fig, ax = plt.subplots()
         fig.set_size_inches(2, 2)
         im = ax.imshow(x[0, :3].permute(0, 2, 3, 1).cpu(), animated=True)
@@ -18,7 +17,7 @@ class NCAAnimator:
 
         def update(i):
             nonlocal x
-            x = nca(x) # --> BWHC
+            x = nca(x)  # --> BWHC
             im.set_array(x)
             return (im,)
 

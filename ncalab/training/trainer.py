@@ -1,8 +1,7 @@
 from __future__ import annotations
-import copy
 import logging
 from pathlib import Path, PosixPath  # for type hint
-from typing import Callable, Dict, Optional, List, Tuple
+from typing import Dict, Optional, List, Tuple
 
 import numpy as np
 
@@ -11,17 +10,16 @@ import torch.optim as optim  # type: ignore[import-untyped]
 from torch.utils.data import DataLoader  # for type hint
 from torch.utils.tensorboard import SummaryWriter  # for type hint
 
-from matplotlib.figure import Figure  # type: ignore[import-untyped]
-
 from tqdm import tqdm  # type: ignore[import-untyped]
 
 from ..models.basicNCA import BasicNCAModel  # for type hint
 from ..prediction import Prediction
 from ..utils import pad_input, unwrap
+from ..visualization import Visual
 
 from .earlystopping import EarlyStopping
 from .pool import Pool
-from .trainingsummary import TrainingSummary
+from .traininghistory import TrainingHistory
 
 
 class BasicNCATrainer:
@@ -32,7 +30,7 @@ class BasicNCATrainer:
     def __init__(
         self,
         nca: BasicNCAModel,
-        model_path: Optional[Path | PosixPath] = None,
+        model_path: Path | PosixPath,
         gradient_clipping: bool = False,
         steps_range: tuple = (90, 110),
         steps_validation: int = 100,
@@ -166,11 +164,9 @@ class BasicNCATrainer:
         dataloader_test: Optional[DataLoader] = None,
         save_every: Optional[int] = None,
         summary_writer: Optional[SummaryWriter] = None,
-        plot_function: Optional[
-            Callable[[np.ndarray, np.ndarray, np.ndarray, BasicNCAModel], Figure]
-        ] = None,
+        plot_function: Optional[Visual] = None,
         earlystopping: Optional[EarlyStopping] = None,
-    ) -> TrainingSummary:
+    ) -> TrainingHistory:
         """
         Execute basic NCA training loop with a single function call.
 
@@ -181,9 +177,11 @@ class BasicNCATrainer:
         :param plot_function: Plot function override. If None, use model's default. Defaults to None.
         :param earlystopping (EarlyStopping, optional): EarlyStopping object. Defaults to None.
 
-        :returns [TrainingSummary]: TrainingSummary object.
+        :returns [TrainingHistory]: TrainingHistory object.
         """
         logging.basicConfig(encoding="utf-8", level=logging.INFO)
+
+        history = TrainingHistory(self.model_path, {}, 0, self.nca)
 
         if save_every is None:
             save_every = 1
@@ -217,13 +215,6 @@ class BasicNCATrainer:
                 self.nca.parameters(), lr=self.lr, betas=self.adam_betas
             )
         scheduler = optim.lr_scheduler.ExponentialLR(optimizer, self.lr_gamma)
-        best_acc = 0.0
-        best_training_loss: float = np.inf
-        best_model = self.nca
-        if self.model_path:
-            best_path = Path(self.model_path).with_suffix(".best.pth")
-        else:
-            best_path = None
 
         # MAIN LOOP
         total_batch_iterations = 0
@@ -242,7 +233,7 @@ class BasicNCATrainer:
             for sample in gen:
                 x, y = sample  # x: BCWH, y: BWHC
                 if len(y.shape) == 4:
-                    y = y.permute(0, 3, 1, 2) # BWHC --> BCWH
+                    y = y.permute(0, 3, 1, 2)  # BWHC --> BCWH
 
                 # Typically, our dataloader supplies a binary, grayscale, RGB or RGBA image.
                 # But the NCA operates on multiple hidden channels and output channels, so we
@@ -276,11 +267,6 @@ class BasicNCATrainer:
                     all_losses.append(losses["total"].item())
 
             with torch.no_grad():
-                # SAVE TRAINING LOSS
-                mean_training_loss = np.mean(all_losses).astype(float)
-                if mean_training_loss < best_training_loss:
-                    best_training_loss = mean_training_loss
-
                 # VISUALIZATION
                 # TODO visualize samples in training and validation batches
                 if (
@@ -288,25 +274,25 @@ class BasicNCATrainer:
                     and summary_writer
                     and (iteration + 1) % save_every == 0
                 ):
-                    figure = plot_function(
-                        x.detach().cpu().numpy(),
-                        prediction.output_image.detach().cpu().numpy(),
-                        y.detach().cpu().numpy(),
+                    figure = plot_function.show(
                         self.nca,
+                        x.detach().cpu().numpy(),
+                        prediction,
+                        y.detach().cpu().numpy(),
                     )
                     summary_writer.add_figure("Training Batch", figure, iteration)
 
                 # VALIDATION
                 self.nca.eval()
-                if self.model_path:
-                    torch.save(self.nca.state_dict(), self.model_path)
-
+                val_acc = 0.0
                 if dataloader_val is not None:
                     all_metrics: Dict[str, List[float]] = {}
                     for sample in dataloader_val:
                         x, y = sample
                         # TODO: move validation/inference steps parameter to NCA model itself
-                        metrics, _ = unwrap(self.nca.validate(x, y, self.steps_validation))
+                        metrics, _ = unwrap(
+                            self.nca.validate(x, y, self.steps_validation)
+                        )
                         for name in metrics:
                             if name not in all_metrics:
                                 all_metrics[name] = []
@@ -319,27 +305,22 @@ class BasicNCATrainer:
                                 f"Acc/Val/{name}", avg_metrics[name], iteration
                             )
                     if self.nca.validation_metric in avg_metrics:
-                        val_acc = avg_metrics.get(self.nca.validation_metric, 0)
-                        if val_acc > best_acc:
-                            logging.info(
-                                f"Accuracy improvement: {best_acc:.5f} --> {val_acc:.5f}"
-                            )
-                            logging.info(f"  In Epoch {iteration}")
-                            if best_path:
-                                torch.save(self.nca.state_dict(), best_path)
-                            best_acc = val_acc
-                            best_model = copy.deepcopy(self.nca)
+                        val_acc = avg_metrics.get(self.nca.validation_metric, 0.0)
                         if earlystopping is not None:
                             earlystopping.step(val_acc)
+                    history.update(iteration, self.nca, val_acc)
+                elif (iteration + 1) % save_every == 0:
+                    history.update(iteration, self.nca, 0, overwrite=True)
+                history.save()
         # After training: Compute metrics on test set for training summary
         with torch.no_grad():
-            metrics = {}
-            if dataloader_test is not None:
-                best_model.eval()
+            history.metrics = {}
+            if dataloader_test is not None and history.best_model is not None:
+                history.best_model.eval()
                 for image, label in dataloader_test:
-                    metrics.update(
-                        best_model.metrics(
+                    history.metrics.update(
+                        history.best_model.metrics(
                             image.to(self.nca.device), label.to(self.nca.device)
                         )
                     )
-        return TrainingSummary(best_acc, best_path, best_training_loss, metrics)
+        return history

@@ -56,9 +56,7 @@ def test_depth_training():
     dataloader_train = DataLoader(dataset, batch_size=8, shuffle=False)
 
     try:
-        trainer = BasicNCATrainer(
-            nca, None, max_epochs=3
-        )
+        trainer = BasicNCATrainer(nca, None, max_epochs=3)
     except Exception as e:
         pytest.fail(str(e))
 
@@ -86,9 +84,7 @@ def test_depth_training_with_validation():
     dataloader_val = DataLoader(dataset, batch_size=8, shuffle=False)
 
     try:
-        trainer = BasicNCATrainer(
-            nca, None, max_epochs=3
-        )
+        trainer = BasicNCATrainer(nca, None, max_epochs=3)
     except Exception as e:
         pytest.fail(str(e))
 

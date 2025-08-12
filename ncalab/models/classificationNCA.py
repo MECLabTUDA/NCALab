@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Optional
 
 import torch  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
@@ -6,7 +6,9 @@ import torch.nn.functional as F  # type: ignore[import-untyped]
 import torchmetrics
 import torchmetrics.classification
 
+from ..autostepper import AutoStepper
 from .basicNCA import BasicNCAModel
+from ..visualization import VisualBinaryImageClassification, VisualMultiImageClassification
 
 
 class ClassificationNCAModel(BasicNCAModel):
@@ -17,39 +19,66 @@ class ClassificationNCAModel(BasicNCAModel):
         num_hidden_channels: int,
         num_classes: int,
         fire_rate: float = 0.8,
+        hidden_size: int = 128,
         use_alive_mask: bool = False,
         pixel_wise_loss: bool = False,
+        num_learned_filters: int = 2,
         filter_padding: str = "reflect",
+        use_laplace: bool = False,
+        kernel_size: int = 3,
         pad_noise: bool = False,
+        autostepper: Optional[AutoStepper] = None,
+        use_temporal_encoding: bool = False,
         **kwargs,
     ):
         """
-        :param device [torch.device]: Compute device.
+        Constructor.
+
+        :param device [device]: Pytorch device descriptor.
         :param num_image_channels [int]: _description_
         :param num_hidden_channels [int]: _description_
         :param num_classes [int]: _description_
-        :param fire_rate [float]: _description_. Defaults to 0.8.
-        :param use_alive_mask [bool]: _description_. Defaults to False.
+        :param fire_rate [float]: Fire rate for stochastic weight update. Defaults to 0.8.
+        :param hidden_size [int]: Number of neurons in hidden layer. Defaults to 128.
+        :param use_alive_mask [bool]: Whether to use alive masking (channel 3) during training. Defaults to False.
         :param pixel_wise_loss [bool]: Whether a prediction per pixel is desired, like in self-classifying MNIST. Defaults to False.
-        :param filter_padding [str]: _description_. Defaults to "reflect".
-        :param pad_noise [bool]: _description_. Defaults to False.
+        :param num_learned_filters [int]: Number of learned filters. If zero, use two sobel filters instead. Defaults to 2.
+        :param filter_padding [str]: Padding type to use. Might affect reliance on spatial cues. Defaults to "circular".
+        :param pad_noise [bool]: Whether to pad input image tensor with noise in hidden / output channels
         """
         super(ClassificationNCAModel, self).__init__(
-            device,
-            num_image_channels,
-            num_hidden_channels,
-            num_classes,
+            device=device,
+            num_image_channels=num_image_channels,
+            num_hidden_channels=num_hidden_channels,
+            num_output_channels=num_classes,
             fire_rate=fire_rate,
+            hidden_size=hidden_size,
             use_alive_mask=use_alive_mask,
             immutable_image_channels=True,
             plot_function=None,
             validation_metric="accuracy_micro",
             filter_padding=filter_padding,
+            use_laplace=use_laplace,
+            kernel_size=kernel_size,
             pad_noise=pad_noise,
-            **kwargs,
+            autostepper=autostepper,
+            use_temporal_encoding=use_temporal_encoding,
         )
-        self.num_classes = num_classes
+        self._num_classes = num_classes
         self.pixel_wise_loss = pixel_wise_loss
+        if num_classes < 2:
+            self.plot_function = VisualBinaryImageClassification()
+        else:
+            self.plot_function = VisualMultiImageClassification()
+
+    @property
+    def num_classes(self) -> int:
+        return self._num_classes
+
+    @num_classes.setter
+    def num_classes(self, x: int):
+        self._num_classes = x
+        self.num_output_channels = x
 
     def classify(
         self, image: torch.Tensor, steps: int = 100, reduce: bool = False
@@ -181,7 +210,9 @@ class ClassificationNCAModel(BasicNCAModel):
         ]
         y_prob = class_channels
         y_prob = torch.mean(y_prob, dim=(2, 3))
-        y_true = label.squeeze(1)
+        y_true = label
+        if len(y_true.shape) == 2:
+            y_true = label.squeeze(1)
 
         accuracy_macro_metric.update(y_prob, y_true)
         accuracy_micro_metric.update(y_prob, y_true)
