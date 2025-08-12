@@ -1,3 +1,5 @@
+from typing import Optional
+
 import numpy as np
 import torch
 
@@ -20,7 +22,7 @@ class Prediction:
         self.steps = steps
         assert output_image.shape[1] == model.num_channels
         self.output_image = output_image
-        self.output_array = output_image.detach().cpu().numpy()
+        self.output_array: Optional[np.ndarray] = None
 
     @property
     def image_channels(self) -> torch.Tensor:
@@ -59,6 +61,8 @@ class Prediction:
         """
         :returns [np.ndarray]: BCWH
         """
+        if self.output_array is None:
+            self.output_array = self.output_image.detach().cpu().numpy()
         return self.output_array[:, : self.model.num_image_channels, :, :]
 
     @property
@@ -66,6 +70,8 @@ class Prediction:
         """
         :returns [np.ndarray]: BCWH
         """
+        if self.output_array is None:
+            self.output_array = self.output_image.detach().cpu().numpy()
         return self.output_array[
             :,
             self.model.num_image_channels : self.model.num_hidden_channels
@@ -79,6 +85,8 @@ class Prediction:
         """
         :returns [np.ndarray]: BCWH
         """
+        if self.output_array is None:
+            self.output_array = self.output_image.detach().cpu().numpy()
         return self.output_array[
             :,
             -self.model.num_output_channels :,
