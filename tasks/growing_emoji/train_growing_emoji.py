@@ -67,7 +67,7 @@ def train_growing_emoji(
     # Create Trainer and run training
     trainer = BasicNCATrainer(
         nca,
-        WEIGHTS_PATH / "ncalab_growing_emoji.pth",
+        WEIGHTS_PATH / "ncalab_growing_emoji",
         max_epochs=max_epochs,
         pool=pool,
     )

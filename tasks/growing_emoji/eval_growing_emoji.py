@@ -26,6 +26,7 @@ FIGURE_PATH.mkdir(exist_ok=True)
 WEIGHTS_PATH = TASK_PATH / "weights"
 WEIGHTS_PATH.mkdir(exist_ok=True)
 
+
 @click.command()
 @click.option(
     "--gpu/--no-gpu", is_flag=True, default=True, help="Try using the GPU if available."
@@ -47,7 +48,10 @@ def eval_growing_emoji(gpu: bool, gpu_index: int):
     ).to(device)
 
     nca.load_state_dict(
-        torch.load(WEIGHTS_PATH / "ncalab_growing_emoji.pth", weights_only=True)
+        torch.load(
+            WEIGHTS_PATH / "ncalab_growing_emoji" / "ncalab_growing_emoji.pth",
+            weights_only=True,
+        )
     )
     nca.eval()
 

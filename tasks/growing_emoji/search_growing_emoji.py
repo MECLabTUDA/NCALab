@@ -66,7 +66,7 @@ def search_growing_emoji(
         # grid search parameters (iterable)
         lr=[1e-3, 16e-4],
         # fixed parameters
-        max_epochs=100
+        max_epochs=100,
     )
 
     # Set up hyperparameter search (grid search)
