@@ -4,6 +4,7 @@ for various downstream tasks. These functions are used
 for tensorboard "images" tab.
 """
 import matplotlib.pyplot as plt  # type: ignore[import-untyped]
+from matplotlib.figure import Figure  # type: ignore[import-untyped]
 import numpy as np
 
 from ..prediction import Prediction
@@ -77,14 +78,14 @@ class Visual:
 
     def show(
         self, model, image: np.ndarray, prediction: Prediction, label: np.ndarray
-    ) -> plt.Figure:
+    ) -> Figure:
         return NotImplemented
 
 
 class VisualBinaryImageClassification(Visual):
     def show(
         self, model, image: np.ndarray, prediction: Prediction, label: np.ndarray
-    ) -> plt.Figure:
+    ) -> Figure:
         batch_size, _, image_width, image_height = image.shape
 
         figure, ax = plt.subplots(
@@ -122,7 +123,7 @@ class VisualBinaryImageClassification(Visual):
 class VisualMultiImageClassification(Visual):
     def show(
         self, model, image: np.ndarray, prediction: Prediction, label: np.ndarray
-    ) -> plt.Figure:
+    ) -> Figure:
         batch_size, _, image_width, image_height = image.shape
 
         figure, ax = plt.subplots(
@@ -171,7 +172,7 @@ class VisualMultiImageClassification(Visual):
 class VisualBinaryImageSegmentation(Visual):
     def show(
         self, model, image: np.ndarray, prediction: Prediction, label: np.ndarray
-    ) -> plt.Figure:
+    ) -> Figure:
         batch_size = image.shape[0]
 
         figure, ax = plt.subplots(
@@ -201,7 +202,7 @@ class VisualBinaryImageSegmentation(Visual):
 class VisualDepthEstimation(Visual):
     def show(
         self, model, image: np.ndarray, prediction: Prediction, label: np.ndarray
-    ) -> plt.Figure:
+    ) -> Figure:
         batch_size = image.shape[0]
 
         figure, ax = plt.subplots(
@@ -238,7 +239,7 @@ class VisualDepthEstimation(Visual):
 class VisualGrowing(Visual):
     def show(
         self, model, image: np.ndarray, prediction: Prediction, label: np.ndarray
-    ) -> plt.Figure:
+    ) -> Figure:
         batch_size = image.shape[0]
 
         figure, ax = plt.subplots(
