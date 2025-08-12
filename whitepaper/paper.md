@@ -43,7 +43,7 @@ However, the training dynamics of NCAs are not yet fully understood, and there i
 
 # Statement of Need
 
-NCAs are recently gaining attention especially in medical imaging, where they are deployed for various modalities in different downstream tasks, including 3D prostate segmentation on MRI [@kalkhof2023mednca] [@kalkhof2023m3dncaa], image registration [@ranem2024ncamorph] or image synthesis [@kalkhof2024frequencytime,@kalkhof2025parameterefficient].
+NCAs are recently gaining attention especially in medical imaging, where they are deployed for various modalities in different downstream tasks, including 3D prostate segmentation on MRI [@kalkhof2023mednca] [@kalkhof2023m3dncaa], image registration [@ranem2024ncamorph] or image synthesis [@kalkhof2024frequencytime], [@kalkhof2025parameterefficient].
 In most cases, they outperform other Convolutional Neural Network or Vision Transformer architectures in terms of model size and robustness, while yielding similarly accurate predictions.
 However, there is no unified framework or reference implementation for training, evaluating and experimentation with NCAs.
 
@@ -52,16 +52,17 @@ Code bases often follow different approaches, even though the underlying archite
 
 The goal of NCALab is to provide a uniform and easy-to-use code base for various downstream tasks with NCAs in a shared project.
 Within minutes, researchers and practitioners should be able to create prototypes for their ideas, inspired by the numerous example tasks provided in this code repository.
-Code quality is ensured by unit tests and automated static code analysis through mypy (type checking) and ruff (linting).
+Code quality is ensured by unit tests ([pytest](https://pytest.org)) and automated static code analysis through [mypy](https://mypy-lang.org/) and [ruff](https://docs.astral.sh/ruff/).
+NCALab uses [uv](https://astral.sh/blog/uv) for fast and simplified dependency management.
 
 # Features
 
-NCALab provides dedicated models and example tasks for recurring image analysis tasks, such as:
+NCALab provides dedicated models and example tasks for image analysis tasks, such as:
 
-* Growing Neural Cellular Automata for emoji generation and other experiments
-* Pixel-wise image segmentation
-* Image classification
-* Per-pixel image classification (MNIST digits)
+* Growing Neural Cellular Automata for emoji generation akin to Mordvintsev et al. [@mordvintsev2020growingb].
+* Per-pixel image classification (MNIST digits), similar to the work of Randazzo et al. [@randazzo2020selfclassifying].
+* Pixel-wise medical image segmentation (Endoscopic images, Kvasir-SEG [@jha2019kvasirseg]).
+* Multi-class medical image classification (MedMNIST [@yang2023medmnist]).
 
 Until now, NCALab provides the following key features:
 
@@ -82,6 +83,6 @@ A conference paper utilizing NCALab was recently accepted for presentation in [I
 
 This work is partially supported by Norwegian Research Council project number 322600 (Capsnetwork).
 
-NCALab depends on pytorch [@paszke2019pytorch], numpy, matplotlib [@hunter2007matplotlib].
+NCALab builds upon pytorch [@paszke2019pytorch], numpy [@harris2020array] and matplotlib [@hunter2007matplotlib].
 
 # References
