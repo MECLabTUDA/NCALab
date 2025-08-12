@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from pathlib import Path
 import sys
 import os
 
@@ -8,9 +9,8 @@ sys.path.append(root_dir)
 from ncalab import (
     ClassificationNCAModel,
     BasicNCATrainer,
-    WEIGHTS_PATH,
-    show_batch_classification,
     get_compute_device,
+    VisualMultiImageClassification,
 )
 
 import click
@@ -21,6 +21,10 @@ import torch  # type: ignore[import-untyped]
 from torchvision import transforms  # type: ignore[import-untyped]
 from torchvision.transforms import v2  # type: ignore[import-untyped]
 from torch.utils.tensorboard import SummaryWriter  # type: ignore[import-untyped]
+
+TASK_PATH = Path(__file__).parent.resolve()
+WEIGHTS_PATH = TASK_PATH / "weights"
+WEIGHTS_PATH.mkdir(exist_ok=True)
 
 
 def train_class_bloodmnist(
@@ -71,10 +75,11 @@ def train_class_bloodmnist(
         lambda_activity=lambda_activity,
         fire_rate=0.5,
         pad_noise=pad_noise,
+        plot_function=VisualMultiImageClassification,
     )
     trainer = BasicNCATrainer(
         nca,
-        WEIGHTS_PATH / "selfclass_bloodmnist.pth",
+        WEIGHTS_PATH / "selfclass_bloodmnist",
         batch_repeat=2,
         gradient_clipping=gradient_clipping,
         steps_range=(64, 96),
@@ -84,7 +89,6 @@ def train_class_bloodmnist(
         loader_train,
         loader_val,
         summary_writer=writer,
-        plot_function=show_batch_classification,
     )
     writer.close()
 

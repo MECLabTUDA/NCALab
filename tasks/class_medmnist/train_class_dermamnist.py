@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from pathlib import Path
 import sys
 import os
 
@@ -8,10 +9,9 @@ sys.path.append(root_dir)
 from ncalab import (
     ClassificationNCAModel,
     BasicNCATrainer,
-    WEIGHTS_PATH,
-    show_batch_classification,
     get_compute_device,
     print_NCALab_banner,
+    VisualMultiImageClassification,
 )
 
 import numpy as np
@@ -23,6 +23,10 @@ import torch  # type: ignore[import-untyped]
 from torchvision import transforms  # type: ignore[import-untyped]
 from torchvision.transforms import v2  # type: ignore[import-untyped]
 from torch.utils.tensorboard import SummaryWriter  # type: ignore[import-untyped]
+
+TASK_PATH = Path(__file__).parent.resolve()
+WEIGHTS_PATH = TASK_PATH / "weights"
+WEIGHTS_PATH.mkdir(exist_ok=True)
 
 
 def train_class_dermamnist(
@@ -38,8 +42,8 @@ def train_class_dermamnist(
     alive_mask = False
     use_temporal_encoding = True
 
-    comment = ""
-    comment += f"hidden_{hidden_channels}"
+    comment = "DermaMNIST"
+    comment += f"_hidden_{hidden_channels}"
     comment += f"_gc_{gradient_clipping}"
     comment += f"_noise_{pad_noise}"
     comment += f"_AM_{alive_mask}"
@@ -56,7 +60,7 @@ def train_class_dermamnist(
             v2.ConvertImageDtype(dtype=torch.float32),
             transforms.RandomHorizontalFlip(),
             transforms.RandomVerticalFlip(),
-            transforms.Normalize((0.5,), (0.5,)),
+            transforms.Normalize((0.5,), (0.225,)),
         ]
     )
 
@@ -106,32 +110,29 @@ def train_class_dermamnist(
         fire_rate=0.8,
         pad_noise=pad_noise,
         use_temporal_encoding=use_temporal_encoding,
-        filter_padding="zeros",
-        learned_filters=0,
-        use_laplace=True,
+        plot_function=VisualMultiImageClassification,
     )
 
     trainer = BasicNCATrainer(
         nca,
-        WEIGHTS_PATH / "classification_dermamnist.pth",
+        WEIGHTS_PATH / "classification_dermamnist",
         batch_repeat=2,
         max_epochs=1000,
         gradient_clipping=gradient_clipping,
-        steps_range=(48, 49),
-        steps_validation=48,
+        steps_range=(80, 81),
+        steps_validation=80,
     )
     trainer.train(
         loader_train,
         loader_val,
         summary_writer=writer,
-        plot_function=show_batch_classification,
     )
     writer.close()
 
 
 @click.command()
 @click.option("--batch-size", "-b", default=8, type=int)
-@click.option("--hidden-channels", "-H", default=40, type=int)
+@click.option("--hidden-channels", "-H", default=30, type=int)
 @click.option(
     "--gpu/--no-gpu", is_flag=True, default=True, help="Try using the GPU if available."
 )

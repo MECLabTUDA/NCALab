@@ -1,4 +1,5 @@
 #!/usr/bin/env python3
+from pathlib import Path
 import sys
 import os
 
@@ -8,9 +9,8 @@ sys.path.append(root_dir)
 from ncalab import (
     ClassificationNCAModel,
     BasicNCATrainer,
-    WEIGHTS_PATH,
-    show_batch_classification,
     get_compute_device,
+    VisualMultiImageClassification,
 )
 
 import click
@@ -21,6 +21,10 @@ import torch  # type: ignore[import-untyped]
 from torchvision import transforms  # type: ignore[import-untyped]
 from torchvision.transforms import v2  # type: ignore[import-untyped]
 from torch.utils.tensorboard import SummaryWriter  # type: ignore[import-untyped]
+
+TASK_PATH = Path(__file__).parent.resolve()
+WEIGHTS_PATH = TASK_PATH / "weights"
+WEIGHTS_PATH.mkdir(exist_ok=True)
 
 
 def train_class_pathmnist(
@@ -70,10 +74,11 @@ def train_class_pathmnist(
         lambda_activity=lambda_activity,
         filter_padding="circular",
         pad_noise=pad_noise,
+        plot_function=VisualMultiImageClassification,
     )
     trainer = BasicNCATrainer(
         nca,
-        WEIGHTS_PATH / "selfclass_pathmnist.pth",
+        WEIGHTS_PATH / "selfclass_pathmnist",
         batch_repeat=2,
         max_epochs=100,
         gradient_clipping=gradient_clipping,
@@ -84,7 +89,6 @@ def train_class_pathmnist(
         loader_train,
         loader_val,
         summary_writer=writer,
-        plot_function=show_batch_classification,
     )
     writer.close()
 

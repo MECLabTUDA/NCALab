@@ -17,7 +17,8 @@ from torchvision.transforms import v2  # type: ignore[import-untyped]
 
 import numpy as np
 
-from torcheval.metrics import MulticlassAccuracy, MulticlassAUROC, MulticlassF1Score
+import torchmetrics
+import torchmetrics.classification
 
 from tqdm import tqdm
 
@@ -67,17 +68,23 @@ def eval_selfclass_pathmnist(
     nca = nca.to(device)
     nca.eval()
 
-    macro_acc = MulticlassAccuracy(average="macro", num_classes=num_classes)
-    micro_acc = MulticlassAccuracy(average="micro", num_classes=num_classes)
-    macro_auc = MulticlassAUROC(
+    macro_acc = torchmetrics.classification.MulticlassAccuracy(
+        average="macro", num_classes=num_classes
+    )
+    micro_acc = torchmetrics.classification.MulticlassAccuracy(
+        average="micro", num_classes=num_classes
+    )
+    macro_auc = torchmetrics.classification.MulticlassAUROC(
         average="macro",
         num_classes=num_classes,
     )
-    micro_f1 = MulticlassF1Score(average="micro", num_classes=num_classes)
+    micro_f1 = torchmetrics.classification.MulticlassF1Score(
+        average="micro", num_classes=num_classes
+    )
     for sample in tqdm(iter(loader_test)):
         x, y = sample
         x = pad_input(x, nca, noise=True)
-        x = x.float().permute(0, 2, 3, 1).to(device)
+        x = x.float().to(device)
         steps = 72
         y_prob = nca.classify(x, steps, reduce=False)
         y = y.squeeze().to(device)
