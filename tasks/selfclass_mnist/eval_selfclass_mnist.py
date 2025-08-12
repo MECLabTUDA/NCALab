@@ -69,7 +69,7 @@ def eval_selfclass_mnist(
         pixel_wise_loss=True,
     )
     nca.load_state_dict(
-        torch.load(WEIGHTS_PATH / "selfclass_mnist.pth", weights_only=True)
+        torch.load(WEIGHTS_PATH / "selfclass_mnist", weights_only=True)
     )
     nca.eval()
 
@@ -79,7 +79,7 @@ def eval_selfclass_mnist(
             break
         x = image.clone()
         x = pad_input(x, nca, noise=False)
-        x = x.permute(0, 2, 3, 1).to(device)
+        x = x.to(device)
 
         prediction = nca(x, steps=50)[0]
         prediction = prediction[..., nca.num_image_channels + nca.num_hidden_channels :]

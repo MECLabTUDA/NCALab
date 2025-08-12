@@ -1,3 +1,4 @@
+from pathlib import Path
 import os
 import sys
 
@@ -7,13 +8,12 @@ sys.path.append(root_dir)
 from ncalab import (
     ClassificationNCAModel,
     BasicNCATrainer,
-    WEIGHTS_PATH,
     get_compute_device,
-    NCALab_banner,
+    print_NCALab_banner,
     print_mascot,
     fix_random_seed,
+    VisualBinaryImageClassification,
 )
-from ncalab.visualization import show_batch_binary_image_classification
 
 import click
 
@@ -27,10 +27,15 @@ from torchvision import transforms  # type: ignore[import-untyped]
 from torch.utils.tensorboard import SummaryWriter
 
 
+TASK_PATH = Path(__file__).parent.resolve()
+WEIGHTS_PATH = TASK_PATH / "weights"
+WEIGHTS_PATH.mkdir(exist_ok=True)
+
+
 def train_selfclass_mnist(
     batch_size: int, hidden_channels: int, gpu: bool, gpu_index: int
 ):
-    NCALab_banner()
+    print_NCALab_banner()
     print()
     print_mascot(
         "While this model is training, you may like to read the\n"
@@ -64,9 +69,7 @@ def train_selfclass_mnist(
     loader_train = torch.utils.data.DataLoader(
         train_split, shuffle=True, batch_size=batch_size
     )
-    loader_val = torch.utils.data.DataLoader(
-        val_split, shuffle=True, batch_size=32
-    )
+    loader_val = torch.utils.data.DataLoader(val_split, shuffle=True, batch_size=32)
 
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
@@ -76,11 +79,12 @@ def train_selfclass_mnist(
         num_hidden_channels=hidden_channels,
         num_classes=10,
         pixel_wise_loss=True,
+        plot_function=VisualBinaryImageClassification(),
     )
 
     trainer = BasicNCATrainer(
         nca,
-        WEIGHTS_PATH / "selfclass_mnist.pth",
+        WEIGHTS_PATH / "selfclass_mnist",
         steps_range=(40, 60),
         steps_validation=50,
         max_epochs=5,
@@ -89,7 +93,6 @@ def train_selfclass_mnist(
         loader_train,
         loader_val,
         summary_writer=writer,
-        plot_function=show_batch_binary_image_classification,
     )
     writer.close()
 
