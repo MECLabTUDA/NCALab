@@ -1,9 +1,0 @@
-from pathlib import Path
-
-# Enter the location of the KID 2 dataset here.
-#
-# See https://mdss.uth.gr/datasets/endoscopy/kid/ to learn how you get access to the data.
-
-KID_DATASET_PATH = Path("~/kid1_kid2/kid2/kid-dataset-2").expanduser()
-KID_DATASET_PATH_NNUNET = Path("~/nnunet_baseline/nnUNet_raw/Dataset011_KID2vascular").expanduser()
-KID_SEGMENTATION_MODEL_NAME = "segmentation_KID2_vascular"
