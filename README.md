@@ -35,12 +35,9 @@ So far, the following example tasks are implemented in NCALab:
       * Hyperparameter search
   * Image Classification:
     * Self-classifying MNIST digits
-    * MedMNIST image classification (PathMNIST, BloodMNIST)
+    * MedMNIST image classification (PathMNIST, BloodMNIST, DermaMNIST)
   * Image Segmentation:
     * Endoscopic polyp segmentation (Kvasir-SEG, public)
-    * Capsule endoscopic bleeding segmentation (KID2 dataset, proprietary)
-  * Monocular Depth Estimation
-    * Capsule endoscopic monocular depth estimation
 
 
 You can find those example tasks inside the `tasks/` directory and its subfolders.
@@ -76,7 +73,7 @@ pip install ncalab
 to install the latest release or
 
 ```bash
-pip install git+https://github.com/MECLabTUDA/NCAlab
+pip install git+https://github.com/MECLabTUDA/NCALab
 ```
 
 for the most recent commit of NCALab.
