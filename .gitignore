@@ -172,3 +172,4 @@ docs/build/
 
 data/
 kvasir_seg.zip
+.ruff_cache/
