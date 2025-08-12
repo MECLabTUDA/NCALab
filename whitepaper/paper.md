@@ -45,10 +45,10 @@ However, the training dynamics of NCAs are not yet fully understood, and there i
 
 NCAs are recently gaining attention especially in medical imaging, where they are deployed for various modalities in different downstream tasks, including 3D prostate segmentation on MRI [@kalkhof2023mednca] [@kalkhof2023m3dncaa], image registration [@ranem2024ncamorph] or image synthesis [@kalkhof2024frequencytime], [@kalkhof2025parameterefficient].
 In most cases, they outperform other Convolutional Neural Network or Vision Transformer architectures in terms of model size and robustness, while yielding similarly accurate predictions.
-However, there is no unified framework or reference implementation for training, evaluating and experimentation with NCAs.
+However, there is no unified framework or reference implementation for training, evaluation and experimentation with NCAs.
 
 Research code for Neural Cellular Automata is typically organized in individual repositories for each downstream task under investigation.
-Code bases often follow different approaches, even though the underlying architecture is in most parts universal; in most cases, it can be defined by the number of input channels, hidden channels and output channels and the weights of the trained network.
+Code bases often follow different approaches, even though the underlying architecture is in most parts universal -- in most cases, it can be defined by the number of input channels, hidden channels and output channels and the weights of the trained network.
 
 The goal of NCALab is to provide a uniform and easy-to-use code base for various downstream tasks with NCAs in a shared project.
 Within minutes, researchers and practitioners should be able to create prototypes for their ideas, inspired by the numerous example tasks provided in this code repository.
