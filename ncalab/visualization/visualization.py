@@ -101,7 +101,7 @@ class VisualBinaryImageClassification(Visual):
         )
 
         # 2nd row: prediction
-        class_channels = prediction.output_channels
+        class_channels = prediction.output_channels_np
         y_pred = np.argmax(class_channels, axis=1)
         images = (image[:, 0, :, :] > 0).astype(np.float32)
         for i in range(batch_size):
@@ -131,8 +131,8 @@ class VisualMultiImageClassification(Visual):
 
         # 1st row: input image
         images = np.ones((batch_size, image_width, image_height))
-        hidden_channels = prediction.hidden_channels
-        class_channels = prediction.output_channels
+        hidden_channels = prediction.hidden_channels_np
+        class_channels = prediction.output_channels_np
         images = prediction.image_channels_np.astype(np.float32)
         show_image_row(ax[0], images, label="IMAGE")
 
@@ -150,7 +150,7 @@ class VisualMultiImageClassification(Visual):
             ax[1, j].axis("off")
 
         # 3rd row: predicted classes per pixel
-        class_channels = prediction.output_channels
+        class_channels = prediction.output_channels_np
         y_pred = np.argmax(class_channels, axis=1)
         images = (image[:, 0, :, :] > 0).astype(np.float32)
         for i in range(batch_size):
@@ -190,7 +190,7 @@ class VisualBinaryImageSegmentation(Visual):
         )
 
         # 3rd row: prediction
-        masks_pred = prediction.output_channels
+        masks_pred = prediction.output_channels_np
         show_image_row(
             ax[2], np.clip(masks_pred, 0.0, 1.0), cmap="gray", label="PREDICTION"
         )
