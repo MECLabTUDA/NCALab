@@ -173,5 +173,6 @@ docs/build/
 .venv*
 
 data/
+!ncalab/data/
 kvasir_seg.zip
 .ruff_cache/
