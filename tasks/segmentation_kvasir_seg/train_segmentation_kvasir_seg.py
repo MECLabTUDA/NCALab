@@ -116,10 +116,9 @@ def train_segmentation_kvasir_seg(batch_size: int, hidden_channels: int):
 @click.option("--hidden-channels", "-H", default=18, type=int)
 def main(batch_size, hidden_channels):
     print_mascot(
-        "So you decided to run NCAs on a medical dataset.\n"
+        "You're training NCAs on a medical dataset now.\n"
         "\n"
-        "Kvasir-SEG: That's an endoscopic dataset for polyp segmentation.\n"
-        "I'm excited to see how NCAs will perform on that."
+        "Kvasir-SEG is an endoscopic dataset for polyp segmentation."
     )
 
     if not KVASIR_SEG_PATH.exists():
