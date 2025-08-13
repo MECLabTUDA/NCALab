@@ -1,17 +1,23 @@
+from pathlib import Path
 import os
 import sys
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from ncalab import ClassificationNCAModel, get_compute_device, pad_input, WEIGHTS_PATH
+from ncalab import ClassificationNCAModel, get_compute_device, pad_input
 
 import click
 
 import torch
+import numpy as np
 
 from torchvision.datasets import MNIST  # type: ignore[import-untyped]
 from torchvision import transforms  # type: ignore[import-untyped]
+
+TASK_PATH = Path(__file__).parent.resolve()
+WEIGHTS_PATH = TASK_PATH / "weights"
+WEIGHTS_PATH.mkdir(exist_ok=True)
 
 
 def print_MNIST_digit(image, prediction, downscale: int = 2):
@@ -41,8 +47,8 @@ def print_MNIST_digit(image, prediction, downscale: int = 2):
             if image[y * downscale, x * downscale] < 0.3:
                 click.secho("  ", nl=False, fg="black", bg="black")
                 continue
-            n = prediction[y * downscale, x * downscale].detach().cpu()
-            n = int(torch.argmax(n))
+            n = prediction[y * downscale, x * downscale]
+            n = int(np.argmax(n))
             click.secho(f" {n}", nl=False, fg=FG.get(n, "black"), bg=BG.get(n, "white"))
         click.secho()
 
@@ -69,7 +75,9 @@ def eval_selfclass_mnist(
         pixel_wise_loss=True,
     )
     nca.load_state_dict(
-        torch.load(WEIGHTS_PATH / "selfclass_mnist", weights_only=True)
+        torch.load(
+            WEIGHTS_PATH / "selfclass_mnist" / "best_model.pth", weights_only=True
+        )
     )
     nca.eval()
 
@@ -81,9 +89,9 @@ def eval_selfclass_mnist(
         x = pad_input(x, nca, noise=False)
         x = x.to(device)
 
-        prediction = nca(x, steps=50)[0]
-        prediction = prediction[..., nca.num_image_channels + nca.num_hidden_channels :]
-        print_MNIST_digit(image[0, 0], prediction)
+        prediction = nca(x, steps=50)
+        out = prediction.output_channels_np[0].transpose(1, 2, 0)
+        print_MNIST_digit(image[0, 0], out)
 
         if i != 1:
             click.secho("-" * 28)
