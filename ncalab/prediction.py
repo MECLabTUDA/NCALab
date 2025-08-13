@@ -22,7 +22,7 @@ class Prediction:
         self.steps = steps
         assert output_image.shape[1] == model.num_channels
         self.output_image = output_image
-        self.output_array: Optional[np.ndarray] = None
+        self._output_array: Optional[np.ndarray] = None
 
     @property
     def image_channels(self) -> torch.Tensor:
@@ -57,22 +57,31 @@ class Prediction:
         ]
 
     @property
+    def output_array(self) -> np.ndarray:
+        """
+        :returns [np.ndarray]: BCWH
+        """
+        if self._output_array is None:
+            self._output_array = self.output_image.detach().cpu().numpy()
+        return self._output_array
+
+    @property
     def image_channels_np(self) -> np.ndarray:
         """
         :returns [np.ndarray]: BCWH
         """
-        if self.output_array is None:
-            self.output_array = self.output_image.detach().cpu().numpy()
-        return self.output_array[:, : self.model.num_image_channels, :, :]
+        if self._output_array is None:
+            self._output_array = self.output_image.detach().cpu().numpy()
+        return self._output_array[:, : self.model.num_image_channels, :, :]
 
     @property
     def hidden_channels_np(self) -> np.ndarray:
         """
         :returns [np.ndarray]: BCWH
         """
-        if self.output_array is None:
-            self.output_array = self.output_image.detach().cpu().numpy()
-        return self.output_array[
+        if self._output_array is None:
+            self._output_array = self.output_image.detach().cpu().numpy()
+        return self._output_array[
             :,
             self.model.num_image_channels : self.model.num_hidden_channels
             + self.model.num_hidden_channels,
@@ -85,9 +94,9 @@ class Prediction:
         """
         :returns [np.ndarray]: BCWH
         """
-        if self.output_array is None:
-            self.output_array = self.output_image.detach().cpu().numpy()
-        return self.output_array[
+        if self._output_array is None:
+            self._output_array = self.output_image.detach().cpu().numpy()
+        return self._output_array[
             :,
             -self.model.num_output_channels :,
             :,

@@ -5,8 +5,8 @@ import os
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from pathlib import Path, PosixPath
-from typing import Any
+from pathlib import Path
+
 
 from ncalab import (
     SegmentationNCAModel,
@@ -14,55 +14,35 @@ from ncalab import (
     BasicNCATrainer,
     get_compute_device,
     print_mascot,
+    print_NCALab_banner,
+    fix_random_seed,
 )
 
 from download_kvasir_seg import download_and_extract, KVASIR_SEG_PATH  # type: ignore[import-untyped]
+from dataset_kvasir_seg import KvasirSegDataset
 
 import albumentations as A  # type: ignore[import-untyped]
 from albumentations.pytorch import ToTensorV2  # type: ignore[import-untyped]
 import click
-import numpy as np
-from PIL import Image
+
 from sklearn.model_selection import train_test_split  # type: ignore[import-untyped]
 import torch
 from torch.utils.tensorboard import SummaryWriter
-from torch.utils.data import Dataset, Subset
+from torch.utils.data import Subset
+
 
 TASK_PATH = Path(__file__).parent.resolve()
 WEIGHTS_PATH = TASK_PATH / "weights"
 WEIGHTS_PATH.mkdir(exist_ok=True)
 
 
-class KvasirSegDataset(Dataset):
-    def __init__(self, path: Path | PosixPath, transform) -> None:
-        super().__init__()
-        self.path = path
-        self.image_filenames = sorted((path / "Kvasir-SEG" / "images").glob("*.jpg"))
-        self.transform = transform
-
-    def __len__(self):
-        return len(self.image_filenames)
-
-    def __getitem__(self, index) -> Any:
-        filename = self.image_filenames[index].name
-        image_filename = (self.path / "Kvasir-SEG" / "images" / filename).resolve()
-        mask_filename = (self.path / "Kvasir-SEG" / "masks" / filename).resolve()
-        image = Image.open(image_filename).convert("RGB")
-        mask = Image.open(mask_filename).convert("L")
-        bbox = image.getbbox()
-        image = image.crop(bbox)
-        mask = mask.crop(bbox)
-        image_arr = np.asarray(image, dtype=np.float32) / 255.0
-        mask_arr = np.asarray(mask, dtype=np.float32) / 255.0
-        sample = {"image": image_arr, "mask": mask_arr}
-        sample = self.transform(**sample)
-        return sample["image"], sample["mask"]
-
-
-def train_segmentation_kvasir_seg(batch_size: int, hidden_channels: int):
+def train_segmentation_kvasir_seg(
+    batch_size: int, hidden_channels: int, gpu: bool, gpu_index: int
+):
     writer = SummaryWriter(comment="Segmentation Kvasir-SEG")
-
-    device = get_compute_device("cuda:0")
+    print_NCALab_banner()
+    fix_random_seed()
+    device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
     nca = SegmentationNCAModel(
         device,
@@ -114,7 +94,13 @@ def train_segmentation_kvasir_seg(batch_size: int, hidden_channels: int):
 @click.command()
 @click.option("--batch-size", "-b", default=8, type=int)
 @click.option("--hidden-channels", "-H", default=18, type=int)
-def main(batch_size, hidden_channels):
+@click.option(
+    "--gpu/--no-gpu", is_flag=True, default=True, help="Try using the GPU if available."
+)
+@click.option(
+    "--gpu-index", type=int, default=0, help="Index of GPU to use, if --gpu in use."
+)
+def main(batch_size, hidden_channels, gpu, gpu_index):
     print_mascot(
         "You're training NCAs on a medical dataset now.\n"
         "\n"
@@ -129,7 +115,10 @@ def main(batch_size, hidden_channels):
         download_and_extract()
 
     train_segmentation_kvasir_seg(
-        batch_size=batch_size, hidden_channels=hidden_channels
+        batch_size=batch_size,
+        hidden_channels=hidden_channels,
+        gpu=gpu,
+        gpu_index=gpu_index,
     )
 
 
