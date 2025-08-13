@@ -74,40 +74,29 @@ class GrowingNCAModel(BasicNCAModel):
         """
         return None
 
-    def grow(
-        self, width: int, height: int, steps: int = 100, save_steps=False
-    ) -> np.ndarray | List[np.ndarray]:
-        """
-        Run the growth process and return the resulting output image.
+    def make_seed(self, width: int, height: int) -> torch.Tensor:
+        x = torch.zeros((1, self.num_channels, width, height)).to(self.device)
+        # set seed in center
+        x[:, 3:, width // 2, height // 2] = 1.0
+        return x
 
-        :param width [int]: Output image width.
-        :param height [int]: Output image height.
+    def grow(
+        self, seed: torch.Tensor, steps: int = 100
+    ) -> List[np.ndarray]:
+        """
+        Run the growth process and return the resulting output sequence.
+
+        :param seed [torch.Tensor]: Seed image, can be generated through make_seed.
         :param steps [int]: Number of inference steps. Defaults to 100.
 
-        :returns [np.ndarray]: Image channels of the output image.
+        :returns [List[np.ndarray]]: Sequence of output images.
         """
         with torch.no_grad():
-            # TODO make use of autostepper, if available
             self.eval()
-            x = torch.zeros((1, self.num_channels, width, height)).to(self.device)
-            # set seed in center
-            x[:, 3:, width // 2, height // 2] = 1.0
-
-            if save_steps:
-                step_outs = []
-                for _ in range(steps):
-                    prediction = self.forward(x, steps=1)  # type: ignore[assignment]
-                    step_outs.append(
-                        np.clip(
-                            prediction.image_channels.squeeze(0).detach().cpu().numpy(),
-                            0,
-                            1,
-                        )
-                    )
-                    x = prediction.output_image
-                return step_outs
-            else:
-                prediction = self.forward(x, steps=steps)  # type: ignore[assignment]
-            out_np = prediction.image_channels.detach().cpu().numpy().squeeze(0)
-            out_np = np.clip(out_np, 0, 1)
-            return out_np
+            output = []
+            sequence = self.record(seed, steps=steps)
+            for prediction in sequence:
+                output.append(
+                    np.clip(prediction.image_channels_np.squeeze(0), 0, 1)
+                )
+            return output

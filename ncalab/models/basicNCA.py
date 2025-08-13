@@ -1,5 +1,5 @@
 from __future__ import annotations
-from typing import Any, Dict, Optional, Tuple
+from typing import Any, Dict, Optional, Tuple, List
 
 import numpy as np
 
@@ -335,6 +335,29 @@ class BasicNCAModel(nn.Module):
             x = self.prepare_input(x)
             prediction = self.forward(x, steps=steps)
             return prediction
+
+    def record(self, image: torch.Tensor, steps: int = 100) -> List[Prediction]:
+        """
+        Record predictions for all time steps and return the resulting
+        sequence of predictions.
+
+        :param image [torch.Tensor]: Input image, BCWH.
+
+        :returns [List[Prediction]]: List of Prediction objects.
+        """
+        assert steps >= 1
+        assert image.shape[1] <= self.num_channels
+        self.eval()
+        sequence = []
+        with torch.no_grad():
+            x = image.clone()
+            x = pad_input(x, self, noise=self.pad_noise)
+            x = self.prepare_input(x)
+            for _ in range(steps):
+                prediction = self.forward(x, steps=1)
+                sequence.append(prediction)
+                x = prediction.output_image
+            return sequence
 
     def validate(
         self, image: torch.Tensor, label: torch.Tensor, steps: int

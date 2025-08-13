@@ -11,14 +11,13 @@ from ncalab import (
     get_compute_device,
     print_NCALab_banner,
     fix_random_seed,
+    Animator,
 )
 
 import click
 
 import torch
 
-import matplotlib.pyplot as plt  # type: ignore[import-untyped]
-import matplotlib.animation as animation  # type: ignore[import-untyped]
 
 TASK_PATH = Path(__file__).parent
 FIGURE_PATH = TASK_PATH / "figures"
@@ -53,33 +52,12 @@ def eval_growing_emoji(gpu: bool, gpu_index: int):
             weights_only=True,
         )
     )
-    nca.eval()
 
-    images = nca.grow(48, 48, steps=100, save_steps=True)
+    seed = nca.make_seed(48, 48)
+    animator = Animator(nca, seed)
 
-    fig, ax = plt.subplots()
-    fig.set_size_inches(2, 2)
-    im = ax.imshow(images[0].transpose(1, 2, 0), animated=True)
-    ax.set_axis_off()
-    plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
-    plt.margins(0, 0)
-    plt.tight_layout()
-
-    def update(i):
-        im.set_array(images[i].transpose(1, 2, 0))
-        return (im,)
-
-    animation_fig = animation.FuncAnimation(
-        fig,
-        update,
-        frames=len(images),
-        interval=10,
-        blit=True,
-        repeat=True,
-        repeat_delay=3000,
-    )
     out_path = FIGURE_PATH / "growing_emoji.gif"
-    animation_fig.save(out_path)
+    animator.save(out_path)
     click.secho(f"Done. You'll find the generated GIF in {out_path} .")
 
 
