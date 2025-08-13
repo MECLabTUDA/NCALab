@@ -10,7 +10,6 @@ from ncalab import (
     ClassificationNCAModel,
     BasicNCATrainer,
     get_compute_device,
-    VisualMultiImageClassification,
 )
 
 import click
@@ -74,7 +73,6 @@ def train_class_pathmnist(
         lambda_activity=lambda_activity,
         filter_padding="circular",
         pad_noise=pad_noise,
-        plot_function=VisualMultiImageClassification(),
     )
     trainer = BasicNCATrainer(
         nca,

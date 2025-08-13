@@ -8,7 +8,7 @@ import torchmetrics.classification
 
 from ..autostepper import AutoStepper
 from .basicNCA import BasicNCAModel
-from ..visualization import VisualBinaryImageClassification, VisualMultiImageClassification
+from ..visualization import VisualBinaryImageClassification, VisualRGBImageClassification
 
 
 class ClassificationNCAModel(BasicNCAModel):
@@ -56,6 +56,7 @@ class ClassificationNCAModel(BasicNCAModel):
             use_alive_mask=use_alive_mask,
             immutable_image_channels=True,
             plot_function=None,
+            num_learned_filters=num_learned_filters,
             validation_metric="accuracy_micro",
             filter_padding=filter_padding,
             use_laplace=use_laplace,
@@ -66,10 +67,10 @@ class ClassificationNCAModel(BasicNCAModel):
         )
         self._num_classes = num_classes
         self.pixel_wise_loss = pixel_wise_loss
-        if num_classes < 2:
+        if num_image_channels <= 1:
             self.plot_function = VisualBinaryImageClassification()
         else:
-            self.plot_function = VisualMultiImageClassification()
+            self.plot_function = VisualRGBImageClassification()
 
     @property
     def num_classes(self) -> int:

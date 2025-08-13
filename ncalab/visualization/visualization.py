@@ -3,6 +3,9 @@ Functions for visualizing input images and predictions
 for various downstream tasks. These functions are used
 for tensorboard "images" tab.
 """
+
+import warnings
+
 import matplotlib.pyplot as plt  # type: ignore[import-untyped]
 from matplotlib.figure import Figure  # type: ignore[import-untyped]
 import numpy as np
@@ -120,7 +123,7 @@ class VisualBinaryImageClassification(Visual):
         return figure
 
 
-class VisualMultiImageClassification(Visual):
+class VisualRGBImageClassification(Visual):
     def show(
         self, model, image: np.ndarray, prediction: Prediction, label: np.ndarray
     ) -> Figure:
@@ -167,6 +170,17 @@ class VisualMultiImageClassification(Visual):
         )
         figure.subplots_adjust()
         return figure
+
+
+class VisualMultiImageClassification(Visual):
+    def __init__(self):
+        warnings.warn(
+            "VisualMultiImageClassification is deprecated and will be removed in future versions. "
+            "Please use VisualRGBImageClassification instead.",
+            DeprecationWarning,
+            stacklevel=2,
+        )
+        self.new_instance = VisualRGBImageClassification()
 
 
 class VisualBinaryImageSegmentation(Visual):

@@ -12,7 +12,6 @@ from ncalab import (
     print_NCALab_banner,
     print_mascot,
     fix_random_seed,
-    VisualBinaryImageClassification,
 )
 
 import click
@@ -79,7 +78,6 @@ def train_selfclass_mnist(
         num_hidden_channels=hidden_channels,
         num_classes=10,
         pixel_wise_loss=True,
-        plot_function=VisualBinaryImageClassification(),
     )
 
     trainer = BasicNCATrainer(

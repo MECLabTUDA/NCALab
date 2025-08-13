@@ -11,7 +11,6 @@ from ncalab import (
     BasicNCATrainer,
     get_compute_device,
     print_NCALab_banner,
-    VisualMultiImageClassification,
 )
 
 import numpy as np
@@ -110,7 +109,6 @@ def train_class_dermamnist(
         fire_rate=0.8,
         pad_noise=pad_noise,
         use_temporal_encoding=use_temporal_encoding,
-        plot_function=VisualMultiImageClassification(),
     )
 
     trainer = BasicNCATrainer(

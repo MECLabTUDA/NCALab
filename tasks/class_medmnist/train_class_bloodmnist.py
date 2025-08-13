@@ -10,7 +10,6 @@ from ncalab import (
     ClassificationNCAModel,
     BasicNCATrainer,
     get_compute_device,
-    VisualMultiImageClassification,
 )
 
 import click
@@ -75,7 +74,6 @@ def train_class_bloodmnist(
         lambda_activity=lambda_activity,
         fire_rate=0.5,
         pad_noise=pad_noise,
-        plot_function=VisualMultiImageClassification(),
     )
     trainer = BasicNCATrainer(
         nca,
