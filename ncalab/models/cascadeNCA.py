@@ -1,10 +1,12 @@
 from typing import List
 
+import numpy as np
 import torch  # type: ignore[import-untyped]
 import torch.nn as nn  # type: ignore[import-untyped]
 
 from .basicNCA import BasicNCAModel
 from ..prediction import Prediction
+from ..utils import unwrap
 
 
 def upscale(image: torch.Tensor, scale: float, mode: str = "nearest") -> torch.Tensor:
@@ -49,8 +51,6 @@ class CascadeNCA(BasicNCAModel):
 
     def __init__(self, backbone: BasicNCAModel, scales: List[int], steps: List[int]):
         """
-        Constructor.
-
         :param backbone [BasicNCAModel]: Backbone model based on BasicNCAModel.
         :param scales [List[int]]: List of scales to operate at, e.g. [4, 2, 1].
         :param steps [List[int]]: List of number of NCA inference time steps.
@@ -89,8 +89,7 @@ class CascadeNCA(BasicNCAModel):
         self.scales = scales
         self.steps = steps
 
-        models = [backbone for _ in scales]
-        self.models = nn.ModuleList(models)
+        self.models = [backbone for _ in scales]
 
     def forward(self, x: torch.Tensor, *args, **kwargs) -> Prediction:
         """
@@ -98,11 +97,18 @@ class CascadeNCA(BasicNCAModel):
         :param steps [int]: Unused, as steps are defined in constructor.
         """
         assert len(self.scales) > 0
+        assert len(self.models) > 0
+        assert len(self.steps) > 0
         x_scaled = downscale(x, self.scales[0])
         for i, (model, scale, scale_steps) in enumerate(
             zip(self.models, self.scales, self.steps)
         ):
-            prediction = model(x_scaled, steps=scale_steps)  # BCWH
+            steps = scale_steps + np.random.randint(
+                -int(scale_steps * 0.2), int(scale_steps * 0.2)
+            )
+            if steps <= 0:
+                steps = 1
+            prediction = model(x_scaled, steps=steps)  # BCWH
             if i < len(self.scales) - 1:
                 x_scaled = upscale(prediction.output_image, scale / self.scales[i + 1])
                 # replace input with downscaled variant of original image
@@ -148,6 +154,8 @@ class CascadeNCA(BasicNCAModel):
         :returns:
         """
         x_scaled = downscale(image, self.scales[0])
+        metrics = {}
+        prediction = None
         for i, (model, scale, scale_steps) in enumerate(
             zip(self.models, self.scales, self.steps)
         ):
@@ -155,11 +163,11 @@ class CascadeNCA(BasicNCAModel):
                 y_scaled = downscale(label.unsqueeze(1), scale).squeeze(1)
             else:
                 y_scaled = label
-            metrics, prediction = model.validate(
+            metrics, prediction = unwrap(model.validate(
                 x_scaled,
                 y_scaled,
                 steps=scale_steps,
-            )
+            ))
             if i < len(self.scales) - 1:
                 x_scaled = upscale(prediction.output_image, scale / self.scales[i + 1])
                 # replace input channel with downscaled variant of original image
