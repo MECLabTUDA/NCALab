@@ -6,8 +6,10 @@ class EarlyStopping:
 
     def __init__(self, patience: int, min_delta: float = 1e-6):
         """
-        :param patience [int]: Steps to wait until stopping the training.
-        :param min_delta [float]: Minimum deviation until counter is reset. Defaults to 1e-6.
+        :param patience: Steps to wait until stopping the training.
+        :type patience: int
+        :param min_delta: Minimum deviation until counter is reset, defaults to 1e-6.
+        :type min_delta: float
         """
         self.patience = patience
         self.min_delta = min_delta
@@ -20,7 +22,8 @@ class EarlyStopping:
 
         Needs to be queried in training loop, once per epoch.
 
-        :returns [bool]: Whether to stop the training or not.
+        :returns: Whether to stop the training or not.
+        :rtype: bool
         """
         return self.counter >= self.patience
 
@@ -31,7 +34,8 @@ class EarlyStopping:
 
         Needs to be called in training loop, once per epoch.
 
-        :param accuracy [float]: Validation accuracy.
+        :param accuracy: Validation accuracy.
+        :type accuracy: float
         """
         self.counter += 1
         if accuracy >= self.best_accuracy + self.min_delta:
