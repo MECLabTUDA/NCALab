@@ -7,6 +7,10 @@ import torch
 
 
 class Animator:
+    """
+    Responsible for rendering NCA predictions as GIFs.
+    """
+
     def __init__(
         self,
         nca,
@@ -16,18 +20,32 @@ class Animator:
         repeat=True,
         repeat_delay=10000,
         overlay=False,
-        show_timestep=True
+        show_timestep=True,
     ):
         """
-        :param nca [BasicNCAModel]: Trained NCA model.
-        :param seed [torch.Tensor]: Input image.
-        :param steps [int]: Inference time steps. Defaults to 100.
-        :param interval [int]: Frame duration in milliseconds. Defaults to 100.
+        :param nca: NCA model instance
+        :type nca: ncalab.BasicNCAModel
+        :param seed: Input image for the NCA model
+        :type seed: torch.Tensor
+        :param steps: Number of NCA prediction steps per sample, defaults to 100
+        :type steps: int, optional
+        :param interval: Time of each frame (milliseconds), defaults to 100
+        :type interval: int, optional
+        :param repeat: Whether to loop the animation, defaults to True
+        :type repeat: bool, optional
+        :param repeat_delay: Time after which the animation is repeated (milliseconds), defaults to 10000
+        :type repeat_delay: int, optional
+        :param overlay: Whether to overlay output channel (segmentation mask), defaults to False
+        :type overlay: bool, optional
+        :param show_timestep: Whether to display timestep in caption, defaults to True
+        :type show_timestep: bool, optional
         """
         nca.eval()
 
         fig, ax = plt.subplots()
         fig.set_size_inches(2, 2)
+        plt.rcParams["font.family"] = "sans-serif"
+        plt.rcParams["font.sans-serif"] = ["Calibri", "Arial"]
 
         # first frame is input image
         if nca.immutable_image_channels and not overlay:
@@ -68,14 +86,16 @@ class Animator:
                 mask = np.clip(arr[:, :, -nca.num_output_channels :].squeeze(-1), 0, 1)
                 alpha = 0.5
                 threshold = 0.0
-                A[mask > threshold] = alpha * color[mask > threshold] + (1 - alpha) * A[mask > threshold]
+                A[mask > threshold] = (
+                    alpha * color[mask > threshold] + (1 - alpha) * A[mask > threshold]
+                )
                 arr = A
             else:
                 arr = arr[:, :, -nca.num_output_channels :]
             arr = np.clip(arr, 0, 1)
             im.set_array(arr)
             if show_timestep:
-                ax.set_title(f"Time step {i % steps}")
+                ax.set_title(f"Time step {i % steps}".upper())
             return (im,)
 
         self.animation_fig = animation.FuncAnimation(
@@ -89,4 +109,10 @@ class Animator:
         )
 
     def save(self, path: str | Path):
+        """
+        Save generated figure as GIF
+
+        :param path: Output path
+        :type path: str | Path
+        """
         self.animation_fig.save(path)

@@ -22,8 +22,10 @@ class TrainValRecord:
         val: List[str],
     ):
         """
-        :param train (List[str]): List of training image file paths
-        :param val (List[str]): List of validation image file paths
+        :param train:  List of training image file paths
+        :type train: List[str]
+        :param val: List of validation image file paths
+        :type val: List[str]
         """
         self.train = train
         self.val = val
@@ -63,8 +65,6 @@ class SplitDefinition:
     """
 
     def __init__(self):
-        """
-        """
         self.folds = []
         self.dataloader_test = None
 
@@ -88,7 +88,9 @@ class SplitDefinition:
                 }
             ]
 
-        :param path [PosixPath]: Path to JSON file containing split definition.
+        :param path: Path to JSON file containing split definition.
+        :returns: SplitDefinition object
+        :rtype: SplitDefinition
         """
         with open(path, "r") as f:
             d = json.load(f)

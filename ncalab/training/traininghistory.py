@@ -11,12 +11,21 @@ from ..models import BasicNCAModel
 
 
 class TrainingStatus(enum.Enum):
+    """
+    Encodes last status of the training.
+    """
+
     STATUS_NONE = 0
     STATUS_RUNNING = 1
     STATUS_DONE = 2
 
 
 class TrainingHistory:
+    """
+    Stores data about the training progress. Populated during training
+    with ncalab.training.BasicNCATrainer.
+    """
+
     def __init__(
         self,
         path: Optional[Path | PosixPath],
@@ -29,6 +38,24 @@ class TrainingHistory:
         best_model: Optional[BasicNCAModel] = None,
         verbose: bool = True,
     ):
+        """
+        :param path: Save and load path.
+        :type path: Optional[Path  |  PosixPath]
+        :param metrics: Dict of validation metrics
+        :type metrics: Dict[str, float]
+        :param current_epoch: Current training epoch.
+        :type current_epoch: int
+        :param current_model: Currently trained model.
+        :type current_model: BasicNCAModel
+        :param best_accuracy: Best validation accuracy, defaults to 0
+        :type best_accuracy: float, optional
+        :param best_epoch: Epoch of best validation accuracy, defaults to 0
+        :type best_epoch: int, optional
+        :param best_model: Model with best validation accuracy, defaults to None
+        :type best_model: Optional[BasicNCAModel], optional
+        :param verbose: Whether to print updates of validation accuracy, defaults to True
+        :type verbose: bool, optional
+        """
         # TODO keep track of accuracy development
         self.path = path
         self.metrics = metrics
@@ -42,6 +69,20 @@ class TrainingHistory:
     def update(
         self, epoch: int, model: BasicNCAModel, accuracy: float, overwrite: bool = False
     ):
+        """
+        Populates history with current iteration's values.
+
+        Automatically recognizes changes in accuracy.
+
+        :param epoch: Current epoch
+        :type epoch: int
+        :param model: Current model
+        :type model: BasicNCAModel
+        :param accuracy: Current accuracy, based on model's validation metric
+        :type accuracy: float
+        :param overwrite: Whether to overwrite best accuracy even with no improvement, defaults to False
+        :type overwrite: bool, optional
+        """
         self.current_epoch = epoch
         self.current_model = model
         self.current_accuracy = accuracy
@@ -57,6 +98,9 @@ class TrainingHistory:
             self.best_model = copy.deepcopy(model)
 
     def save(self):
+        """
+        Saves history and model checkpoint.
+        """
         if self.path is None:
             return
         history_path = self.path / "history.json"
@@ -70,6 +114,12 @@ class TrainingHistory:
             torch.save(self.best_model.state_dict(), best_model_path)
 
     def to_dict(self) -> Dict:
+        """
+        Return dict of recorded values
+
+        :return: Dict of recorded values
+        :rtype: Dict
+        """
         d = dict(
             path=str(self.path),
             metrics=self.metrics,
