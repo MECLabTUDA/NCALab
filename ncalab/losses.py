@@ -9,19 +9,21 @@ class DiceScore(nn.Module):
     """
 
     def __init__(self):
-        """
-        Constructor.
-        """
         super(DiceScore, self).__init__()
 
     def forward(
         self, x: torch.Tensor, y: torch.Tensor, smooth: float = 1.0
     ) -> torch.Tensor:
         """
-        :param x [torch.Tensor]: Reference Input
-        :param y [torch.Tensor]: Other Input
+        :param x: Reference Input
+        :type x: torch.Tensor
+        :param y: Other Input
+        :type y: torch.Tensor
+        :param smooth: Smooting factor, defaults to 1.0
+        :type smooth: float
 
-        :returns [torch.Tensor]: Dice score as Tensor
+        :returns: Dice score
+        :rtype: torch.Tensor
         """
         x = torch.sigmoid(x)
         x = torch.flatten(x)
@@ -38,9 +40,6 @@ class DiceBCELoss(nn.Module):
     """
 
     def __init__(self):
-        """
-        Constructor.
-        """
         super(DiceBCELoss, self).__init__()
         self.dicescore = DiceScore()
 
@@ -48,11 +47,15 @@ class DiceBCELoss(nn.Module):
         self, x: torch.Tensor, y: torch.Tensor, smooth: float = 1.0
     ) -> torch.Tensor:
         """
-        :param x [torch.Tensor]: Reference Input.
-        :param y [torch.Tensor]: Other Input.
-        :param smooth [float]: Smoothing factor. Defaults to 1.0
+        :param x: Reference Input
+        :type x: torch.Tensor
+        :param y: Other Input
+        :type y: torch.Tensor
+        :param smooth: Smooting factor, defaults to 1.0
+        :type smooth: float
 
-        :returns: Combination of Dice and BCE loss
+        :returns: Dice score
+        :rtype: torch.Tensor
         """
         x = torch.sigmoid(x)
         x = torch.flatten(x)
