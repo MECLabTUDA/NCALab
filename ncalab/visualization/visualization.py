@@ -76,6 +76,10 @@ def show_image_row(
 
 
 class Visual:
+    """
+    Base class for tensorboard visuals.
+    """
+
     def __init__(self):
         pass
 
