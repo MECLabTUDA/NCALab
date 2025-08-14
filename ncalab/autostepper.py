@@ -17,13 +17,16 @@ class AutoStepper:
         threshold: float = 1e-2,
     ):
         """
-        Constructor.
-
-        :param min_steps [int]: Minimum number of timesteps to always execute. Defaults to 10.
-        :param max_steps [int]: Terminate after maximum number of steps. Defaults to 100.
-        :param plateau [int]: _description_. Defaults to 5.
-        :param verbose [bool]: Whether to log interruption to stdout. Defaults to False.
-        :param threshold [float]: Score threshold. Defaults to 1e-2.
+        :param min_steps: Minimum number of timesteps to always execute, defaults to 10.
+        :type min_steps: int, optional
+        :param max_steps: Terminate after maximum number of steps, defaults to 100.
+        :type max_steps: int, optional
+        :param plateau: Number of steps that is considered a plateau, defaults to 5.
+        :type plateau: int
+        :param verbose: Whether to log interruption to stdout, defaults to False.
+        :type verbose: bool
+        :param threshold: Score threshold, defaults to 1e-2.
+        :type threshold: float
         """
         assert min_steps >= 1
         assert plateau >= 1
@@ -39,6 +42,14 @@ class AutoStepper:
         self.hidden_i_1: torch.Tensor | None = None
 
     def score(self) -> torch.Tensor:
+        """
+        Calculates activity score.
+
+        Method check() uses this score to determine if the NCA is inactive.
+
+        :return: Activity score estimate.
+        :rtype: torch.Tensor
+        """
         assert self.hidden_i is not None
         assert self.hidden_i_1 is not None
         # normalized absolute difference between two hidden states
@@ -50,8 +61,11 @@ class AutoStepper:
         """
         Checks whether to interrupt inference after the current step.
 
-        :param score [int]: Current NCA inference step.
-        :return [bool]: Whether to interrupt inference after the current step.
+        :param step: Current NCA inference step.
+        :type step: int
+
+        :return: Whether to interrupt inference after the current step.
+        :rtype: bool
         """
         with torch.no_grad():
             if step < self.min_steps:
