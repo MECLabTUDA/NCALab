@@ -31,7 +31,7 @@ class BasicNCAModel(nn.Module):
         use_alive_mask: bool = False,
         immutable_image_channels: bool = True,
         num_learned_filters: int = 2,
-        filter_padding: str = "circular",
+        filter_padding: str = "reflect",
         use_laplace: bool = False,
         kernel_size: int = 3,
         pad_noise: bool = False,

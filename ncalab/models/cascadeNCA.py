@@ -1,4 +1,4 @@
-from typing import List
+from typing import Dict, Optional, Tuple, List
 
 import numpy as np
 import torch  # type: ignore[import-untyped]
@@ -99,12 +99,13 @@ class CascadeNCA(BasicNCAModel):
         assert len(self.scales) > 0
         assert len(self.models) > 0
         assert len(self.steps) > 0
+        prediction = None
         x_scaled = downscale(x, self.scales[0])
         for i, (model, scale, scale_steps) in enumerate(
             zip(self.models, self.scales, self.steps)
         ):
             steps = scale_steps + np.random.randint(
-                -int(scale_steps * 0.2), int(scale_steps * 0.2)
+                -int(scale_steps * 0.2), int(scale_steps * 0.2) + 1
             )
             if steps <= 0:
                 steps = 1
@@ -117,12 +118,13 @@ class CascadeNCA(BasicNCAModel):
                     self.scales[i + 1],
                 )
         # TODO prediction has incorrect number of steps
-        return prediction
+        return unwrap(prediction)
 
     def record_steps(self, x: torch.Tensor):
         # TODO let "Prediction" class record steps
         step_outputs = []
         x_scaled = downscale(x, self.scales[0])
+        prediction = None
         for i, (model, scale, scale_steps) in enumerate(
             zip(self.models, self.scales, self.steps)
         ):
@@ -132,7 +134,7 @@ class CascadeNCA(BasicNCAModel):
                 step_outputs.append(upscale(prediction.output_image, scale))
                 x_in = prediction.output_image
             if i < len(self.scales) - 1:
-                x_scaled = upscale(prediction.output_image, scale / self.scales[i + 1])
+                x_scaled = upscale(unwrap(prediction).output_image, scale / self.scales[i + 1])
                 # replace input with downscaled variant of original image
                 x_scaled[:, : model.num_image_channels, :, :] = downscale(
                     x[:, : model.num_image_channels, :, :],
@@ -140,7 +142,7 @@ class CascadeNCA(BasicNCAModel):
                 )
         return step_outputs
 
-    def validate(self, image: torch.Tensor, label: torch.Tensor, steps: int = 1):
+    def validate(self, image: torch.Tensor, label: torch.Tensor, steps: int = 1) -> Optional[Tuple[Dict[str, float], Prediction]]:
         """
         Validation method.
 
@@ -175,4 +177,4 @@ class CascadeNCA(BasicNCAModel):
                     image[:, : model.num_image_channels, :, :],
                     self.scales[i + 1],
                 )
-        return metrics, prediction
+        return unwrap(metrics), unwrap(prediction)

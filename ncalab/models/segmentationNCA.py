@@ -27,6 +27,7 @@ class SegmentationNCAModel(BasicNCAModel):
         num_learned_filters: int = 2,
         pad_noise: bool = True,
         autostepper: Optional[AutoStepper] = None,
+        filter_padding: str = "reflect",
         **kwargs,
     ):
         """
@@ -38,6 +39,7 @@ class SegmentationNCAModel(BasicNCAModel):
         :param hidden_size [int]: Number of neurons in hidden layer. Defaults to 128.
         :param learned_filters [int]: Number of learned filters. If 0, use sobel. Defaults to 2.
         :param pad_noise [bool]: Whether to pad input images with noise. Defaults to True.
+        :param filter_padding [str]: Padding type to use. Might affect reliance on spatial cues. Defaults to "circular".
         """
         self.num_classes = num_classes
         super(SegmentationNCAModel, self).__init__(
@@ -54,6 +56,7 @@ class SegmentationNCAModel(BasicNCAModel):
             num_learned_filters=num_learned_filters,
             pad_noise=pad_noise,
             autostepper=autostepper,
+            filter_padding=filter_padding,
             **kwargs,
         )
 
@@ -92,15 +95,15 @@ class SegmentationNCAModel(BasicNCAModel):
         """
         outputs = pred[:, self.num_image_channels + self.num_hidden_channels :, :, :]
         tp, fp, fn, tn = smp.metrics.get_stats(
-            outputs.cpu(),
+            outputs.cpu().float(),
             label[:, None, :, :].cpu().long(),
             mode="binary",
             threshold=0.1,
         )
-        tp = tp.squeeze()
-        fp = fp.squeeze()
-        fn = fn.squeeze()
-        tn = tn.squeeze()
+        tp = tp.squeeze().long()
+        fp = fp.squeeze().long()
+        fn = fn.squeeze().long()
+        tn = tn.squeeze().long()
         iou_score = smp.metrics.iou_score(
             tp,
             fp,
