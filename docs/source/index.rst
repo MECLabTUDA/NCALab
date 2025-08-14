@@ -11,7 +11,6 @@ Welcome to NCALab's documentation!
    example_selfclass
    training
    kfold
-   search
 
 
 Indices and tables
@@ -19,4 +18,3 @@ Indices and tables
 
 * :ref:`genindex`
 * :ref:`modindex`
-* :ref:`search`

@@ -33,6 +33,8 @@ extensions = ["sphinx.ext.doctest", "autoapi.extension"]
 
 autoapi_type = "python"
 autoapi_dirs = [module_path / "ncalab"]
+autoapi_add_toctree_entry = True
+autoapi_python_class_content = "both"
 
 # Add any paths that contain templates here, relative to this directory.
 templates_path = ["_templates"]
