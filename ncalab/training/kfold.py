@@ -22,8 +22,6 @@ class TrainValRecord:
         val: List[str],
     ):
         """
-        Constructor.
-
         :param train (List[str]): List of training image file paths
         :param val (List[str]): List of validation image file paths
         """
@@ -66,7 +64,6 @@ class SplitDefinition:
 
     def __init__(self):
         """
-        Constructor.
         """
         self.folds = []
         self.dataloader_test = None
@@ -115,8 +112,6 @@ class SplitDefinition:
 class KFoldCrossValidationTrainer:
     def __init__(self, trainer: BasicNCATrainer, split: SplitDefinition):
         """
-        Constructor.
-
         :param trainer [BasicNCATrainer]: BasicNCATrainer, to train each individual fold.
         :param split [SplitDefinition]: Definition of the split used for k-fold cross-training.
         """

@@ -32,8 +32,6 @@ class ClassificationNCAModel(BasicNCAModel):
         **kwargs,
     ):
         """
-        Constructor.
-
         :param device [device]: Pytorch device descriptor.
         :param num_image_channels [int]: _description_
         :param num_hidden_channels [int]: _description_

@@ -39,8 +39,6 @@ class BasicNCAModel(nn.Module):
         use_temporal_encoding: bool = False,
     ):
         """
-        Constructor.
-
         :param device [device]: Pytorch device descriptor.
         :param num_image_channels [int]: Number of channels reserved for input image.
         :param num_hidden_channels [int]: Number of hidden channels (communication channels).

@@ -6,8 +6,6 @@ class EarlyStopping:
 
     def __init__(self, patience: int, min_delta: float = 1e-6):
         """
-        Constructor.
-
         :param patience [int]: Steps to wait until stopping the training.
         :param min_delta [float]: Minimum deviation until counter is reset. Defaults to 1e-6.
         """

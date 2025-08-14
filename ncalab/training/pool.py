@@ -3,7 +3,17 @@ import numpy as np
 
 
 class Pool:
+    """
+    Sample pool that retains previous predictions. Also applies damaging patterns to
+    images to increase the robustness of the trained NCA.
+    """
+
     def __init__(self, n_seed: int = 1, damage: bool = False, p_damage: float = 0.2):
+        """
+        :param n_seed [int]: How many seed images to retain, defaults to 1
+        :param damage [bool]: Whether to apply damaging patterns, defaults to False
+        :param p_damage [float]: Probability at which a damaging pattern is applied, defaults to 0.2
+        """
         assert n_seed >= 1
         self.n_seed = n_seed
         self.damage = damage

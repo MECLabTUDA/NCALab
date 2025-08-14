@@ -11,6 +11,14 @@ from ..visualization import VisualGrowing
 
 
 class GrowingNCAModel(BasicNCAModel):
+    """
+    NCA Model class for "growing" tasks, in which a structure is grown from a single seed pixel.
+
+    This specialization of the BasicNCAModel has some interesting properties.
+    For instance, it has no output channels, as the growing task directly
+    manipulates the input image channels.
+    """
+
     def __init__(
         self,
         device: torch.device,
@@ -23,12 +31,6 @@ class GrowingNCAModel(BasicNCAModel):
         **kwargs,
     ):
         """
-        NCA Model class for "growing" tasks, in which a structure is grown from a single seed pixel.
-
-        This specialization of the BasicNCAModel has some interesting properties.
-        For instance, it has no output channels, as the growing task directly
-        manipulates the input image channels.
-
         :param device [torch.device]: Pytorch device descriptor.
         :param num_image_channels [int]: Number of channels reserved for input image. Defaults to 4.
         :param num_hidden_channels [int]: Number of hidden channels (communication channels). Defaults to 16.
@@ -80,9 +82,7 @@ class GrowingNCAModel(BasicNCAModel):
         x[:, 3:, width // 2, height // 2] = 1.0
         return x
 
-    def grow(
-        self, seed: torch.Tensor, steps: int = 100
-    ) -> List[np.ndarray]:
+    def grow(self, seed: torch.Tensor, steps: int = 100) -> List[np.ndarray]:
         """
         Run the growth process and return the resulting output sequence.
 
@@ -96,7 +96,5 @@ class GrowingNCAModel(BasicNCAModel):
             output = []
             sequence = self.record(seed, steps=steps)
             for prediction in sequence:
-                output.append(
-                    np.clip(prediction.image_channels_np.squeeze(0), 0, 1)
-                )
+                output.append(np.clip(prediction.image_channels_np.squeeze(0), 0, 1))
             return output

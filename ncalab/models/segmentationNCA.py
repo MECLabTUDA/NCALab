@@ -12,7 +12,8 @@ class SegmentationNCAModel(BasicNCAModel):
     """
     Model used for image segmentation.
 
-    Uses Dice score as the default validation metric.
+    Uses Dice score as the default validation metric. Currently, only binary segmentation
+    masks are supported.
     """
 
     def __init__(
@@ -29,8 +30,6 @@ class SegmentationNCAModel(BasicNCAModel):
         **kwargs,
     ):
         """
-        Instantiate an image segmentation model based on NCA.
-
         :param device [torch.device]: Compute device.
         :param num_image_channels [int]: Number of image channels. Defaults to 3.
         :param num_hidden_channels [int]: Number of hidden channels. Defaults to 16.

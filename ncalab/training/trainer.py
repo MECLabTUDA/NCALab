@@ -36,26 +36,35 @@ class BasicNCATrainer:
         steps_validation: int = 100,
         lr: Optional[float] = None,
         lr_gamma: float = 0.9999,
-        adam_betas=(0.9, 0.99),
+        adam_betas=(0.9, 0.95),
         batch_repeat: int = 2,
         max_epochs: int = 200,
         optimizer_method: str = "adam",
         pool: Optional[Pool] = None,
     ):
         """
-        Initialize trainer object.
-
-        :param nca (BasicNCAModel): NCA model instance to train.
-        :param model_path (Optional[str  |  Path  |  PosixPath], optional): Path to saved models. If None, models are not saved. Defaults to None.
-        :param gradient_clipping (bool, optional): Whether to clip gradients. Defaults to False.
-        :param steps_range (tuple, optional): Inclusive range of NCA time steps, randomized in each forward pass. Defaults to (90, 110).
-        :param steps_validation (int, optional): Number of steps to use during validation. Defaults to 100.
-        :param lr (float, optional): Initial learning rate. Defaults to 16e-4.
-        :param lr_gamma (float, optional): Exponential learning rate decay. Defaults to 0.9999.
-        :param adam_betas (tuple, optional): Beta values for Adam optimizer. Defaults to (0.9, 0.99).
-        :param batch_repeat (int, optional): How often each batch will be duplicated. Defaults to 2.
-        :param max_epochs (int, optional): Maximum number of epochs in training. Defaults to 200.
-        :param optimizer_method: Optimization method. Defaults to 'adamw'.
+        :param nca: NCA model instance to train.
+        :type nca: ncalab.BasicNCAModel
+        :param model_path: Path to saved models. If None, models are not saved, defaults to None.
+        :type model_path: Path | PosixPath, optional
+        :param gradient_clipping: Whether to clip gradients, defaults to False.
+        :type gradient_clipping: bool, optional
+        :param steps_range: Inclusive range of NCA time steps, randomized in each forward pass, defaults to (90, 110).
+        :type steps_range: tuple, optional
+        :param steps_validation: Number of steps to use during validation, defaults to 100.
+        :type steps_validation: int, optional
+        :param lr: Initial learning rate, defaults to 16e-4.
+        :type lr: float, optional
+        :param lr_gamma: Exponential learning rate decay, defaults to 0.9999.
+        :type lr_gamma: float, optional
+        :param adam_betas: Beta values for Adam optimizer, defaults to (0.9, 0.95).
+        :type adam_betas: tuple, optional
+        :param batch_repeat: How often each batch will be duplicated, dfaults to 2.
+        :param max_epochs: Maximum number of epochs in training, defaults to 200.
+        :param optimizer_method: Optimization method, defaults to 'adam'.
+        :type optimizer_method: str, optional
+        :param pool: Sample pool object.
+        :type pool: ncalab.Pool
         """
         assert batch_repeat >= 1
         assert steps_range[0] < steps_range[1]
@@ -124,19 +133,23 @@ class BasicNCATrainer:
         optimizer: torch.optim.Optimizer,
         scheduler: torch.optim.lr_scheduler.LRScheduler,
         total_batch_iterations: int,
-        summary_writer,
+        summary_writer: Optional[SummaryWriter] = None,
     ) -> Tuple[Prediction, Dict[str, torch.Tensor]]:
         """
         Run a single training iteration.
 
-        :param x [Tensor]: Input training images.
-        :param y [Tensor]: Input training labels.
-        :param steps [int]: Number of NCA inference time steps.
-        :param optimizer [torch.optim.Optimizer]: Optimizer.
-        :param scheduler [torch.optim.lr_scheduler.LRScheduler]: Scheduler.
-        :param total_batch_iterations [int]: Total training batch iterations
+        :param x: Input training images.
+        :param y: Input training labels.
+        :param steps: Number of NCA inference time steps.
+        :param optimizer: Optimizer.
+        :param scheduler: Scheduler.
+        :param total_batch_iterations: Total training batch iterations
+        :type total_batch_iterations: int
+        :param summary_writer: Tensorboard SummaryWriter
+        :type summary_writer: SummaryWriter, optional
 
-        :returns [Tensor]: Predicted image.
+        :returns: Predicted image.
+        :rtype: Tuple[Prediction, Dict[str, torch.Tensor]]
         """
         device = self.nca.device
         self.nca.train()

@@ -14,9 +14,16 @@ class Animator:
         steps=100,
         interval=100,
         repeat=True,
-        repeat_delay=3000,
+        repeat_delay=10000,
         overlay=False,
+        show_timestep=True
     ):
+        """
+        :param nca [BasicNCAModel]: Trained NCA model.
+        :param seed [torch.Tensor]: Input image.
+        :param steps [int]: Inference time steps. Defaults to 100.
+        :param interval [int]: Frame duration in milliseconds. Defaults to 100.
+        """
         nca.eval()
 
         fig, ax = plt.subplots()
@@ -28,19 +35,22 @@ class Animator:
         else:
             first_frame = seed[0, : nca.num_image_channels]
         first_frame_np = first_frame.permute(1, 2, 0).detach().cpu().numpy()
-        first_frame_np = np.clip(first_frame, 0, 1)
+        first_frame_np = np.clip(first_frame_np, 0, 1)
 
         im = ax.imshow(
             first_frame_np,
             animated=True,
         )
+        if show_timestep:
+            ax.set_title(f"Time step {0}")
 
-        predictions = nca.record(seed, steps)
         images = []
-        for prediction in predictions:
-            output_image = prediction.output_array[0]
-            output_image = output_image.transpose(1, 2, 0)
-            images.append(output_image)
+        predictions = nca.record(seed, steps)
+        for batch_index in range(len(seed)):
+            for prediction in predictions:
+                output_image = prediction.output_array[batch_index]
+                output_image = output_image.transpose(1, 2, 0)
+                images.append(output_image)
 
         ax.set_axis_off()
         plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
@@ -48,31 +58,30 @@ class Animator:
         plt.tight_layout()
 
         def update(i):
-            nonlocal images, nca
+            nonlocal ax, images, nca
             arr = images[i]
             if not nca.immutable_image_channels:
                 arr = arr[:, :, : nca.num_image_channels]
             elif overlay:
+                color = np.ones((arr.shape[0], arr.shape[1], 3)) * (0.0, 0.0, 1.0)
                 A = np.clip(arr[:, :, : nca.num_image_channels], 0, 1)
-                B = np.clip(arr[:, :, -nca.num_output_channels :].squeeze(-1), 0, 1)
-                alpha = 0.8
-                threshold = 0.2
-                beta = 0.8
-                blue = A[:, :, 2]
-                blue[B > threshold] = beta * (
-                    alpha * B[B > threshold] + (1 - alpha) * blue[B > threshold]
-                )
-                A[:, :, 2] = blue
+                mask = np.clip(arr[:, :, -nca.num_output_channels :].squeeze(-1), 0, 1)
+                alpha = 0.5
+                threshold = 0.0
+                A[mask > threshold] = alpha * color[mask > threshold] + (1 - alpha) * A[mask > threshold]
                 arr = A
             else:
                 arr = arr[:, :, -nca.num_output_channels :]
+            arr = np.clip(arr, 0, 1)
             im.set_array(arr)
+            if show_timestep:
+                ax.set_title(f"Time step {i % steps}")
             return (im,)
 
         self.animation_fig = animation.FuncAnimation(
             fig,
             update,
-            frames=steps,
+            frames=steps * len(seed),
             interval=interval,
             blit=True,
             repeat=repeat,
