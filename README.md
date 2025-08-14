@@ -1,6 +1,7 @@
 # NCALab
 
-NCALab makes it easy to create and analyze Neural Cellular Automata (NCA) implementations for various downstream tasks, such as image segmentation, classification and synthesis.
+NCALab is a framework designed to simplify the creation and analysis of Neural Cellular Automata (NCA) implementations.
+With NCALab, users can effortlessly explore various applications, including image segmentation, classification, and synthesis.
 
 
 ![docs](https://github.com/MECLabTUDA/NCAlab/actions/workflows/docs.yml/badge.svg)
