@@ -1,4 +1,5 @@
 from pathlib import Path
+from typing import Tuple
 
 import matplotlib.pyplot as plt  # type: ignore[import-untyped]
 import matplotlib.animation as animation  # type: ignore[import-untyped]
@@ -15,12 +16,13 @@ class Animator:
         self,
         nca,
         seed: torch.Tensor,
-        steps=100,
-        interval=100,
-        repeat=True,
-        repeat_delay=10000,
-        overlay=False,
-        show_timestep=True,
+        steps: int = 100,
+        interval: int = 100,
+        repeat: bool = True,
+        repeat_delay: int = 10000,
+        overlay: bool = False,
+        show_timestep: bool = True,
+        overlay_color: Tuple[float, float, float] = (0.0, 1.0, 0.0),
     ):
         """
         :param nca: NCA model instance
@@ -46,6 +48,7 @@ class Animator:
         fig.set_size_inches(2, 2)
         plt.rcParams["font.family"] = "sans-serif"
         plt.rcParams["font.sans-serif"] = ["Calibri", "Arial"]
+        plt.rcParams["axes.titlecolor"] = (0.2, 0.2, 0.2)
 
         # first frame is input image
         if nca.immutable_image_channels and not overlay:
@@ -81,7 +84,7 @@ class Animator:
             if not nca.immutable_image_channels:
                 arr = arr[:, :, : nca.num_image_channels]
             elif overlay:
-                color = np.ones((arr.shape[0], arr.shape[1], 3)) * (0.0, 0.0, 1.0)
+                color = np.ones((arr.shape[0], arr.shape[1], 3)) * overlay_color
                 A = np.clip(arr[:, :, : nca.num_image_channels], 0, 1)
                 mask = np.clip(arr[:, :, -nca.num_output_channels :].squeeze(-1), 0, 1)
                 alpha = 0.5
@@ -95,7 +98,11 @@ class Animator:
             arr = np.clip(arr, 0, 1)
             im.set_array(arr)
             if show_timestep:
-                ax.set_title(f"Time step {i % steps}".upper())
+                ax.set_title(
+                    r"$\mathbf{TIME STEP\:"
+                    + f"{i % steps:3d}".replace(" ", r"\:")
+                    + r"}$"
+                )
             return (im,)
 
         self.animation_fig = animation.FuncAnimation(
