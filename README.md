@@ -1,24 +1,46 @@
 # NCALab
 
-NCALab makes it easy to create Neural Cellular Automata (NCA) implementations for various downstream tasks, such as image segmentation, classification and synthesis.
+NCALab makes it easy to create and analyze Neural Cellular Automata (NCA) implementations for various downstream tasks, such as image segmentation, classification and synthesis.
 
 
 ![docs](https://github.com/MECLabTUDA/NCAlab/actions/workflows/docs.yml/badge.svg)
 ![python-package](https://github.com/MECLabTUDA/NCAlab/actions/workflows/python-package.yml/badge.svg)
 ![manuscript](https://github.com/MECLabTUDA/NCAlab/actions/workflows/draft-pdf.yml/badge.svg)
 
-![NCALab Logo](artwork/ncalab_logo.png)
+![Animation of a growing lizard emoji](artwork/growing_emoji.gif)
+![Animation of gastro-intestinal polyp segmentation using NCA](artwork/segmentation_kvasir_seg.gif)
 
+## Neural Cellular Automata
+NCA are a new type of neural architecture, fusing Cellular Automata and Artificial Neural Networks to create memory-efficient, robust models.
+By replacing the transition function of a Cellular Automaton with a neural network model (a Multi-Layer Perceptron), they can learn from labelled input data to achieve tasks like image classification or segmentation.
+
+![Generalized NCA Architecture](artwork/architecture.png)
+
+Akin to a traditional cellular automaton, inference is carried out in multiple time steps (typically up to 100 steps per image).
+In each time step, the cells of an image are stochastically updated by a multilayer perceptron.
+Instead of a manual neighborhood aggregation (e.g. Moore or von Neumann neighborhood), neighboring cell states are determined by applying 2D depth-wise convolutions to the input image.
+
+For a better overview on the basic NCA architecture, we recommend you to read the original 2020 [NCA Paper](https://distill.pub/2020/growing-ca/) by Mordvintsev et al.
 
 ## Features
 
 Features of NCALab include:
+
   * Easy training and evaluation of NCA models
   * Cascaded multi-scale training
   * Tensorboard integration with default presets
   * Training with k-fold cross-validation
   * Convenience features: Fixing random seeds, selecting compute devices, data processing
+  * Animation and visualization of NCA predictions
 
+### Roadmap
+
+The following features are planned for future releases of NCALab:
+
+  * Implementation of more approaches presented in research that extend or tweak NCA models
+  * Simplifyed saving and loading of trained NCA models
+  * Evaluation of federated and continual learning with NCAs
+  * NCAs that work on 3D voxel data
 
 ## Getting started
 
@@ -58,9 +80,6 @@ Run this script to generate a GIF of the trained model's prediction:
 ```bash
 uv run tasks/growing_emoji/eval_growing_emoji.py
 ```
-
-![Animation of a growing lizard emoji](artwork/growing_emoji.gif)
-
 
 ### Installation
 
