@@ -120,27 +120,39 @@ class CascadeNCA(BasicNCAModel):
         # TODO prediction has incorrect number of steps
         return unwrap(prediction)
 
-    def record_steps(self, x: torch.Tensor):
-        # TODO let "Prediction" class record steps
-        step_outputs = []
-        x_scaled = downscale(x, self.scales[0])
+    def record(self, image: torch.Tensor, steps: int = 100) -> List[Prediction]:
+        """
+        Record predictions for all time steps and return the resulting
+        sequence of predictions.
+
+        :param image: Input image, BCWH.
+        :type image: torch.Tensor
+
+        :returns: List of Prediction objects.
+        :rtype: List[Prediction]
+        """
+        assert steps >= 1
+        assert image.shape[1] <= self.num_channels
+        self.eval()
+        sequence = []
+        x_scaled = downscale(image, self.scales[0])
         prediction = None
         for i, (model, scale, scale_steps) in enumerate(
             zip(self.models, self.scales, self.steps)
         ):
             x_in = x_scaled
-            for _ in range(scale_steps):
-                prediction = model(x_in, steps=1)
-                step_outputs.append(upscale(prediction.output_image, scale))
-                x_in = prediction.output_image
+            subseq = model.record(x_in, steps=scale_steps)
+            prediction = subseq[-1]
+            sequence.extend(subseq)
+            x_in = prediction.output_image
             if i < len(self.scales) - 1:
                 x_scaled = upscale(unwrap(prediction).output_image, scale / self.scales[i + 1])
                 # replace input with downscaled variant of original image
                 x_scaled[:, : model.num_image_channels, :, :] = downscale(
-                    x[:, : model.num_image_channels, :, :],
+                    image[:, : model.num_image_channels, :, :],
                     self.scales[i + 1],
                 )
-        return step_outputs
+        return sequence
 
     def validate(self, image: torch.Tensor, label: torch.Tensor, steps: int = 1) -> Optional[Tuple[Dict[str, float], Prediction]]:
         """
@@ -165,11 +177,13 @@ class CascadeNCA(BasicNCAModel):
                 y_scaled = downscale(label.unsqueeze(1), scale).squeeze(1)
             else:
                 y_scaled = label
-            metrics, prediction = unwrap(model.validate(
-                x_scaled,
-                y_scaled,
-                steps=scale_steps,
-            ))
+            metrics, prediction = unwrap(
+                model.validate(
+                    x_scaled,
+                    y_scaled,
+                    steps=scale_steps,
+                )
+            )
             if i < len(self.scales) - 1:
                 x_scaled = upscale(prediction.output_image, scale / self.scales[i + 1])
                 # replace input channel with downscaled variant of original image
