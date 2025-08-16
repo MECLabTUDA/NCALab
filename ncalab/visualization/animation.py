@@ -46,9 +46,8 @@ class Animator:
 
         fig, ax = plt.subplots()
         fig.set_size_inches(2, 2)
-        plt.rcParams["font.family"] = "sans-serif"
-        plt.rcParams["font.sans-serif"] = ["Calibri", "Arial"]
-        plt.rcParams["axes.titlecolor"] = (0.2, 0.2, 0.2)
+        fpath = Path(__file__) / ".." / ".." / ".." / "fonts" / "PixelOperatorMono-Bold.ttf"
+        plt.rcParams["axes.titlecolor"] = (0.15, 0.15, 0.15)
 
         # first frame is input image
         if nca.immutable_image_channels and not overlay:
@@ -99,9 +98,9 @@ class Animator:
             im.set_array(arr)
             if show_timestep:
                 ax.set_title(
-                    r"$\mathbf{TIME STEP\:"
-                    + f"{i % steps:3d}".replace(" ", r"\:")
-                    + r"}$"
+                    f"TIME STEP {i % steps:3d}",
+                    font=fpath,
+                    fontsize=16
                 )
             return (im,)
 
