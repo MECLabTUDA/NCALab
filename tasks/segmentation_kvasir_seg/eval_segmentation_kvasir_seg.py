@@ -52,30 +52,31 @@ def eval_segmentation_kvasir_seg(hidden_channels: int, gpu: bool, gpu_index: int
         num_hidden_channels=hidden_channels,
         num_classes=1,
         pad_noise=True,
-        fire_rate=0.8,
+        fire_rate=0.5,
+        use_temporal_encoding=True,
     )
-    cascade = CascadeNCA(nca, [8, 4, 2, 1], [70, 20, 10, 5])
+    cascade = CascadeNCA(nca, [4, 2, 1], [32, 16, 8])
 
     T = A.Compose(
         [
-            A.RandomCrop(300, 300),
             A.Resize(256, 256),
-            A.RandomRotate90(),
-            A.HorizontalFlip(),
             ToTensorV2(),
         ]
     )
     dataset = KvasirSegDataset(KVASIR_SEG_PATH, transform=T)
+    loader = torch.utils.data.DataLoader(
+        dataset, shuffle=False, batch_size=8, drop_last=True
+    )
 
     cascade.load_state_dict(
         torch.load(
-            WEIGHTS_PATH / "segmentation_kvasir_seg" / "last_model.pth",
+            WEIGHTS_PATH / "segmentation_kvasir_seg" / "best_model.pth",
             weights_only=True,
         )
     )
 
-    seed = dataset[0][0].unsqueeze(0).to(device)
-    animator = Animator(cascade, seed, overlay=True)
+    seed = next(iter(loader))[0].to(device)
+    animator = Animator(cascade, seed, overlay=True, interval=100, steps=sum(cascade.steps))
 
     out_path = FIGURE_PATH / "segmentation_kvasir_seg.gif"
     animator.save(out_path)

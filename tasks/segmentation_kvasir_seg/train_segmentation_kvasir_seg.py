@@ -50,13 +50,15 @@ def train_segmentation_kvasir_seg(
         num_hidden_channels=hidden_channels,
         num_classes=1,
         pad_noise=True,
-        fire_rate=0.8,
+        fire_rate=0.5,
+        use_temporal_encoding=True,
+        filter_padding="circular",
     )
-    cascade = CascadeNCA(nca, [8, 4, 2, 1], [70, 20, 10, 5])
+    cascade = CascadeNCA(nca, [4, 2, 1], [32, 16, 8])
 
     T = A.Compose(
         [
-            A.RandomCrop(300, 300),
+            A.ColorJitter(),
             A.Resize(256, 256),
             A.RandomRotate90(),
             A.HorizontalFlip(),
@@ -81,7 +83,13 @@ def train_segmentation_kvasir_seg(
         val_split, shuffle=True, batch_size=batch_size, drop_last=True
     )
 
-    trainer = BasicNCATrainer(cascade, WEIGHTS_PATH / "segmentation_kvasir_seg")
+    trainer = BasicNCATrainer(
+        cascade,
+        WEIGHTS_PATH / "segmentation_kvasir_seg",
+        max_epochs=500,
+        steps_range=(30, 40),
+        steps_validation=35,
+    )
     trainer.train(
         loader_train,
         loader_val,
