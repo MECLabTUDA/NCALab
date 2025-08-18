@@ -54,7 +54,7 @@ def train_segmentation_kvasir_seg(
         use_temporal_encoding=True,
         filter_padding="circular",
     )
-    cascade = CascadeNCA(nca, [4, 2, 1], [32, 16, 8])
+    cascade = CascadeNCA(nca, [4, 2, 1], [32, 16, 10])
 
     T = A.Compose(
         [
@@ -86,7 +86,7 @@ def train_segmentation_kvasir_seg(
     trainer = BasicNCATrainer(
         cascade,
         WEIGHTS_PATH / "segmentation_kvasir_seg",
-        max_epochs=500,
+        max_epochs=1000,
         steps_range=(30, 40),
         steps_validation=35,
     )

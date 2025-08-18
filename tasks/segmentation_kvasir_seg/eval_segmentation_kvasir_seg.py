@@ -55,7 +55,7 @@ def eval_segmentation_kvasir_seg(hidden_channels: int, gpu: bool, gpu_index: int
         fire_rate=0.5,
         use_temporal_encoding=True,
     )
-    cascade = CascadeNCA(nca, [4, 2, 1], [32, 16, 8])
+    cascade = CascadeNCA(nca, [4, 2, 1], [32, 16, 10])
 
     T = A.Compose(
         [
