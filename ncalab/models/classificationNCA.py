@@ -8,7 +8,11 @@ import torchmetrics.classification
 
 from ..autostepper import AutoStepper
 from .basicNCA import BasicNCAModel
-from ..visualization import VisualBinaryImageClassification, VisualRGBImageClassification
+from ..utils import pad_input
+from ..visualization import (
+    VisualBinaryImageClassification,
+    VisualRGBImageClassification,
+)
 
 
 class ClassificationNCAModel(BasicNCAModel):
@@ -93,6 +97,8 @@ class ClassificationNCAModel(BasicNCAModel):
         """
         with torch.no_grad():
             x = image.clone()
+            if self.pad_noise:
+                x = pad_input(x, self, noise=True)
             prediction = self(x, steps=steps)
             hidden_channels = prediction.hidden_channels
             class_channels = prediction.output_channels
@@ -111,14 +117,13 @@ class ClassificationNCAModel(BasicNCAModel):
                         class_channels[i, c, :, :] *= mask
 
             # Average over all pixels if a single categorial prediction is desired
-            y_pred = F.softmax(class_channels, dim=-1)
-            y_pred = torch.mean(y_pred, dim=1)
-            y_pred = torch.mean(y_pred, dim=1)
+            y_pred = F.softmax(class_channels, dim=1)
+            y_pred = torch.mean(y_pred, dim=(2, 3))
 
             # If reduce enabled, reduce to a single scalar.
             # Otherwise, return logits of all channels as a vector.
             if reduce:
-                y_pred = torch.argmax(y_pred, dim=-1)
+                y_pred = torch.argmax(y_pred, dim=0)
                 return y_pred
             return y_pred
 
