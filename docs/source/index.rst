@@ -15,10 +15,6 @@ Here, you'll find detailed instructions, examples, and best practices to help yo
 
    intro_nca
    intro_ncalab
-   example_growing
-   example_selfclass
-   training
-   kfold
 
 
 Indices and tables
