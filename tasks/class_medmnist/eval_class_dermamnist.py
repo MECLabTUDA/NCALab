@@ -5,63 +5,71 @@ import os
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from ncalab import ClassificationNCAModel, WEIGHTS_PATH, get_compute_device, pad_input
+from ncalab import ClassificationNCAModel, get_compute_device
 
 import click
 
-from medmnist import PathMNIST  # type: ignore[import-untyped]
+from medmnist import INFO, DermaMNIST  # type: ignore[import-untyped]
 
 import torch  # type: ignore[import-untyped]
 from torchvision import transforms  # type: ignore[import-untyped]
 from torchvision.transforms import v2  # type: ignore[import-untyped]
-
-import numpy as np
 
 import torchmetrics
 import torchmetrics.classification
 
 from tqdm import tqdm
 
+from train_class_dermamnist import (
+    pad_noise,
+    alive_mask,
+    use_temporal_encoding,
+    fire_rate,
+    WEIGHTS_PATH,
+)
 
 T = transforms.Compose(
     [
         v2.ToImage(),
         v2.ToDtype(torch.float, scale=True),
         v2.ConvertImageDtype(dtype=torch.float32),
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomVerticalFlip(),
+        transforms.Normalize((0.5,), (0.225,)),
     ]
 )
 
 
-def eval_selfclass_pathmnist(
+def eval_selfclass_dermamnist(
     hidden_channels: int,
     gpu,
     gpu_index,
 ):
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
-    dataset_test = PathMNIST(split="test", download=True, transform=T)
+    dataset_test = DermaMNIST(split="test", download=True, transform=T)
     loader_test = torch.utils.data.DataLoader(
         dataset_test, shuffle=False, batch_size=32
     )
 
-    num_classes = 9
+    num_classes = len(INFO["dermamnist"]["label"])
     nca = ClassificationNCAModel(
         device,
         num_image_channels=3,
         num_hidden_channels=hidden_channels,
         hidden_size=128,
         num_classes=num_classes,
-        use_alive_mask=False,
-        fire_rate=0.5,
+        use_alive_mask=alive_mask,
+        fire_rate=fire_rate,
+        use_temporal_encoding=use_temporal_encoding,
+        pad_noise=pad_noise,
     )
     nca.load_state_dict(
-        torch.load(WEIGHTS_PATH / "selfclass_pathmnist.best.pth", weights_only=True)
+        torch.load(
+            WEIGHTS_PATH / "classification_dermamnist" / "best_model.pth",
+            weights_only=True,
+        )
     )
 
-    model_parameters = filter(lambda p: p.requires_grad, nca.parameters())
-    params = sum([np.prod(p.size()) for p in model_parameters])
+    params = nca.num_trainable_parameters()
     print(f"Trainable parameters: {params}")
     print(f"That is {4 * params / 1000} kB")
 
@@ -70,24 +78,24 @@ def eval_selfclass_pathmnist(
 
     macro_acc = torchmetrics.classification.MulticlassAccuracy(
         average="macro", num_classes=num_classes
-    )
+    ).to(device)
     micro_acc = torchmetrics.classification.MulticlassAccuracy(
         average="micro", num_classes=num_classes
-    )
+    ).to(device)
     macro_auc = torchmetrics.classification.MulticlassAUROC(
         average="macro",
         num_classes=num_classes,
-    )
+    ).to(device)
     micro_f1 = torchmetrics.classification.MulticlassF1Score(
         average="micro", num_classes=num_classes
-    )
+    ).to(device)
     for sample in tqdm(iter(loader_test)):
         x, y = sample
-        x = pad_input(x, nca, noise=True)
         x = x.float().to(device)
         steps = 72
         y_prob = nca.classify(x, steps, reduce=False)
         y = y.squeeze().to(device)
+
         macro_acc.update(y_prob, y)
         micro_acc.update(y_prob, y)
         macro_auc.update(y_prob, y)
@@ -104,7 +112,7 @@ def eval_selfclass_pathmnist(
 
 
 @click.command()
-@click.option("--hidden-channels", "-H", default=20, type=int)
+@click.option("--hidden-channels", "-H", default=30, type=int)
 @click.option(
     "--gpu/--no-gpu", is_flag=True, default=True, help="Try using the GPU if available."
 )
@@ -112,7 +120,7 @@ def eval_selfclass_pathmnist(
     "--gpu-index", type=int, default=0, help="Index of GPU to use, if --gpu in use."
 )
 def main(hidden_channels, gpu: bool, gpu_index: int):
-    eval_selfclass_pathmnist(
+    eval_selfclass_dermamnist(
         hidden_channels=hidden_channels,
         gpu=gpu,
         gpu_index=gpu_index,

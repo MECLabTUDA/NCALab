@@ -14,7 +14,7 @@ from ncalab import (
 
 import click
 
-from medmnist import PathMNIST  # type: ignore[import-untyped]
+from medmnist import INFO, PathMNIST  # type: ignore[import-untyped]
 
 import torch  # type: ignore[import-untyped]
 from torchvision import transforms  # type: ignore[import-untyped]
@@ -25,6 +25,12 @@ TASK_PATH = Path(__file__).parent.resolve()
 WEIGHTS_PATH = TASK_PATH / "weights"
 WEIGHTS_PATH.mkdir(exist_ok=True)
 
+gradient_clipping = False
+pad_noise = True
+alive_mask = False
+use_temporal_encoding = True
+fire_rate = 0.8
+
 
 def train_class_pathmnist(
     batch_size: int,
@@ -33,10 +39,6 @@ def train_class_pathmnist(
     gpu_index: int,
     lambda_activity: float,
 ):
-    gradient_clipping = False
-    pad_noise = True
-    alive_mask = False
-
     writer = SummaryWriter(
         comment=f"L.act_{lambda_activity}_c.hidden_{hidden_channels}_gc_{gradient_clipping}_noise_{pad_noise}_AM_{alive_mask}"
     )
@@ -50,6 +52,7 @@ def train_class_pathmnist(
             v2.ConvertImageDtype(dtype=torch.float32),
             transforms.RandomHorizontalFlip(),
             transforms.RandomVerticalFlip(),
+            transforms.Normalize((0.5,), (0.225,)),
         ]
     )
 
@@ -63,20 +66,21 @@ def train_class_pathmnist(
         dataset_val, shuffle=True, batch_size=32, drop_last=True
     )
 
+    num_classes = len(INFO["pathmnist"]["label"])
     nca = ClassificationNCAModel(
         device,
         num_image_channels=3,
         num_hidden_channels=hidden_channels,
-        num_classes=9,
+        num_classes=num_classes,
         use_alive_mask=alive_mask,
-        fire_rate=0.5,
+        fire_rate=fire_rate,
         lambda_activity=lambda_activity,
         filter_padding="circular",
         pad_noise=pad_noise,
     )
     trainer = BasicNCATrainer(
         nca,
-        WEIGHTS_PATH / "selfclass_pathmnist",
+        WEIGHTS_PATH / "classification_pathmnist",
         batch_repeat=2,
         max_epochs=100,
         gradient_clipping=gradient_clipping,

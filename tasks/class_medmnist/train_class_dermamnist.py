@@ -27,6 +27,12 @@ TASK_PATH = Path(__file__).parent.resolve()
 WEIGHTS_PATH = TASK_PATH / "weights"
 WEIGHTS_PATH.mkdir(exist_ok=True)
 
+gradient_clipping = False
+pad_noise = True
+alive_mask = False
+use_temporal_encoding = True
+fire_rate = 0.8
+
 
 def train_class_dermamnist(
     batch_size: int,
@@ -35,11 +41,6 @@ def train_class_dermamnist(
     gpu_index: int,
 ):
     print_NCALab_banner()
-
-    gradient_clipping = False
-    pad_noise = True
-    alive_mask = False
-    use_temporal_encoding = True
 
     comment = "DermaMNIST"
     comment += f"_hidden_{hidden_channels}"
@@ -106,7 +107,7 @@ def train_class_dermamnist(
         num_hidden_channels=hidden_channels,
         num_classes=7,
         use_alive_mask=alive_mask,
-        fire_rate=0.8,
+        fire_rate=fire_rate,
         pad_noise=pad_noise,
         use_temporal_encoding=use_temporal_encoding,
     )
