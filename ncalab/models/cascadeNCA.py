@@ -13,10 +13,15 @@ def upscale(image: torch.Tensor, scale: float, mode: str = "nearest") -> torch.T
     """
     Upsamples an image.
 
-    :param image [torch.Tensor]: Image tensor in BCWH order.
-    :param scale [float]: Scale factor.
-    :param mode [str]: Defaults to "nearest".
+    :param image: Image tensor in BCWH order.
+    :type image: torch.Tensor
+    :param scale: Scale factor. Must be >= 1.0
+    :type scale: float
+    :param mode: Interpolation mode, defaults to "nearest".
+    :type mode: str
+
     :return: Image tensor in BCWH order.
+    :rtype: torch.Tensor
     """
     assert scale >= 1.0
     return nn.Upsample(scale_factor=scale, mode=mode)(image)
@@ -28,9 +33,14 @@ def downscale(
     """
     Downsamples an image.
 
-    :param image [torch.Tensor]: Image tensor in BCWH order.
-    :param scale [float]: Scale factor.
+    :param image: Image tensor in BCWH order.
+    :type image: torch.Tensor
+    :param scale: Scale factor, must be >= 1.0
+    :type scale: float
+    :param mode: Interpolation mode, defaults to "bilinear".
+
     :return: Image tensor in BCWH order.
+    :rtype: torch.Tensor
     """
     assert scale >= 1.0
     return nn.Upsample(scale_factor=1.0 / scale, mode=mode, align_corners=True)(image)
@@ -49,11 +59,16 @@ class CascadeNCA(BasicNCAModel):
     This is still highly experimental. In the future, we'll work on a cleaner interface for this.
     """
 
-    def __init__(self, backbone: BasicNCAModel, scales: List[int], steps: List[int]):
+    def __init__(self, backbone: BasicNCAModel, scales: List[int], steps: List[int], single_model: bool = True):
         """
-        :param backbone [BasicNCAModel]: Backbone model based on BasicNCAModel.
-        :param scales [List[int]]: List of scales to operate at, e.g. [4, 2, 1].
-        :param steps [List[int]]: List of number of NCA inference time steps.
+        :param backbone: Backbone model based on BasicNCAModel.
+        :type backbone: ncalab.BasicNCAModel
+        :param scales: List of scales to operate at, e.g. [4, 2, 1].
+        :type scales: List[int]
+        :param steps: List of number of NCA inference time steps.
+        :type steps: List[int]
+        :param single_model: Only train a single instance of the NCA model
+        :type single_model: bool
         """
         super(CascadeNCA, self).__init__(
             device=backbone.device,
@@ -93,8 +108,13 @@ class CascadeNCA(BasicNCAModel):
 
     def forward(self, x: torch.Tensor, *args, **kwargs) -> Prediction:
         """
-        :param x [torch.Tensor]: Input image tensor, BCWH.
-        :param steps [int]: Unused, as steps are defined in constructor.
+        :param x: Input image tensor, BCWH.
+        :type x: torch.Tensor
+        :param steps: Unused, as steps are defined in constructor.
+        :type steps: torch.Tensor
+
+        :return: Prediction object
+        :rtype: Prediction
         """
         assert len(self.scales) > 0
         assert len(self.models) > 0
@@ -122,8 +142,10 @@ class CascadeNCA(BasicNCAModel):
 
     def record(self, image: torch.Tensor, steps: int = 100) -> List[Prediction]:
         """
-        Record predictions for all time steps and return the resulting
+        Records predictions for all time steps and returns the resulting
         sequence of predictions.
+
+        Takes care of scaling the image in between steps.
 
         :param image: Input image, BCWH.
         :type image: torch.Tensor
@@ -161,11 +183,13 @@ class CascadeNCA(BasicNCAModel):
         Takes care of scaling the input image and label on each scale,
         and calls the respective validation method of the backbone.
 
-        :param image [torch.Tensor]: Input image tensor, BCWH.
-        :param label [torch.Tensor]: Ground truth.
-        :param steps [int]: Unused, as steps are defined in constructor.
+        :param image: Input image tensor, BCWH.
+        :param label: Ground truth.
+        :param steps: Unused, as steps are defined in constructor.
+        :type steps: int
 
-        :returns:
+        :returns: Dict of metrics and prediction
+        :rtype: Optional[Tuple[Dict[str, float], Prediction]]
         """
         x_scaled = downscale(image, self.scales[0])
         metrics = {}
