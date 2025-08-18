@@ -1,4 +1,5 @@
 import copy
+from datetime import datetime
 import enum
 from pathlib import Path, PosixPath
 import json
@@ -65,6 +66,8 @@ class TrainingHistory:
         self.best_epoch = best_epoch
         self.best_model = best_model
         self.verbose = verbose
+        self.created_timestamp = datetime.now()
+        self.modified_timestamp = datetime.now()
 
     def update(
         self, epoch: int, model: BasicNCAModel, accuracy: float, overwrite: bool = False
@@ -83,6 +86,7 @@ class TrainingHistory:
         :param overwrite: Whether to overwrite best accuracy even with no improvement, defaults to False
         :type overwrite: bool, optional
         """
+        self.modified_timestamp = datetime.now()
         self.current_epoch = epoch
         self.current_model = model
         self.current_accuracy = accuracy
@@ -126,6 +130,8 @@ class TrainingHistory:
             current_epoch=self.current_epoch,
             best_acc=self.best_accuracy,
             best_epoch=self.best_epoch,
+            created_timestamp=self.created_timestamp.isoformat(),
+            modified_timestamp=self.modified_timestamp.isoformat(),
             **self.metrics,
             current_model=self.current_model.to_dict(),
         )
