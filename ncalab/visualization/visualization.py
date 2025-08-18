@@ -26,6 +26,7 @@ def show_image_row(
     label: str = "",
     colorbar: bool = False,
     x_index: bool = False,
+    normalize: bool = False,
 ):
     """
     Shows a row of images next to each other.
@@ -42,9 +43,13 @@ def show_image_row(
     :param label: y-axis label next to first image, defaults to ""
     :param colorbar: Whether to display a colorbar next to the last image, defaults to False
     :param x_index: Whether to show the batch index below each image, defaults to False
+    :param normalize: Whether to normalize images across batch
     """
     plt.rcParams["font.family"] = "sans-serif"
     plt.rcParams["font.sans-serif"] = ["Calibri", "Arial"]
+    # if images are not normalized to [0, 1] or [0, 255], normalize them
+    if normalize and np.min(images) < 0:
+        images = (images - np.min(images)) / (np.max(images) - np.min(images))
     for j in range(len(images)):
         image = images[j]
         # if channel dimension is first (CWH), permute to (WHC)
@@ -105,7 +110,13 @@ class VisualBinaryImageClassification(Visual):
             images[i, :, :] *= label[i] + 1
         images -= 1
         show_image_row(
-            ax[0], images, vmin=-1, vmax=model.num_classes, cmap="Set3", label="INPUT"
+            ax[0],
+            images,
+            vmin=-1,
+            vmax=model.num_classes,
+            cmap="Set3",
+            label="INPUT",
+            normalize=True,
         )
 
         # 2nd row: prediction
@@ -142,7 +153,7 @@ class VisualRGBImageClassification(Visual):
         hidden_channels = prediction.hidden_channels_np
         class_channels = prediction.output_channels_np
         images = prediction.image_channels_np.astype(np.float32)
-        show_image_row(ax[0], images, label="IMAGE")
+        show_image_row(ax[0], images, label="IMAGE", normalize=True)
 
         for i in range(batch_size):
             mask = np.max(hidden_channels[i]) > 0.1
@@ -200,7 +211,7 @@ class VisualBinaryImageSegmentation(Visual):
         # 1st row: input image
         images = image[:, : model.num_image_channels, :, :]
         images = np.permute_dims(images, (0, 2, 3, 1))
-        show_image_row(ax[0], np.clip(images, 0.0, 1.0), label="INPUT")
+        show_image_row(ax[0], np.clip(images, 0.0, 1.0), label="INPUT", normalize=True)
 
         # 2nd row: true segmentation
         masks_true = label
@@ -229,7 +240,7 @@ class VisualDepthEstimation(Visual):
 
         # 1st row: input image
         images = image[:, : model.num_image_channels, :, :]
-        show_image_row(ax[0], np.clip(images, 0.0, 1.0), label="INPUT")
+        show_image_row(ax[0], np.clip(images, 0.0, 1.0), label="INPUT", normalize=True)
 
         # 2nd row: true segmentation
         images = label
@@ -266,12 +277,16 @@ class VisualGrowing(Visual):
 
         # 1st row: true image
         images = label[:, : model.num_image_channels, :, :]
-        show_image_row(ax[0], images, label="GROUND TRUTH")
+        show_image_row(ax[0], images, label="GROUND TRUTH", normalize=True)
 
         # 2nd row: prediction
         images = prediction.image_channels_np
         show_image_row(
-            ax[1], np.clip(images, 0.0, 1.0), label="PREDICTION", x_index=True
+            ax[1],
+            np.clip(images, 0.0, 1.0),
+            label="PREDICTION",
+            x_index=True,
+            normalize=True,
         )
         figure.subplots_adjust()
         return figure
