@@ -376,3 +376,13 @@ class BasicNCAModel(nn.Module):
 
     def to_dict(self) -> Dict[str, Any]:
         return dict()
+
+    def num_trainable_parameters(self) -> int:
+        """
+        Returns the number of trainable model parameters.
+
+        :return: Number of trainable parameters.
+        :rtype: int
+        """
+        model_parameters = filter(lambda p: p.requires_grad, self.parameters())
+        return int(sum([np.prod(p.size()) for p in model_parameters]))
