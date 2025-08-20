@@ -86,7 +86,7 @@ def train_class_bloodmnist(
         nca,
         WEIGHTS_PATH / "classification_bloodmnist",
         batch_repeat=2,
-        max_epochs=100,
+        max_epochs=40,
         gradient_clipping=gradient_clipping,
         steps_range=(32, 33),
         steps_validation=32,
