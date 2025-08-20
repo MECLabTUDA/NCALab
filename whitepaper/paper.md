@@ -49,12 +49,12 @@ However, the training dynamics of NCAs are not yet fully understood, and there i
 
 Neural cellular automata (NCA) are a computational model combining the principles of Cellular Automata and Nneural Networks, allowing systems to learn and evolve over time.
 In NCAs, a grid of cells, each cell being capable of assuming a continuous, multi-dimensional state, changes based on a learned rule determined by neural networks rather than fixed algorithms.
-Typically, the inference is carried out in two steps, which are called "Perception" and "Update".
-In the perception step, each cell's neighborhood is aggregated by applying multiple depth-wise convolution.
-These convolutions can be learned, or carried out through static filters (e.g. Sobel or Laplace filters).
-In the update step, the residual cell update is computed by a multi-layer perceptron with a ReLU activation.
-This update is applied in a stochastic manner, meaning that only a portion of cells are activated in a single time step.
-The probability of the stochastic update is determined by a parameter called "fire rate".
+Typically, the inference is done in two steps, which are called _Perception_ and _Update_.
+In the perception step, each cell's neighborhood is aggregated by applying multiple depth-wise convolutions.
+These convolutions can be learned, or hardcoded through static filters (e.g. Sobel or Laplace filters).
+In the _update_ step, the residual cell update is computed by a multi-layer perceptron with a ReLU activation.
+This step is applied in a stochastic manner, meaning that only a portion of cells are activated in a single time step.
+The probability of the stochastic update is determined by a parameter called "fire rate", which is typically set to 0.5, activating only half of all cells in every time step.
 For more information, we want to point the reader to the comprehensive original paper on NCAs by Mordvintsev et al. [@mordvintsev2020growingb].
 
 # Statement of Need
@@ -67,11 +67,12 @@ However, research of NCA models and training has just started a few years ago, a
 Further, there is currently no set of best practices for designing NCA models with respect to their hyperparameters, such as the number of neurons, hidden channels or fire rate.
 
 A systematic analysis of different NCA hyperparameters and architectural variations is difficult, as the research code of NCA contributions is typically organized in individual repositories with different frameworks and coding styles for each downstream task under investigation.
-Code bases often follow different approaches, even though the underlying architecture is in most parts universal -- in most cases, it can be defined by the number of input channels, hidden channels and output channels and the weights of the trained network.
+Code bases often follow different approaches, even though the underlying backbone architecture is in most parts identical.
+In most cases, the NCA architecture can be defined by the number of input channels, hidden channels and output channels and the weights of the trained network.
 Since there is currently no unified framework, deployment of NCA models in practical applications (or as part of other learning pipelines) remains difficult.
 
 `NCALab` provides a uniform and easy-to-use code base for various downstream tasks with NCAs as a packaged Python module.
-Within minutes, researchers and practitioners should be able to create prototypes for their ideas, inspired by the example tasks provided in this code repository.
+Within minutes, researchers and practitioners will be able to create prototypes for their ideas, inspired by the example tasks provided in this code repository.
 
 We further provide weights for example tasks to enable post-hoc analyses on pre-trained NCA models.
 To our knowledge, post-hoc tasks like transfer learning or uncertainty estimation were not  evaluated for NCAs yet.
