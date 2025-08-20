@@ -1,4 +1,8 @@
+# v0.3.2
+* Fix use of max() reduction in uncertainty estimator
+
 # v0.3.1
+* Add uncertainty estimation feature
 
 # v0.3.0
 * Rename VisualMultiImageClassification --> VisualRGBImageClassification
