@@ -14,6 +14,8 @@ authors:
   - name: Richard Sattel
     orcid: 0009-0003-1060-3462
     affiliation: 1
+  - name: Niklas Ihm
+    affiliation: 1
   - name: Jonathan Dewenter
     affiliation: 1
   - name: Dennis Grotz
@@ -94,6 +96,7 @@ Until now, NCALab provides the following key features:
 * Finetuning by re-training the final layer of an NCA
 * Visualization and animation of the NCA inference process
 * Cascaded training of multi-scale NCAs for training on higher-resolution images
+* Uncertainty heatmap generation
 
 
 # Ongoing Research
