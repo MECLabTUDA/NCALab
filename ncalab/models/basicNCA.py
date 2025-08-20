@@ -222,6 +222,19 @@ class BasicNCAModel(nn.Module):
             dx[:, : self.num_image_channels, :, :] *= 0
         return dx
 
+    def _forward_step(self, x: torch.Tensor, step: int):
+        dx = self._update(x, step)
+        x = x + dx
+
+        # Alive masking
+        if self.use_alive_mask:
+            life_mask = self._alive(x)
+            life_mask = life_mask
+            x = x.permute(1, 0, 2, 3)  # B C W H --> C B W H
+            x = x * life_mask.float()
+            x = x.permute(1, 0, 2, 3)  # C B W H --> B C W H
+        return x
+
     def forward(
         self,
         x: torch.Tensor,
@@ -235,16 +248,7 @@ class BasicNCAModel(nn.Module):
         """
         if self.autostepper is None:
             for step in range(steps):
-                dx = self._update(x, step)
-                x = x + dx
-
-                # Alive masking
-                if self.use_alive_mask:
-                    life_mask = self._alive(x)
-                    life_mask = life_mask
-                    x = x.permute(1, 0, 2, 3)  # B C W H --> C B W H
-                    x = x * life_mask.float()
-                    x = x.permute(1, 0, 2, 3)  # C B W H --> B C W H
+                x = self._forward_step(x, step)
             return Prediction(self, steps, x)
 
         for step in range(self.autostepper.max_steps):
@@ -258,17 +262,7 @@ class BasicNCAModel(nn.Module):
                 :,
                 :,
             ]
-            # single inference time step
-            dx = self._update(x, step)
-            x = x + dx
-
-            # Alive masking
-            if self.use_alive_mask:
-                life_mask = self._alive(x)
-                life_mask = life_mask
-                x = x.permute(1, 0, 2, 3)  # B C W H --> C B W H
-                x = x * life_mask.float()
-                x = x.permute(1, 0, 2, 3)  # C B W H --> B C W H
+            x = self._forward_step(x, step)
 
             # set current hidden state
             self.autostepper.hidden_i = x[
