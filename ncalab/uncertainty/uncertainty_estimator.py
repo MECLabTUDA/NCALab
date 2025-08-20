@@ -46,7 +46,7 @@ class UncertaintyEstimator:
         if reduce == "mean":
             score = torch.mean(heatmap, dim=(2, 3))
         elif reduce == "max":
-            score = torch.max(image, dim=(2, 3))
+            score, _ = torch.max(torch.max(image, dim=2)[0], dim=2)
         else:
             score = torch.mean(heatmap, dim=(2, 3))
         return heatmap, predictions, score
@@ -122,14 +122,12 @@ class MCMC(UncertaintyEstimator):
         """
         self.nca.eval()
         heatmap = torch.zeros_like(image)
-        sequence = self.nca.record(image)[-self.N_last:]
+        sequence = self.nca.record(image)[-self.N_last :]
         output_images = torch.stack(
             [prediction.hidden_channels for prediction in sequence]
         )
 
-        heatmap = torch.std(
-            output_images, dim=0
-        )
+        heatmap = torch.std(output_images, dim=0)
         if self.normalize:
             normalization = 10
             heatmap /= normalization
