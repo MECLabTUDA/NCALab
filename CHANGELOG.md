@@ -5,3 +5,8 @@
 * Adapt Animator class to new prediction API
 * Use Animator class in growing emoji example task
 * Fix evaluation script for MNIST example task
+* Fix dimensionality error in "classify" method
+* Add evaluation scripts for MedMNIST example tasks
+* Fix visualization of normalized data
+* Add (optional) MLP classification head in classification model
+* Slightly adjust training parameters (learning rate and adam betas)

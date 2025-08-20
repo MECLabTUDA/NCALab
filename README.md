@@ -1,8 +1,11 @@
 # NCALab
 
-NCALab is a framework designed to simplify the creation and analysis of Neural Cellular Automata (NCA) implementations.
-With NCALab, users can effortlessly explore various applications, including image segmentation, classification, and synthesis.
+`NCALab` is a framework designed to facilitate the creation and analysis of Neural Cellular Automata (NCA) implementations.
+NCAs are a new type of Artificial Neural Network model that operates on a grid of cells in multiple iterations.
+With NCALab, users can effortlessly explore various applications of NCA, including image segmentation, classification, and synthesis.
+The models are documented, unit-tested and type-checked and can be modified in a streamlined fashion.
 
+For more information on NCAs, check out our curated [Awesome List](https://github.com/MECLabTUDA/awesome-nca) and our [NCA Tutorial](https://github.com/MECLabTUDA/NCA-tutorial).
 
 ![docs](https://github.com/MECLabTUDA/NCAlab/actions/workflows/docs.yml/badge.svg)
 ![python-package](https://github.com/MECLabTUDA/NCAlab/actions/workflows/python-package.yml/badge.svg)
@@ -12,12 +15,13 @@ With NCALab, users can effortlessly explore various applications, including imag
 ![Animation of gastro-intestinal polyp segmentation using NCA](artwork/segmentation_kvasir_seg.gif)
 
 ## Neural Cellular Automata
+
 NCA are a new type of neural architecture, fusing Cellular Automata and Artificial Neural Networks to create memory-efficient, robust models.
 By replacing the transition function of a Cellular Automaton with a neural network model (a Multi-Layer Perceptron), they can learn from labelled input data to achieve tasks like image classification or segmentation.
 
 ![Generalized NCA Architecture](artwork/architecture.png)
 
-Akin to a traditional cellular automaton, inference is carried out in multiple time steps (typically up to 100 steps per image).
+Akin to a traditional cellular automaton, a neural cellular automaton operates in multiple time steps (typically up to 100 steps until a prediction is considered finished).
 In each time step, the cells of an image are stochastically updated by a multilayer perceptron.
 Instead of a manual neighborhood aggregation (e.g. Moore or von Neumann neighborhood), neighboring cell states are determined by applying 2D depth-wise convolutions to the input image.
 
@@ -41,9 +45,17 @@ The following features are planned for future releases of NCALab:
   * Implementation of more approaches presented in research that extend or tweak NCA models
   * Simplifyed saving and loading of trained NCA models
   * Evaluation of federated and continual learning with NCAs
-  * NCAs that work on 3D voxel data
+  * NCAs that operate on 3D voxel data
 
 ## Getting started
+
+This project makes use of [uv](https://astral.sh/blog/uv) for package and dependency management.
+Please read the installation instructions of `uv` before proceeding or simply install it to your Python workspace by running:
+
+```bash
+pip install -U uv
+```
+
 
 Perhaps the best way of getting started with NCALab is to take a look at the provided usage example tasks, starting with the Growing Emoji task.
 
