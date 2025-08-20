@@ -1,4 +1,4 @@
-# v0.2.1
+# v0.3.0
 * Rename VisualMultiImageClassification --> VisualRGBImageClassification
 * Deprecate VisualMultiImageClassification
 * Add record() member to BasicNCAModel to record sequences of predictions
