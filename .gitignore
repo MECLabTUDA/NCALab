@@ -176,3 +176,4 @@ data/
 !ncalab/data/
 kvasir_seg.zip
 .ruff_cache/
+pretrained_weights.zip
