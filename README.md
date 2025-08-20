@@ -59,6 +59,12 @@ pip install -U uv
 
 Perhaps the best way of getting started with NCALab is to take a look at the provided usage example tasks, starting with the Growing Emoji task.
 
+You may want to download pre-trained weights for all examples by issuing the following script:
+
+```bash
+uv run scripts/download_example_weights.py
+```
+
 ### Usage Example Tasks
 
 So far, the following example tasks are implemented in NCALab:
