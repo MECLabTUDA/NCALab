@@ -91,7 +91,7 @@ class BasicNCATrainer:
             if optimizer_method.lower() == "sgd":
                 self.lr = 1e-2
             elif optimizer_method.lower() in ("adam", "adamw"):
-                self.lr = 16e-4
+                self.lr = 1e-3
             elif optimizer_method.lower() == "rmsprop":
                 self.lr = 1e-2
             elif optimizer_method.lower() == "adagrad":
