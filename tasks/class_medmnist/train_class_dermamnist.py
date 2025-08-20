@@ -16,7 +16,7 @@ from ncalab import (
 import numpy as np
 import click
 
-from medmnist import DermaMNIST  # type: ignore[import-untyped]
+from medmnist import INFO, DermaMNIST  # type: ignore[import-untyped]
 
 import torch  # type: ignore[import-untyped]
 from torchvision import transforms  # type: ignore[import-untyped]
@@ -28,10 +28,11 @@ WEIGHTS_PATH = TASK_PATH / "weights"
 WEIGHTS_PATH.mkdir(exist_ok=True)
 
 gradient_clipping = False
-pad_noise = True
+pad_noise = False
 alive_mask = False
 use_temporal_encoding = True
 fire_rate = 0.8
+default_hidden_channels = 20
 
 
 def train_class_dermamnist(
@@ -101,11 +102,12 @@ def train_class_dermamnist(
         dataset_val, sampler=sampler_val, batch_size=len(dataset_val)
     )
 
+    num_classes = len(INFO["dermamnist"]["label"])
     nca = ClassificationNCAModel(
         device,
         num_image_channels=3,
         num_hidden_channels=hidden_channels,
-        num_classes=7,
+        num_classes=num_classes,
         use_alive_mask=alive_mask,
         fire_rate=fire_rate,
         pad_noise=pad_noise,
@@ -116,10 +118,10 @@ def train_class_dermamnist(
         nca,
         WEIGHTS_PATH / "classification_dermamnist",
         batch_repeat=2,
-        max_epochs=1000,
+        max_epochs=100,
         gradient_clipping=gradient_clipping,
-        steps_range=(80, 81),
-        steps_validation=80,
+        steps_range=(32, 33),
+        steps_validation=32,
     )
     trainer.train(
         loader_train,
@@ -131,7 +133,7 @@ def train_class_dermamnist(
 
 @click.command()
 @click.option("--batch-size", "-b", default=8, type=int)
-@click.option("--hidden-channels", "-H", default=30, type=int)
+@click.option("--hidden-channels", "-H", default=default_hidden_channels, type=int)
 @click.option(
     "--gpu/--no-gpu", is_flag=True, default=True, help="Try using the GPU if available."
 )

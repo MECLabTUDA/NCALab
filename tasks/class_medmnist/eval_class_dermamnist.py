@@ -26,6 +26,7 @@ from train_class_dermamnist import (
     use_temporal_encoding,
     fire_rate,
     WEIGHTS_PATH,
+    default_hidden_channels,
 )
 
 T = transforms.Compose(
@@ -92,7 +93,7 @@ def eval_selfclass_dermamnist(
     for sample in tqdm(iter(loader_test)):
         x, y = sample
         x = x.float().to(device)
-        steps = 72
+        steps = 32
         y_prob = nca.classify(x, steps, reduce=False)
         y = y.squeeze().to(device)
 
@@ -112,7 +113,7 @@ def eval_selfclass_dermamnist(
 
 
 @click.command()
-@click.option("--hidden-channels", "-H", default=30, type=int)
+@click.option("--hidden-channels", "-H", default=default_hidden_channels, type=int)
 @click.option(
     "--gpu/--no-gpu", is_flag=True, default=True, help="Try using the GPU if available."
 )
