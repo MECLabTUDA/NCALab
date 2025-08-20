@@ -2,6 +2,7 @@ from typing import Dict, Optional
 
 import torch  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
+from torch import nn
 
 import torchmetrics
 import torchmetrics.classification
@@ -13,6 +14,7 @@ from ..visualization import (
     VisualBinaryImageClassification,
     VisualRGBImageClassification,
 )
+from ..prediction import Prediction
 
 
 class ClassificationNCAModel(BasicNCAModel):
@@ -33,18 +35,19 @@ class ClassificationNCAModel(BasicNCAModel):
         pad_noise: bool = False,
         autostepper: Optional[AutoStepper] = None,
         use_temporal_encoding: bool = False,
+        use_classifier: bool = True,
         **kwargs,
     ):
         """
-        :param device [device]: Pytorch device descriptor.
-        :param num_image_channels [int]: _description_
-        :param num_hidden_channels [int]: _description_
-        :param num_classes [int]: _description_
-        :param fire_rate [float]: Fire rate for stochastic weight update. Defaults to 0.8.
-        :param hidden_size [int]: Number of neurons in hidden layer. Defaults to 128.
-        :param use_alive_mask [bool]: Whether to use alive masking (channel 3) during training. Defaults to False.
-        :param pixel_wise_loss [bool]: Whether a prediction per pixel is desired, like in self-classifying MNIST. Defaults to False.
-        :param num_learned_filters [int]: Number of learned filters. If zero, use two sobel filters instead. Defaults to 2.
+        :param device: Pytorch device descriptor.
+        :param num_image_channels: _description_
+        :param num_hidden_channels: _description_
+        :param num_classes: _description_
+        :param fire_rate: Fire rate for stochastic weight update. Defaults to 0.8.
+        :param hidden_size: Number of neurons in hidden layer. Defaults to 128.
+        :param use_alive_mask: Whether to use alive masking (channel 3) during training. Defaults to False.
+        :param pixel_wise_loss: Whether a prediction per pixel is desired, like in self-classifying MNIST. Defaults to False.
+        :param num_learned_filters: Number of learned filters. If zero, use two sobel filters instead. Defaults to 2.
         :param filter_padding [str]: Padding type to use. Might affect reliance on spatial cues. Defaults to "circular".
         :param pad_noise [bool]: Whether to pad input image tensor with noise in hidden / output channels
         """
@@ -59,7 +62,7 @@ class ClassificationNCAModel(BasicNCAModel):
             immutable_image_channels=True,
             plot_function=None,
             num_learned_filters=num_learned_filters,
-            validation_metric="accuracy_micro",
+            validation_metric="accuracy_macro",
             filter_padding=filter_padding,
             use_laplace=use_laplace,
             kernel_size=kernel_size,
@@ -69,6 +72,16 @@ class ClassificationNCAModel(BasicNCAModel):
         )
         self._num_classes = num_classes
         self.pixel_wise_loss = pixel_wise_loss
+        self.use_classifier = use_classifier
+        if use_classifier:
+            self.classifier = nn.Sequential(
+                nn.Linear(
+                    self.num_hidden_channels,
+                    128,
+                ),
+                nn.ReLU(),
+                nn.Linear(128, num_classes, bias=False),
+            ).to(self.device)
         if num_image_channels <= 1:
             self.plot_function = VisualBinaryImageClassification()
         else:
@@ -89,24 +102,17 @@ class ClassificationNCAModel(BasicNCAModel):
         """
         Predict classification for an input image.
 
-        :param image [torch.Tensor]: Input image.
-        :param steps [int]: Inference steps. Defaults to 100.
-        :param reduce [bool]: Return a single softmax probability. Defaults to False.
+        :param image: Input image.
+        :param steps: Inference steps. Defaults to 100.
+        :param reduce: Return a single softmax probability. Defaults to False.
 
-        :returns [torch.Tensor]: Single class index or vector of logits.
+        :returns: Single class index or vector of logits.
         """
         with torch.no_grad():
             x = image.clone()
-            if self.pad_noise:
-                x = pad_input(x, self, noise=True)
+            x = pad_input(x, self, noise=self.pad_noise)
             prediction = self(x, steps=steps)
-            hidden_channels = prediction.hidden_channels
             class_channels = prediction.output_channels
-
-            # mask inactive pixels
-            for i in range(image.shape[0]):
-                mask = torch.max(hidden_channels[i]) > 0.1
-                class_channels[i] *= mask
 
             # if binary classification (e.g. self classifying MNIST),
             # mask away pixels with the binary image used as a mask
@@ -115,6 +121,9 @@ class ClassificationNCAModel(BasicNCAModel):
                     mask = image[i, 0, :, :]
                     for c in range(self.num_classes):
                         class_channels[i, c, :, :] *= mask
+
+            if self.use_classifier:
+                return class_channels[:, :, 0, 0]
 
             # Average over all pixels if a single categorial prediction is desired
             y_pred = F.softmax(class_channels, dim=1)
@@ -127,21 +136,42 @@ class ClassificationNCAModel(BasicNCAModel):
                 return y_pred
             return y_pred
 
+    def forward(
+        self,
+        x: torch.Tensor,
+        steps: int = 1,
+    ):
+        assert x.shape[1] == self.num_channels
+        x[:, -self.num_output_channels :, :, :] *= 0
+        for step in range(steps):
+            x = self._forward_step(x, step)
+        x[:, -self.num_output_channels :, :, :] *= 0
+
+        if self.use_classifier:
+            hidden = x[:, self.num_image_channels : -self.num_output_channels, :, :]
+            z = F.adaptive_avg_pool2d(hidden, (1, 1))
+            classification = self.classifier(z.permute(0, 2, 3, 1)).permute(0, 3, 1, 2)
+            w, h = x.shape[2], x.shape[3]
+            x = torch.cat(
+                (
+                    x[:, : self.num_image_channels + self.num_hidden_channels, :, :],
+                    classification.expand(-1, -1, w, h),
+                ),
+                dim=1,
+            )
+        return Prediction(self, steps, x)
+
     def loss(self, image: torch.Tensor, label: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
-        Return the classification loss. For pixel-wise ("self-classifying") problems,
-        such as self-classifying MNIST, we compute the Cross-Entropy loss.
-        For image-wise classification, MSE loss is returned.
+        Return the classification loss.
 
-        :param image [torch.Tensor]: Input image, BCWH.
-        :param label [torch.Tensor]: Ground truth.
+        :param image: Input image, BCWH.
+        :param label: Ground truth.
 
         :returns: Dictionary of identifiers mapped to computed losses.
         """
         assert image.shape[1] == self.num_channels, "Tensor must be in BCWH order."
-        class_channels = image[
-            :, self.num_image_channels + self.num_hidden_channels :, :, :
-        ]
+        class_channels = image[:, -self.num_output_channels :, :, :]
 
         # Create one-hot ground truth tensor, where all pixels of the predicted class are
         # active in the respective classification channel.
@@ -167,8 +197,10 @@ class ClassificationNCAModel(BasicNCAModel):
             ).mean()
             loss_classification = loss_ce
         else:
-            y_pred = class_channels
-            y_pred = torch.mean(y_pred, dim=(2, 3))
+            if self.use_classifier:
+                y_pred = class_channels[:, :, 0, 0]
+            else:
+                y_pred = torch.mean(class_channels, dim=(2, 3))
 
             loss_ce = (
                 F.cross_entropy(
@@ -212,8 +244,10 @@ class ClassificationNCAModel(BasicNCAModel):
         class_channels = pred[
             :, self.num_image_channels + self.num_hidden_channels :, :, :
         ]
-        y_prob = class_channels
-        y_prob = torch.mean(y_prob, dim=(2, 3))
+        if self.use_classifier:
+            y_prob = class_channels[:, :, 0, 0]
+        else:
+            y_prob = torch.mean(class_channels, dim=(2, 3))
         y_true = label
         if len(y_true.shape) == 2:
             y_true = label.squeeze(1)
