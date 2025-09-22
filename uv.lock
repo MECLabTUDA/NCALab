@@ -1072,7 +1072,7 @@ wheels = [
 
 [[package]]
 name = "keras"
-version = "3.11.0"
+version = "3.11.3"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "absl-py" },
@@ -1084,9 +1084,9 @@ dependencies = [
     { name = "packaging" },
     { name = "rich" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/ec/b9/e317966154c9deb3e98572b85937d0f8bbb5538841e771513a19cf9f5025/keras-3.11.0.tar.gz", hash = "sha256:f5dfeaf4fcaea180e032f7c1e373f1868961e2940dcfcaaf9a5b711baf41bd60", size = 1070168, upload-time = "2025-07-30T00:00:02.937Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/6a/89/646425fe9a46f9053430e1271f817c36041c6f33469950a3caafc3d2591e/keras-3.11.3.tar.gz", hash = "sha256:efda616835c31b7d916d72303ef9adec1257320bc9fd4b2b0138840fc65fb5b7", size = 1065906, upload-time = "2025-08-21T22:08:57.643Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/ad/ef/812a74cd45189382869aeff38abd88cc2ec9813adb2470543b3a683735d1/keras-3.11.0-py3-none-any.whl", hash = "sha256:28babe8dc69370a2b7c3bc385be6c1f22d702b00b3c47cae62559b6f80d6073a", size = 1408372, upload-time = "2025-07-30T00:00:01.105Z" },
+    { url = "https://files.pythonhosted.org/packages/94/5b/4c778cc921ce4b864b238f63f8e3ff6e954ab19b80c9fa680593ad8093d4/keras-3.11.3-py3-none-any.whl", hash = "sha256:f484f050e05ee400455b05ec8c36ed35edc34de94256b6073f56cfe68f65491f", size = 1408438, upload-time = "2025-08-21T22:08:55.858Z" },
 ]
 
 [[package]]
@@ -1753,7 +1753,7 @@ requires-dist = [
     { name = "jedi", specifier = "==0.19.2" },
     { name = "jinja2", specifier = "==3.1.6" },
     { name = "joblib", specifier = "==1.4.2" },
-    { name = "keras", specifier = "==3.11.0" },
+    { name = "keras", specifier = "==3.11.3" },
     { name = "keras-applications", specifier = "==1.0.8" },
     { name = "kiwisolver", specifier = "==1.4.8" },
     { name = "lazy-loader", specifier = "==0.4" },
