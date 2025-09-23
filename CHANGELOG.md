@@ -1,3 +1,8 @@
+# v0.3.3
+* Parameterize average pooling size in classification with MLP head
+* Let user supply class label names to classifier
+* Classification visual in tensorboard: Show bar plot of softmax
+
 # v0.3.2
 * Fix use of max() reduction in uncertainty estimator
 
