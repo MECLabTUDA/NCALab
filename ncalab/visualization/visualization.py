@@ -9,8 +9,20 @@ import warnings
 import matplotlib.pyplot as plt  # type: ignore[import-untyped]
 from matplotlib.figure import Figure  # type: ignore[import-untyped]
 import numpy as np
+from scipy.special import softmax
 
 from ..prediction import Prediction
+
+
+def abbreviate_label(L, max_len=8):
+    if len(L) <= max_len:
+        return L
+    tokens = L.split(" ")
+    if len(tokens) == 1:
+        tokens = L.split("_")
+    if len(tokens) > 1:
+        return "".join([t[0].upper() for t in tokens])
+    return L[: max_len - 1] + "…"
 
 
 def show_image_row(
@@ -159,22 +171,33 @@ class VisualRGBImageClassification(Visual):
             mask = np.max(hidden_channels[i]) > 0.1
             class_channels[i] *= mask
 
-        y_pred = np.mean(class_channels, (2, 3))
-        y_pred = np.argmax(y_pred, axis=-1)
+        y_prob = np.mean(class_channels, (2, 3))
+        y_logit = softmax(y_prob, axis=-1)
+        y_pred = np.argmax(y_logit, axis=-1)
+
+        if len(label.shape) > 1:
+            label = label.flatten()
 
         # 2nd row: prediction vs. true
         for j in range(batch_size):
-            ax[1, j].text(0, 1, f"TRUE: {label[j][0]}")
-            ax[1, j].text(0, 0.9, f"PRED: {y_pred[j]}")
-            ax[1, j].axis("off")
+            colors = [
+                "xkcd:yellow green" if k == label[j] else "xkcd:cerulean"
+                for k in range(len(model.class_names))
+            ]
+            ax[1, j].barh(
+                [abbreviate_label(name) for name in model.class_names],
+                y_logit[j],
+                color=colors,
+            )
+            ax[1, j].get_xaxis().set_visible(False)
+            [spine.set_linewidth(2) for spine in ax[1, j].spines.values()]
 
         # 3rd row: predicted classes per pixel
         class_channels = prediction.output_channels_np
         y_pred = np.argmax(class_channels, axis=1)
-        images = (image[:, 0, :, :] > 0).astype(np.float32)
+        images = np.ones_like(image[:, 0, :, :], dtype=np.float32)
         for i in range(batch_size):
-            images[i, :, :] *= y_pred[i] + 1
-        images -= 1
+            images[i, :, :] *= y_pred[i]
         show_image_row(
             ax[2],
             images,

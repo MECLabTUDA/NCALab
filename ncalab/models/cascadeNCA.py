@@ -113,6 +113,7 @@ class CascadeNCA(BasicNCAModel):
         self.steps = steps
 
         self.single_model = single_model
+        self.models: nn.ModuleList | List[nn.Module]
         if single_model:
             self.models = [backbone for _ in scales]
         else:

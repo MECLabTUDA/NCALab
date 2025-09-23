@@ -83,6 +83,7 @@ class ClassificationNCAModel(BasicNCAModel):
                     self.num_hidden_channels * self.avg_pool_size**2,
                     128,
                 ),
+                nn.Dropout(0.5),
                 nn.ReLU(),
                 nn.Linear(128, num_classes, bias=False),
             ).to(self.device)
@@ -163,8 +164,6 @@ class ClassificationNCAModel(BasicNCAModel):
             z = F.adaptive_avg_pool2d(
                 hidden, (self.avg_pool_size, self.avg_pool_size)
             ).flatten(1, 3)
-            # z = z.permute(0, 2, 1)
-            # print(z.shape)
             classification = self.classifier(z).unsqueeze(-1).unsqueeze(-1)
             w, h = x.shape[2], x.shape[3]
             classification = classification.expand(-1, -1, w, h)

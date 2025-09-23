@@ -112,6 +112,7 @@ def train_class_dermamnist(
         fire_rate=fire_rate,
         pad_noise=pad_noise,
         use_temporal_encoding=use_temporal_encoding,
+        class_names=list(INFO["dermamnist"]["label"].values()),
     )
 
     trainer = BasicNCATrainer(

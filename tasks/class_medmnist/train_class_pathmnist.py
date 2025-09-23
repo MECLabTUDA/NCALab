@@ -81,6 +81,7 @@ def train_class_pathmnist(
         fire_rate=fire_rate,
         pad_noise=pad_noise,
         use_temporal_encoding=use_temporal_encoding,
+        class_names=list(INFO["pathmnist"]["label"].values()),
     )
     trainer = BasicNCATrainer(
         nca,

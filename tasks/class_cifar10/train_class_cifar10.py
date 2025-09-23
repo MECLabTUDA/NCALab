@@ -76,7 +76,7 @@ def train_class_cifar10(
         val_subset, batch_size=batch_size, shuffle=False, num_workers=2
     )
 
-    classes = (
+    class_names = [
         "plane",
         "car",
         "bird",
@@ -87,9 +87,9 @@ def train_class_cifar10(
         "horse",
         "ship",
         "truck",
-    )
+    ]
 
-    num_classes = len(classes)
+    num_classes = len(class_names)
     nca = ClassificationNCAModel(
         device,
         num_image_channels=3,
@@ -99,6 +99,7 @@ def train_class_cifar10(
         fire_rate=fire_rate,
         pad_noise=pad_noise,
         use_temporal_encoding=use_temporal_encoding,
+        class_names=class_names,
     )
     trainer = BasicNCATrainer(
         nca,
