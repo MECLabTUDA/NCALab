@@ -59,7 +59,13 @@ class CascadeNCA(BasicNCAModel):
     This is still highly experimental. In the future, we'll work on a cleaner interface for this.
     """
 
-    def __init__(self, backbone: BasicNCAModel, scales: List[int], steps: List[int], single_model: bool = True):
+    def __init__(
+        self,
+        backbone: BasicNCAModel,
+        scales: List[int],
+        steps: List[int],
+        single_model: bool = True,
+    ):
         """
         :param backbone: Backbone model based on BasicNCAModel.
         :type backbone: ncalab.BasicNCAModel
@@ -94,6 +100,8 @@ class CascadeNCA(BasicNCAModel):
         # TODO automatically copy attributes
         if hasattr(backbone, "num_classes"):
             self.num_classes = backbone.num_classes
+        if hasattr(backbone, "avg_pool_size"):
+            self.avg_pool_size = backbone.avg_pool_size
 
         self.backbone = backbone
         assert len(scales) == len(steps)
@@ -104,7 +112,11 @@ class CascadeNCA(BasicNCAModel):
         self.scales = scales
         self.steps = steps
 
-        self.models = [backbone for _ in scales]
+        self.single_model = single_model
+        if single_model:
+            self.models = [backbone for _ in scales]
+        else:
+            self.models = nn.ModuleList([backbone for _ in scales])
 
     def forward(self, x: torch.Tensor, *args, **kwargs) -> Prediction:
         """
@@ -168,7 +180,9 @@ class CascadeNCA(BasicNCAModel):
             sequence.extend(subseq)
             x_in = prediction.output_image
             if i < len(self.scales) - 1:
-                x_scaled = upscale(unwrap(prediction).output_image, scale / self.scales[i + 1])
+                x_scaled = upscale(
+                    unwrap(prediction).output_image, scale / self.scales[i + 1]
+                )
                 # replace input with downscaled variant of original image
                 x_scaled[:, : model.num_image_channels, :, :] = downscale(
                     image[:, : model.num_image_channels, :, :],
@@ -176,7 +190,9 @@ class CascadeNCA(BasicNCAModel):
                 )
         return sequence
 
-    def validate(self, image: torch.Tensor, label: torch.Tensor, steps: int = 1) -> Optional[Tuple[Dict[str, float], Prediction]]:
+    def validate(
+        self, image: torch.Tensor, label: torch.Tensor, steps: int = 1
+    ) -> Optional[Tuple[Dict[str, float], Prediction]]:
         """
         Validation method.
 

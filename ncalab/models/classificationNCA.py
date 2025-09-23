@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 import torch  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
@@ -36,6 +36,8 @@ class ClassificationNCAModel(BasicNCAModel):
         autostepper: Optional[AutoStepper] = None,
         use_temporal_encoding: bool = False,
         use_classifier: bool = True,
+        class_names: Optional[List[str]] = None,
+        avg_pool_size: int = 3,
         **kwargs,
     ):
         """
@@ -73,15 +75,24 @@ class ClassificationNCAModel(BasicNCAModel):
         self._num_classes = num_classes
         self.pixel_wise_loss = pixel_wise_loss
         self.use_classifier = use_classifier
+        assert avg_pool_size >= 1
+        self.avg_pool_size = avg_pool_size
         if use_classifier:
             self.classifier = nn.Sequential(
                 nn.Linear(
-                    self.num_hidden_channels,
+                    self.num_hidden_channels * self.avg_pool_size**2,
                     128,
                 ),
                 nn.ReLU(),
                 nn.Linear(128, num_classes, bias=False),
             ).to(self.device)
+        if class_names is None:
+            self.class_names = [str(i) for i in range(num_classes)]
+        else:
+            assert (
+                len(class_names) == num_classes
+            ), "Length of class names list must match number of classes"
+            self.class_names = class_names
         if num_image_channels <= 1:
             self.plot_function = VisualBinaryImageClassification()
         else:
@@ -149,13 +160,18 @@ class ClassificationNCAModel(BasicNCAModel):
 
         if self.use_classifier:
             hidden = x[:, self.num_image_channels : -self.num_output_channels, :, :]
-            z = F.adaptive_avg_pool2d(hidden, (1, 1))
-            classification = self.classifier(z.permute(0, 2, 3, 1)).permute(0, 3, 1, 2)
+            z = F.adaptive_avg_pool2d(
+                hidden, (self.avg_pool_size, self.avg_pool_size)
+            ).flatten(1, 3)
+            # z = z.permute(0, 2, 1)
+            # print(z.shape)
+            classification = self.classifier(z).unsqueeze(-1).unsqueeze(-1)
             w, h = x.shape[2], x.shape[3]
+            classification = classification.expand(-1, -1, w, h)
             x = torch.cat(
                 (
                     x[:, : self.num_image_channels + self.num_hidden_channels, :, :],
-                    classification.expand(-1, -1, w, h),
+                    classification,
                 ),
                 dim=1,
             )
