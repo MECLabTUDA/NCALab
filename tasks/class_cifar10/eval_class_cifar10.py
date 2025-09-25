@@ -25,7 +25,7 @@ root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
 
-from ncalab import ClassificationNCAModel, get_compute_device
+from ncalab import ClassificationNCAModel, get_compute_device, fix_random_seed
 
 T = transforms.Compose(
     [
@@ -42,6 +42,7 @@ def eval_class_cifar10(
     gpu,
     gpu_index,
 ):
+    fix_random_seed()
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
     testset = torchvision.datasets.CIFAR10(
@@ -107,7 +108,7 @@ def eval_class_cifar10(
     for sample in tqdm(iter(loader_test)):
         x, y = sample
         x = x.float().to(device)
-        steps = 32
+        steps = 42
 
         y_prob = nca.classify(x, steps, reduce=False)
         y = y.squeeze().to(device)

@@ -4,7 +4,9 @@ import sys
 from pathlib import Path
 
 import click
+import numpy as np  # type: ignore[import-untyped]
 import torch  # type: ignore[import-untyped]
+from torch.utils.data.sampler import SubsetRandomSampler  # type: ignore[import-untyped]
 from torch.utils.tensorboard import SummaryWriter  # type: ignore[import-untyped]
 import torchvision  # type: ignore[import-untyped]
 from torchvision import transforms  # type: ignore[import-untyped]
@@ -27,7 +29,7 @@ pad_noise = False
 alive_mask = False
 use_temporal_encoding = True
 fire_rate = 0.8
-default_hidden_channels = 20
+default_hidden_channels = 24
 
 
 def train_class_cifar10(
@@ -48,7 +50,7 @@ def train_class_cifar10(
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
     # Data loading and preprocessing
-    T = transforms.Compose(
+    T_train = transforms.Compose(
         [
             v2.ToImage(),
             v2.ToDtype(torch.float, scale=True),
@@ -62,22 +64,50 @@ def train_class_cifar10(
             transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
         ]
     )
-
-    trainset = torchvision.datasets.CIFAR10(
-        root=TASK_PATH / "data", train=True, download=True, transform=T
+    T_val = transforms.Compose(
+        [
+            v2.ToImage(),
+            v2.ToDtype(torch.float, scale=True),
+            v2.ConvertImageDtype(dtype=torch.float32),
+            transforms.Normalize((0.5, 0.5, 0.5), (0.5, 0.5, 0.5)),
+        ]
     )
-    val_size = int(0.2 * len(trainset))
-    train_size = len(trainset) - val_size
 
-    train_subset, val_subset = torch.utils.data.random_split(
-        trainset, [train_size, val_size]
+    train_dataset = torchvision.datasets.CIFAR10(
+        root=TASK_PATH / "data",
+        train=True,
+        download=True,
+        transform=T_train,
     )
+
+    val_dataset = torchvision.datasets.CIFAR10(
+        root=TASK_PATH / "data",
+        train=True,
+        download=True,
+        transform=T_val,
+    )
+
+    indices = list(range(len(train_dataset)))
+    split = int(np.floor(0.1 * len(train_dataset)))
+    np.random.shuffle(indices)
+
+    train_idx, val_idx = indices[split:], indices[:split]
+    train_sampler = SubsetRandomSampler(train_idx)
+    val_sampler = SubsetRandomSampler(val_idx)
 
     loader_train = torch.utils.data.DataLoader(
-        train_subset, batch_size=batch_size, shuffle=True, num_workers=2
+        train_dataset,
+        batch_size=batch_size,
+        num_workers=2,
+        sampler=train_sampler,
+        pin_memory=True,
     )
     loader_val = torch.utils.data.DataLoader(
-        val_subset, batch_size=batch_size, shuffle=False, num_workers=2
+        val_dataset,
+        batch_size=len(val_idx),
+        num_workers=2,
+        sampler=val_sampler,
+        pin_memory=True,
     )
 
     class_names = [
@@ -109,10 +139,10 @@ def train_class_cifar10(
         nca,
         WEIGHTS_PATH / "classification_cifar10",
         batch_repeat=2,
-        max_epochs=40,
+        max_epochs=100,
         gradient_clipping=gradient_clipping,
-        steps_range=(32, 33),
-        steps_validation=32,
+        steps_range=(32, 48),
+        steps_validation=42,
     )
     trainer.train(
         loader_train,
