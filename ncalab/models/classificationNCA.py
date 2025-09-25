@@ -37,7 +37,7 @@ class ClassificationNCAModel(BasicNCAModel):
         use_temporal_encoding: bool = False,
         use_classifier: bool = True,
         class_names: Optional[List[str]] = None,
-        avg_pool_size: int = 3,
+        avg_pool_size: int = 5,
         **kwargs,
     ):
         """
@@ -64,7 +64,7 @@ class ClassificationNCAModel(BasicNCAModel):
             immutable_image_channels=True,
             plot_function=None,
             num_learned_filters=num_learned_filters,
-            validation_metric="accuracy_macro",
+            validation_metric="accuracy_micro",
             filter_padding=filter_padding,
             use_laplace=use_laplace,
             kernel_size=kernel_size,
@@ -78,14 +78,15 @@ class ClassificationNCAModel(BasicNCAModel):
         assert avg_pool_size >= 1
         self.avg_pool_size = avg_pool_size
         if use_classifier:
+            # TODO make configurable
+            N_z_classifier = 64
             self.classifier = nn.Sequential(
                 nn.Linear(
                     self.num_hidden_channels * self.avg_pool_size**2,
-                    128,
+                    N_z_classifier,
                 ),
-                nn.Dropout(0.5),
                 nn.ReLU(),
-                nn.Linear(128, num_classes, bias=False),
+                nn.Linear(N_z_classifier, num_classes, bias=False),
             ).to(self.device)
         if class_names is None:
             self.class_names = [str(i) for i in range(num_classes)]
@@ -213,13 +214,13 @@ class ClassificationNCAModel(BasicNCAModel):
             loss_classification = loss_ce
         else:
             if self.use_classifier:
-                y_pred = class_channels[:, :, 0, 0]
+                y_logits = class_channels[:, :, 0, 0]
             else:
-                y_pred = torch.mean(class_channels, dim=(2, 3))
+                y_logits = torch.mean(class_channels, dim=(2, 3))
 
             loss_ce = (
                 F.cross_entropy(
-                    y_pred,
+                    y_logits,
                     label.squeeze(),
                     reduction="none",
                 )
@@ -260,9 +261,10 @@ class ClassificationNCAModel(BasicNCAModel):
             :, self.num_image_channels + self.num_hidden_channels :, :, :
         ]
         if self.use_classifier:
-            y_prob = class_channels[:, :, 0, 0]
+            y_logits = class_channels[:, :, 0, 0]
         else:
-            y_prob = torch.mean(class_channels, dim=(2, 3))
+            y_logits = torch.mean(class_channels, dim=(2, 3))
+        y_prob = F.softmax(y_logits, dim=1)
         y_true = label
         if len(y_true.shape) == 2:
             y_true = label.squeeze(1)
