@@ -1,22 +1,20 @@
 from __future__ import annotations
+
 import logging
 from pathlib import Path, PosixPath  # for type hint
-from typing import Dict, Optional, List, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
-
 import torch  # type: ignore[import-untyped]
 import torch.optim as optim  # type: ignore[import-untyped]
 from torch.utils.data import DataLoader  # for type hint
 from torch.utils.tensorboard import SummaryWriter  # for type hint
-
 from tqdm import tqdm  # type: ignore[import-untyped]
 
 from ..models.basicNCA import BasicNCAModel  # for type hint
 from ..prediction import Prediction
 from ..utils import pad_input, unwrap
 from ..visualization import Visual
-
 from .earlystopping import EarlyStopping
 from .pool import Pool
 from .traininghistory import TrainingHistory
@@ -35,7 +33,7 @@ class BasicNCATrainer:
         steps_range: tuple = (90, 110),
         steps_validation: int = 100,
         lr: Optional[float] = None,
-        lr_gamma: float = 0.9999,
+        lr_gamma: float = 0.99,
         adam_betas=(0.9, 0.95),
         batch_repeat: int = 2,
         max_epochs: int = 200,
@@ -162,7 +160,6 @@ class BasicNCATrainer:
         if self.gradient_clipping:
             torch.nn.utils.clip_grad_norm_(self.nca.parameters(), 1.0)
         optimizer.step()
-        scheduler.step()
         if summary_writer:
             for key in losses:
                 summary_writer.add_scalar(
@@ -278,7 +275,7 @@ class BasicNCATrainer:
                     if self.pool is not None:
                         self.pool.update(prediction.output_image)
                     all_losses.append(losses["total"].item())
-
+            scheduler.step()
             with torch.no_grad():
                 # VISUALIZATION
                 # TODO visualize samples in training and validation batches
