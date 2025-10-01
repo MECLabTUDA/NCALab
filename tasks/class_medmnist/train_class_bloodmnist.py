@@ -1,25 +1,24 @@
 #!/usr/bin/env python3
-from pathlib import Path
-import sys
 import os
+import sys
+from pathlib import Path
+
+import click
+import torch  # type: ignore[import-untyped]
+from medmnist import INFO, BloodMNIST  # type: ignore[import-untyped]
+from torch.utils.tensorboard import SummaryWriter  # type: ignore[import-untyped]
+from torchvision import transforms  # type: ignore[import-untyped]
+from torchvision.transforms import v2  # type: ignore[import-untyped]
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from ncalab import (
-    ClassificationNCAModel,
+
+from ncalab import (  # noqa: E402
     BasicNCATrainer,
+    ClassificationNCAModel,
     get_compute_device,
 )
-
-import click
-
-from medmnist import INFO, BloodMNIST  # type: ignore[import-untyped]
-
-import torch  # type: ignore[import-untyped]
-from torchvision import transforms  # type: ignore[import-untyped]
-from torchvision.transforms import v2  # type: ignore[import-untyped]
-from torch.utils.tensorboard import SummaryWriter  # type: ignore[import-untyped]
 
 TASK_PATH = Path(__file__).parent.resolve()
 WEIGHTS_PATH = TASK_PATH / "weights"

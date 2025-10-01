@@ -1,27 +1,26 @@
 #!/usr/bin/env python3
+import logging
 import os
 import sys
-import logging
 from pathlib import Path
 
 import click
-from torch.utils.data import DataLoader
 import numpy as np
+from growing_utils import get_emoji_image
+from torch.utils.data import DataLoader
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from ncalab import (
+from ncalab import (  # noqa: E402
     GrowingNCADataset,
     GrowingNCAModel,
-    get_compute_device,
-    print_NCALab_banner,
-    print_mascot,
     ParameterSearch,
     ParameterSet,
+    get_compute_device,
+    print_mascot,
+    print_NCALab_banner,
 )
-
-from growing_utils import get_emoji_image
 
 TASK_PATH = Path(__file__).parent
 

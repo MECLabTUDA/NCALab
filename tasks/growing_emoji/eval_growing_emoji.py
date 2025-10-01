@@ -3,21 +3,19 @@ import os
 import sys
 from pathlib import Path
 
+import click
+import torch
+
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from ncalab import (
+from ncalab import (  # noqa: E402
+    Animator,
     GrowingNCAModel,
+    fix_random_seed,
     get_compute_device,
     print_NCALab_banner,
-    fix_random_seed,
-    Animator,
 )
-
-import click
-
-import torch
-
 
 TASK_PATH = Path(__file__).parent
 FIGURE_PATH = TASK_PATH / "figures"

@@ -1,19 +1,17 @@
-from pathlib import Path
 import os
 import sys
+from pathlib import Path
+
+import click
+import numpy as np
+import torch
+from torchvision import transforms  # type: ignore[import-untyped]
+from torchvision.datasets import MNIST  # type: ignore[import-untyped]
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from ncalab import ClassificationNCAModel, get_compute_device, pad_input
-
-import click
-
-import torch
-import numpy as np
-
-from torchvision.datasets import MNIST  # type: ignore[import-untyped]
-from torchvision import transforms  # type: ignore[import-untyped]
+from ncalab import ClassificationNCAModel, get_compute_device, pad_input  # noqa: E402
 
 TASK_PATH = Path(__file__).parent.resolve()
 WEIGHTS_PATH = TASK_PATH / "weights"

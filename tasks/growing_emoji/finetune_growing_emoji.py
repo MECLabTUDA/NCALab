@@ -5,27 +5,23 @@ import sys
 from pathlib import Path
 
 import click
-
-import torch
-from torch.utils.data import DataLoader
-
-from torch.utils.tensorboard import SummaryWriter
-
 import numpy as np
-
+import torch
 from growing_utils import get_emoji_image
+from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from ncalab import (
+from ncalab import (  # noqa: E402
+    BasicNCATrainer,
     GrowingNCADataset,
     GrowingNCAModel,
-    BasicNCATrainer,
-    get_compute_device,
-    print_NCALab_banner,
-    print_mascot,
     fix_random_seed,
+    get_compute_device,
+    print_mascot,
+    print_NCALab_banner,
 )
 
 TASK_PATH = Path(__file__).parent.resolve()

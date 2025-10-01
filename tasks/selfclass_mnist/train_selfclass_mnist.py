@@ -1,30 +1,26 @@
-from pathlib import Path
 import os
 import sys
+from pathlib import Path
+
+import click
+import torch
+from sklearn.model_selection import train_test_split  # type: ignore[import-untyped]
+from torch.utils.data import Subset
+from torch.utils.tensorboard import SummaryWriter
+from torchvision import transforms  # type: ignore[import-untyped]
+from torchvision.datasets import MNIST  # type: ignore[import-untyped]
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from ncalab import (
-    ClassificationNCAModel,
+from ncalab import (  # noqa: E402
     BasicNCATrainer,
-    get_compute_device,
-    print_NCALab_banner,
-    print_mascot,
+    ClassificationNCAModel,
     fix_random_seed,
+    get_compute_device,
+    print_mascot,
+    print_NCALab_banner,
 )
-
-import click
-
-from sklearn.model_selection import train_test_split  # type: ignore[import-untyped]
-
-import torch
-
-from torchvision.datasets import MNIST  # type: ignore[import-untyped]
-from torch.utils.data import Subset
-from torchvision import transforms  # type: ignore[import-untyped]
-from torch.utils.tensorboard import SummaryWriter
-
 
 TASK_PATH = Path(__file__).parent.resolve()
 WEIGHTS_PATH = TASK_PATH / "weights"

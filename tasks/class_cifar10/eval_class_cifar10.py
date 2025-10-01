@@ -10,10 +10,9 @@ import torchvision  # type: ignore[import-untyped]
 from torchvision import transforms  # type: ignore[import-untyped]
 from torchvision.transforms import v2  # type: ignore[import-untyped]
 from tqdm import tqdm
-
 from train_class_cifar10 import (
-    WEIGHTS_PATH,
     TASK_PATH,
+    WEIGHTS_PATH,
     alive_mask,
     default_hidden_channels,
     fire_rate,
@@ -25,7 +24,11 @@ root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
 
-from ncalab import ClassificationNCAModel, get_compute_device, fix_random_seed
+from ncalab import (  # noqa: E402
+    ClassificationNCAModel,
+    fix_random_seed,
+    get_compute_device,
+)
 
 T = transforms.Compose(
     [

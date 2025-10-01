@@ -1,35 +1,34 @@
 #!/usr/bin/env python3
-import sys
 import os
+import sys
+from pathlib import Path
+
+import albumentations as A  # type: ignore[import-untyped]
+import click
+import torch
+from albumentations.pytorch import ToTensorV2  # type: ignore[import-untyped]
+from dataset_kvasir_seg import KvasirSegDataset
+from download_kvasir_seg import (  # type: ignore[import-untyped]
+    KVASIR_SEG_PATH,
+    download_and_extract,
+)
+from sklearn.model_selection import train_test_split  # type: ignore[import-untyped]
+from torch.utils.data import Subset
+from torch.utils.tensorboard import SummaryWriter
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from pathlib import Path
 
-
-from ncalab import (
-    SegmentationNCAModel,
-    CascadeNCA,
+from ncalab import (  # noqa: E402
     BasicNCATrainer,
+    CascadeNCA,
+    SegmentationNCAModel,
+    fix_random_seed,
     get_compute_device,
     print_mascot,
     print_NCALab_banner,
-    fix_random_seed,
 )
-
-from download_kvasir_seg import download_and_extract, KVASIR_SEG_PATH  # type: ignore[import-untyped]
-from dataset_kvasir_seg import KvasirSegDataset
-
-import albumentations as A  # type: ignore[import-untyped]
-from albumentations.pytorch import ToTensorV2  # type: ignore[import-untyped]
-import click
-
-from sklearn.model_selection import train_test_split  # type: ignore[import-untyped]
-import torch
-from torch.utils.tensorboard import SummaryWriter
-from torch.utils.data import Subset
-
 
 TASK_PATH = Path(__file__).parent.resolve()
 WEIGHTS_PATH = TASK_PATH / "weights"

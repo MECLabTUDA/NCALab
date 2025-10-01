@@ -1,33 +1,28 @@
 #!/usr/bin/env python3
-import sys
 import os
+import sys
+
+import click
+import torch  # type: ignore[import-untyped]
+import torchmetrics
+import torchmetrics.classification
+from medmnist import INFO, PathMNIST  # type: ignore[import-untyped]
+from torchvision import transforms  # type: ignore[import-untyped]
+from torchvision.transforms import v2  # type: ignore[import-untyped]
+from tqdm import tqdm
+from train_class_pathmnist import (
+    WEIGHTS_PATH,
+    alive_mask,
+    default_hidden_channels,
+    fire_rate,
+    pad_noise,
+    use_temporal_encoding,
+)
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from ncalab import ClassificationNCAModel, get_compute_device
-
-import click
-
-from medmnist import INFO, PathMNIST  # type: ignore[import-untyped]
-
-import torch  # type: ignore[import-untyped]
-from torchvision import transforms  # type: ignore[import-untyped]
-from torchvision.transforms import v2  # type: ignore[import-untyped]
-
-import torchmetrics
-import torchmetrics.classification
-
-from tqdm import tqdm
-
-from train_class_pathmnist import (
-    pad_noise,
-    alive_mask,
-    use_temporal_encoding,
-    fire_rate,
-    WEIGHTS_PATH,
-    default_hidden_channels,
-)
+from ncalab import ClassificationNCAModel, get_compute_device  # noqa: E402
 
 T = transforms.Compose(
     [

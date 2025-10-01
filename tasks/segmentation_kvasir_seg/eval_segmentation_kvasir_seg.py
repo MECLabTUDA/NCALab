@@ -3,27 +3,24 @@ import os
 import sys
 from pathlib import Path
 
+import albumentations as A  # type: ignore[import-untyped]
+import click
+import torch
+from albumentations.pytorch import ToTensorV2  # type: ignore[import-untyped]
+from dataset_kvasir_seg import KvasirSegDataset
+from download_kvasir_seg import KVASIR_SEG_PATH  # type: ignore[import-untyped]
+
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from ncalab import (
+from ncalab import (  # noqa: E402
     Animator,
-    SegmentationNCAModel,
     CascadeNCA,
+    SegmentationNCAModel,
+    fix_random_seed,
     get_compute_device,
     print_NCALab_banner,
-    fix_random_seed
 )
-
-from download_kvasir_seg import KVASIR_SEG_PATH  # type: ignore[import-untyped]
-from dataset_kvasir_seg import KvasirSegDataset
-
-import albumentations as A  # type: ignore[import-untyped]
-from albumentations.pytorch import ToTensorV2  # type: ignore[import-untyped]
-import click
-
-import torch
-
 
 TASK_PATH = Path(__file__).parent
 FIGURE_PATH = TASK_PATH / "figures"
@@ -76,7 +73,9 @@ def eval_segmentation_kvasir_seg(hidden_channels: int, gpu: bool, gpu_index: int
     )
 
     seed = next(iter(loader))[0].to(device)
-    animator = Animator(cascade, seed, overlay=True, interval=100, steps=sum(cascade.steps))
+    animator = Animator(
+        cascade, seed, overlay=True, interval=100, steps=sum(cascade.steps)
+    )
 
     out_path = FIGURE_PATH / "segmentation_kvasir_seg.gif"
     animator.save(out_path)

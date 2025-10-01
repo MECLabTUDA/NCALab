@@ -1,21 +1,22 @@
 #!/usr/bin/env python3
-import sys
-import os
-
-root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
-sys.path.append(root_dir)
 import hashlib
+import os
 import shutil
+import sys
 
 import click
 import requests  # type: ignore[import-untyped]
 import tqdm
 
+root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
+sys.path.append(root_dir)
+
+from ncalab.paths import ROOT_PATH  # noqa: E402
+
 KVASIR_SEG_URL = "https://datasets.simula.no/downloads/kvasir-seg.zip"
 KVASIR_SEG_CHECKSUM = "03b30e21d584e04facf49397a2576738fd626815771afbbf788f74a7153478f7"
 RANDOM_STATE = 1337
 
-from ncalab.paths import ROOT_PATH
 
 KVASIR_SEG_PATH = ROOT_PATH / "data" / "kvasir_seg"
 
