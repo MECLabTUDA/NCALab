@@ -1,14 +1,13 @@
 from typing import Dict, Optional
 
-from .basicNCA import BasicNCAModel, AutoStepper
-
-from ..visualization import VisualDepthEstimation
-
 import torch  # type: ignore[import-untyped]
 import torch.nn as nn  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
-
 from pytorch_msssim import ssim  # type: ignore[import-untyped]
+
+from ..prediction import Prediction
+from ..visualization import VisualDepthEstimation
+from .basicNCA import AutoStepper, BasicNCAModel
 
 # TODO use torchmetrics ssim
 
@@ -98,16 +97,14 @@ class DepthNCAModel(BasicNCAModel):
         )
         self.vignette = None
 
-    def loss(self, image: torch.Tensor, label: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def loss(self, pred: Prediction, label: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
-        :param image [torch.Tensor]: Input image, BCWH.
-        :param label [torch.Tensor]: Ground truth.
+        :param image: Input image, BCWH.
+        :param label: Ground truth.
 
         :returns: Dictionary of identifiers mapped to computed losses.
         """
-        out_channels = image[
-            :, self.num_image_channels + self.num_hidden_channels :, :, :
-        ]
+        out_channels = pred.output_channels
         y_pred = out_channels.squeeze(1)
 
         assert y_pred.shape == label.shape
@@ -149,17 +146,17 @@ class DepthNCAModel(BasicNCAModel):
         loss = 0.5 * loss_tv + loss_depthmap + 0.2 * loss_ssim
         return {"total": loss, "tv": loss_tv, "depth": loss_depthmap, "ssim": loss_ssim}
 
-    def metrics(self, pred: torch.Tensor, label: torch.Tensor) -> Dict[str, float]:
+    def metrics(self, pred: Prediction, label: torch.Tensor) -> Dict[str, float]:
         """
         Return dict of standard evaluation metrics.
         Needs to include special item 'prediction', containing the predicted image (all channels).
 
-        :param pred [torch.Tensor]: Predicted image, BCWH.
-        :param label [torch.Tensor]: Ground truth label.
+        :param pred:
+        :param label: Ground truth label.
 
         :returns [Dict]: Dict of metrics, mapped by their names.
         """
         s = ssim(
-            pred[:, -1, :, :].unsqueeze(1), label.unsqueeze(1), data_range=1.0
+            pred.output_channels, label.unsqueeze(1), data_range=1.0
         ).item()
         return {"ssim": s}
