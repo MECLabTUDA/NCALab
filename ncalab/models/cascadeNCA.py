@@ -48,7 +48,7 @@ def downscale(
 
 class CascadeNCA(BasicNCAModel):
     """
-    Chain multiple instances of the same NCA backbone model, operating at different
+    Chain multiple instances of the same NCA model, operating at different
     image scales.
 
     The idea is to use this model as a wrapper and drop-in replacement for an existing model.
@@ -61,14 +61,14 @@ class CascadeNCA(BasicNCAModel):
 
     def __init__(
         self,
-        backbone: BasicNCAModel,
+        wrapped: BasicNCAModel,
         scales: List[int],
         steps: List[int],
         single_model: bool = True,
     ):
         """
-        :param backbone: Backbone model based on BasicNCAModel.
-        :type backbone: ncalab.BasicNCAModel
+        :param wrapped: Backbone model based on BasicNCAModel.
+        :type wrapped: ncalab.BasicNCAModel
         :param scales: List of scales to operate at, e.g. [4, 2, 1].
         :type scales: List[int]
         :param steps: List of number of NCA inference time steps.
@@ -77,33 +77,34 @@ class CascadeNCA(BasicNCAModel):
         :type single_model: bool
         """
         super(CascadeNCA, self).__init__(
-            device=backbone.device,
-            num_image_channels=backbone.num_image_channels,
-            num_hidden_channels=backbone.num_hidden_channels,
-            num_output_channels=backbone.num_output_channels,
-            fire_rate=backbone.fire_rate,
-            hidden_size=backbone.hidden_size,
-            use_alive_mask=backbone.use_alive_mask,
-            immutable_image_channels=backbone.immutable_image_channels,
-            num_learned_filters=backbone.num_learned_filters,
-            plot_function=backbone.plot_function,
-            validation_metric=backbone.validation_metric,
-            use_laplace=backbone.use_laplace,
-            pad_noise=backbone.pad_noise,
-            autostepper=backbone.autostepper,
-            use_temporal_encoding=backbone.use_temporal_encoding,
+            device=wrapped.device,
+            num_image_channels=wrapped.num_image_channels,
+            num_hidden_channels=wrapped.num_hidden_channels,
+            num_output_channels=wrapped.num_output_channels,
+            fire_rate=wrapped.fire_rate,
+            hidden_size=wrapped.hidden_size,
+            use_alive_mask=wrapped.use_alive_mask,
+            immutable_image_channels=wrapped.immutable_image_channels,
+            num_learned_filters=wrapped.num_learned_filters,
+            plot_function=wrapped.plot_function,
+            validation_metric=wrapped.validation_metric,
+            use_laplace=wrapped.use_laplace,
+            pad_noise=wrapped.pad_noise,
+            autostepper=wrapped.autostepper,
+            use_temporal_encoding=wrapped.use_temporal_encoding,
         )
-        self.loss = backbone.loss  # type: ignore[method-assign]
-        self.finetune = backbone.finetune  # type: ignore[method-assign]
-        self.prepare_input = backbone.prepare_input  # type: ignore[method-assign]
+        self.loss = wrapped.loss  # type: ignore[method-assign]
+        self.finetune = wrapped.finetune  # type: ignore[method-assign]
+        self.prepare_input = wrapped.prepare_input  # type: ignore[method-assign]
+        self.head = wrapped.head
 
         # TODO automatically copy attributes
-        if hasattr(backbone, "num_classes"):
-            self.num_classes = backbone.num_classes
-        if hasattr(backbone, "avg_pool_size"):
-            self.avg_pool_size = backbone.avg_pool_size
+        if hasattr(wrapped, "num_classes"):
+            self.num_classes = wrapped.num_classes
+        if hasattr(wrapped, "avg_pool_size"):
+            self.avg_pool_size = wrapped.avg_pool_size
 
-        self.backbone = backbone
+        self.wrapped = wrapped
         assert len(scales) == len(steps)
         assert len(scales) != 0
         for i, scale in enumerate(scales):
@@ -115,9 +116,9 @@ class CascadeNCA(BasicNCAModel):
         self.single_model = single_model
         self.models: nn.ModuleList | List[nn.Module]
         if single_model:
-            self.models = [backbone for _ in scales]
+            self.models = [wrapped for _ in scales]
         else:
-            self.models = nn.ModuleList([backbone for _ in scales])
+            self.models = nn.ModuleList([wrapped for _ in scales])
 
     def forward(self, x: torch.Tensor, *args, **kwargs) -> Prediction:
         """
@@ -142,7 +143,7 @@ class CascadeNCA(BasicNCAModel):
             )
             if steps <= 0:
                 steps = 1
-            prediction = model(x_scaled, steps=steps)  # BCWH
+            prediction = model(x_scaled, steps=steps)
             if i < len(self.scales) - 1:
                 x_scaled = upscale(prediction.output_image, scale / self.scales[i + 1])
                 # replace input with downscaled variant of original image
@@ -198,7 +199,7 @@ class CascadeNCA(BasicNCAModel):
         Validation method.
 
         Takes care of scaling the input image and label on each scale,
-        and calls the respective validation method of the backbone.
+        and calls the respective validation method of the wrapped model.
 
         :param image: Input image tensor, BCWH.
         :param label: Ground truth.

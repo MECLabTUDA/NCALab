@@ -1,20 +1,19 @@
-from typing import Dict, Optional, List
+from typing import Dict, List, Optional
 
 import torch  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
-from torch import nn
-
 import torchmetrics
 import torchmetrics.classification
 
 from ..autostepper import AutoStepper
-from .basicNCA import BasicNCAModel
-from ..utils import pad_input
+from ..prediction import Prediction
+from ..utils import pad_input, unwrap
 from ..visualization import (
     VisualBinaryImageClassification,
     VisualRGBImageClassification,
 )
-from ..prediction import Prediction
+from .basicNCA import BasicNCAModel
+from .classificationNCAhead import ClassificationNCAHead
 
 
 class ClassificationNCAModel(BasicNCAModel):
@@ -38,7 +37,6 @@ class ClassificationNCAModel(BasicNCAModel):
         use_classifier: bool = True,
         class_names: Optional[List[str]] = None,
         avg_pool_size: int = 5,
-        **kwargs,
     ):
         """
         :param device: Pytorch device descriptor.
@@ -50,8 +48,8 @@ class ClassificationNCAModel(BasicNCAModel):
         :param use_alive_mask: Whether to use alive masking (channel 3) during training. Defaults to False.
         :param pixel_wise_loss: Whether a prediction per pixel is desired, like in self-classifying MNIST. Defaults to False.
         :param num_learned_filters: Number of learned filters. If zero, use two sobel filters instead. Defaults to 2.
-        :param filter_padding [str]: Padding type to use. Might affect reliance on spatial cues. Defaults to "circular".
-        :param pad_noise [bool]: Whether to pad input image tensor with noise in hidden / output channels
+        :param filter_padding: Padding type to use. Might affect reliance on spatial cues. Defaults to "circular".
+        :param pad_noise: Whether to pad input image tensor with noise in hidden / output channels
         """
         super(ClassificationNCAModel, self).__init__(
             device=device,
@@ -78,16 +76,13 @@ class ClassificationNCAModel(BasicNCAModel):
         assert avg_pool_size >= 1
         self.avg_pool_size = avg_pool_size
         if use_classifier:
-            # TODO make configurable
-            N_z_classifier = 64
-            self.classifier = nn.Sequential(
-                nn.Linear(
-                    self.num_hidden_channels * self.avg_pool_size**2,
-                    N_z_classifier,
-                ),
-                nn.ReLU(),
-                nn.Linear(N_z_classifier, num_classes, bias=False),
-            ).to(self.device)
+            self.head = ClassificationNCAHead(
+                self.num_hidden_channels,
+                self._num_classes,
+                self.device,
+                avg_pool_size=avg_pool_size,
+                hidden_size=64,
+            )
         if class_names is None:
             self.class_names = [str(i) for i in range(num_classes)]
         else:
@@ -124,8 +119,11 @@ class ClassificationNCAModel(BasicNCAModel):
         with torch.no_grad():
             x = image.clone()
             x = pad_input(x, self, noise=self.pad_noise)
-            prediction = self(x, steps=steps)
-            class_channels = prediction.output_channels
+            prediction: Prediction = self(x, steps=steps)
+            if prediction.head_prediction is not None:
+                class_channels = prediction.head_prediction
+            else:
+                class_channels = prediction.output_channels
 
             # if binary classification (e.g. self classifying MNIST),
             # mask away pixels with the binary image used as a mask
@@ -135,12 +133,10 @@ class ClassificationNCAModel(BasicNCAModel):
                     for c in range(self.num_classes):
                         class_channels[i, c, :, :] *= mask
 
-            if self.use_classifier:
-                return class_channels[:, :, 0, 0]
-
             # Average over all pixels if a single categorial prediction is desired
             y_pred = F.softmax(class_channels, dim=1)
-            y_pred = torch.mean(y_pred, dim=(2, 3))
+            if not self.use_classifier:
+                y_pred = torch.mean(y_pred, dim=(2, 3))
 
             # If reduce enabled, reduce to a single scalar.
             # Otherwise, return logits of all channels as a vector.
@@ -160,38 +156,25 @@ class ClassificationNCAModel(BasicNCAModel):
             x = self._forward_step(x, step)
         x[:, -self.num_output_channels :, :, :] *= 0
 
-        if self.use_classifier:
+        if self.head is not None:
             hidden = x[:, self.num_image_channels : -self.num_output_channels, :, :]
-            z = F.adaptive_avg_pool2d(
-                hidden, (self.avg_pool_size, self.avg_pool_size)
-            ).flatten(1, 3)
-            classification = self.classifier(z).unsqueeze(-1).unsqueeze(-1)
-            w, h = x.shape[2], x.shape[3]
-            classification = classification.expand(-1, -1, w, h)
-            x = torch.cat(
-                (
-                    x[:, : self.num_image_channels + self.num_hidden_channels, :, :],
-                    classification,
-                ),
-                dim=1,
-            )
+            head_prediction = self.head(hidden)
+            return Prediction(self, steps, x, head_prediction)
         return Prediction(self, steps, x)
 
-    def loss(self, image: torch.Tensor, label: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def loss(self, pred: Prediction, label: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
         Return the classification loss.
 
-        :param image: Input image, BCWH.
+        :param pred: Prediction.
         :param label: Ground truth.
 
         :returns: Dictionary of identifiers mapped to computed losses.
         """
-        assert image.shape[1] == self.num_channels, "Tensor must be in BCWH order."
-        class_channels = image[:, -self.num_output_channels :, :, :]
-
         # Create one-hot ground truth tensor, where all pixels of the predicted class are
         # active in the respective classification channel.
         if self.pixel_wise_loss:
+            image = pred.image_channels
             y = torch.ones((image.shape[0], image.shape[2], image.shape[3])).to(
                 self.device
             )
@@ -205,7 +188,7 @@ class ClassificationNCAModel(BasicNCAModel):
                 y[i] *= label[i]
             loss_ce = (
                 F.cross_entropy(
-                    class_channels,
+                    pred.output_channels,
                     y.long(),
                     reduction="none",
                 )
@@ -214,9 +197,9 @@ class ClassificationNCAModel(BasicNCAModel):
             loss_classification = loss_ce
         else:
             if self.use_classifier:
-                y_logits = class_channels[:, :, 0, 0]
+                y_logits = unwrap(pred.head_prediction)
             else:
-                y_logits = torch.mean(class_channels, dim=(2, 3))
+                y_logits = torch.mean(pred.output_channels, dim=(2, 3))
 
             loss_ce = (
                 F.cross_entropy(
@@ -233,12 +216,14 @@ class ClassificationNCAModel(BasicNCAModel):
             "classification": loss_classification,
         }
 
-    def metrics(self, pred: torch.Tensor, label: torch.Tensor) -> Dict[str, float]:
+    def metrics(self, pred: Prediction, label: torch.Tensor) -> Dict[str, float]:
         """
         Return dict of standard evaluation metrics.
 
-        :param pred [torch.Tensor]: Predicted image (BWHC).
-        :param label [torch.Tensor]: Ground truth label.
+        :param pred: Prediction
+        :type pred: Prediction
+        :param label: Ground truth label.
+        :type label: Tensor
         """
         accuracy_macro_metric = torchmetrics.classification.MulticlassAccuracy(
             average="macro", num_classes=self.num_classes
@@ -253,16 +238,10 @@ class ClassificationNCAModel(BasicNCAModel):
             num_classes=self.num_classes
         ).to(self.device)
 
-        assert (
-            pred.shape[1] == self.num_channels
-        ), "Prediction tensor must be in BCWH order"
-
-        class_channels = pred[
-            :, self.num_image_channels + self.num_hidden_channels :, :, :
-        ]
         if self.use_classifier:
-            y_logits = class_channels[:, :, 0, 0]
+            y_logits = unwrap(pred.head_prediction)
         else:
+            class_channels = pred.output_channels
             y_logits = torch.mean(class_channels, dim=(2, 3))
         y_prob = F.softmax(y_logits, dim=1)
         y_true = label

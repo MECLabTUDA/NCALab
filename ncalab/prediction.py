@@ -12,7 +12,13 @@ class Prediction:
     returned as a list of Prediction objects.
     """
 
-    def __init__(self, model, steps: int, output_image: torch.Tensor):
+    def __init__(
+        self,
+        model,
+        steps: int,
+        output_image: torch.Tensor,
+        head_prediction: Optional[torch.Tensor] = None,
+    ):
         """
         Constructor is typically not called explicitly.
         Rather, the forward pass of BasicNCAModel (and its
@@ -30,6 +36,8 @@ class Prediction:
         assert output_image.shape[1] == model.num_channels
         self.output_image = output_image
         self._output_array: Optional[np.ndarray] = None
+        self.head_prediction = head_prediction
+        self._head_prediction_array: Optional[np.ndarray] = None
 
     @property
     def image_channels(self) -> torch.Tensor:
@@ -138,3 +146,11 @@ class Prediction:
             :,
             :,
         ]
+
+    @property
+    def head_prediction_array(self) -> np.ndarray | None:
+        if self.head_prediction is None:
+            return None
+        if self._head_prediction_array is None:
+            self._head_prediction_array = self.head_prediction.detach().cpu().numpy()
+        return self._head_prediction_array

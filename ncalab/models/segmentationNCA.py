@@ -1,11 +1,12 @@
-from typing import Optional, Dict
+from typing import Dict, Optional
 
-import torch  # type: ignore[import-untyped]
 import segmentation_models_pytorch as smp  # type: ignore[import-untyped]
+import torch  # type: ignore[import-untyped]
 
-from .basicNCA import AutoStepper, BasicNCAModel
 from ..losses import DiceBCELoss
+from ..prediction import Prediction
 from ..visualization import VisualBinaryImageSegmentation
+from .basicNCA import AutoStepper, BasicNCAModel
 
 
 class SegmentationNCAModel(BasicNCAModel):
@@ -60,42 +61,33 @@ class SegmentationNCAModel(BasicNCAModel):
             **kwargs,
         )
 
-    def loss(self, image: torch.Tensor, label: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def loss(self, pred: Prediction, label: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
         Compute Dice + BCE loss.
 
-        :param image [torch.Tensor]: Input image, BCWH.
-        :param label [torch.Tensor]: Ground truth.
+        :param pred: Prediction.
+        :param label: Ground truth.
 
         :returns: Dictionary of identifiers mapped to computed losses.
         """
-        assert len(image.shape) == 4, "Expecting a four-dimensional Tensor."
-        assert (
-            image.shape[1] == self.num_channels
-        ), "Image dimensions need to have BCWH order."
-        class_channels = image[
-            :, self.num_image_channels + self.num_hidden_channels :, :, :
-        ]
-
         loss_segmentation_function = DiceBCELoss()
         loss_segmentation = loss_segmentation_function(
-            class_channels,
+            pred.output_channels,
             label,
         )
 
         loss = loss_segmentation
         return {"total": loss}
 
-    def metrics(self, pred: torch.Tensor, label: torch.Tensor) -> Dict[str, float]:
+    def metrics(self, pred: Prediction, label: torch.Tensor) -> Dict[str, float]:
         """
         Return dict of standard evaluation metrics.
 
         :param pred [torch.Tensor]: Predicted image.
         :param label [torch.Tensor]: Ground truth label.
         """
-        outputs = pred[:, self.num_image_channels + self.num_hidden_channels :, :, :]
         tp, fp, fn, tn = smp.metrics.get_stats(
-            outputs.cpu().float(),
+            pred.output_channels.cpu().float(),
             label[:, None, :, :].cpu().long(),
             mode="binary",
             threshold=0.1,

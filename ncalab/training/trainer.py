@@ -1,20 +1,22 @@
 from __future__ import annotations
-
 import logging
 from pathlib import Path, PosixPath  # for type hint
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, List, Tuple
 
 import numpy as np
+
 import torch  # type: ignore[import-untyped]
 import torch.optim as optim  # type: ignore[import-untyped]
 from torch.utils.data import DataLoader  # for type hint
 from torch.utils.tensorboard import SummaryWriter  # for type hint
+
 from tqdm import tqdm  # type: ignore[import-untyped]
 
 from ..models.basicNCA import BasicNCAModel  # for type hint
 from ..prediction import Prediction
 from ..utils import pad_input, unwrap
 from ..visualization import Visual
+
 from .earlystopping import EarlyStopping
 from .pool import Pool
 from .traininghistory import TrainingHistory
@@ -34,10 +36,10 @@ class BasicNCATrainer:
         steps_validation: int = 100,
         lr: Optional[float] = None,
         lr_gamma: float = 0.99,
-        adam_betas=(0.9, 0.95),
+        adam_betas=(0.4, 0.95),
         batch_repeat: int = 2,
         max_epochs: int = 200,
-        optimizer_method: str = "adam",
+        optimizer_method: str = "adamw",
         pool: Optional[Pool] = None,
     ):
         """
@@ -123,13 +125,12 @@ class BasicNCATrainer:
             s += f"**{attribute_f}:** {getattr(self, attribute)}\n"
         return s
 
-    def train_iteration(
+    def _train_iteration(
         self,
         x: torch.Tensor,
         y: torch.Tensor,
         steps: int,
         optimizer: torch.optim.Optimizer,
-        scheduler: torch.optim.lr_scheduler.LRScheduler,
         total_batch_iterations: int,
         summary_writer: Optional[SummaryWriter] = None,
     ) -> Tuple[Prediction, Dict[str, torch.Tensor]]:
@@ -140,7 +141,6 @@ class BasicNCATrainer:
         :param y: Input training labels.
         :param steps: Number of NCA inference time steps.
         :param optimizer: Optimizer.
-        :param scheduler: Scheduler.
         :param total_batch_iterations: Total training batch iterations
         :type total_batch_iterations: int
         :param summary_writer: Tensorboard SummaryWriter
@@ -154,7 +154,7 @@ class BasicNCATrainer:
         optimizer.zero_grad()
         x_in = x.clone().to(self.nca.device)
         prediction = self.nca(x_in, steps=steps)
-        losses = self.nca.loss(prediction.output_image, y.to(device))
+        losses = self.nca.loss(prediction, y.to(device))
         losses["total"].backward()
 
         if self.gradient_clipping:
@@ -260,12 +260,11 @@ class BasicNCATrainer:
                     y = torch.cat(self.batch_repeat * [y])
 
                 steps = np.random.randint(*self.steps_range)
-                prediction, losses = self.train_iteration(
+                prediction, losses = self._train_iteration(
                     x,
                     y,
                     steps,
                     optimizer,
-                    scheduler,
                     total_batch_iterations,
                     summary_writer,
                 )

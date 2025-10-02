@@ -1,8 +1,8 @@
 from __future__ import annotations
-from typing import Any, Dict, Optional, Tuple, List
+
+from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
-
 import torch  # type: ignore[import-untyped]
 import torch.nn as nn  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
@@ -11,6 +11,8 @@ from ..autostepper import AutoStepper
 from ..prediction import Prediction
 from ..utils import pad_input
 from ..visualization import Visual
+from .basicNCArule import BasicNCARule
+from .basicNCAhead import BasicNCAHead
 
 
 class BasicNCAModel(nn.Module):
@@ -37,22 +39,23 @@ class BasicNCAModel(nn.Module):
         pad_noise: bool = False,
         autostepper: Optional[AutoStepper] = None,
         use_temporal_encoding: bool = False,
+        rule_type: type[BasicNCARule] = BasicNCARule,
     ):
         """
-        :param device [device]: Pytorch device descriptor.
-        :param num_image_channels [int]: Number of channels reserved for input image.
-        :param num_hidden_channels [int]: Number of hidden channels (communication channels).
-        :param num_output_channels [int]: Number of output channels.
-        :param fire_rate [float]: Fire rate for stochastic weight update. Defaults to 0.5.
-        :param hidden_size [int]: Number of neurons in hidden layer. Defaults to 128.
-        :param use_alive_mask [bool]: Whether to use alive masking (channel 3) during training. Defaults to False.
-        :param immutable_image_channels [bool]: If image channels should be fixed during inference, which is the case for most segmentation or classification problems. Defaults to True.
-        :param num_learned_filters [int]: Number of learned filters. If zero, use two sobel filters instead. Defaults to 2.
-        :param filter_padding [str]: Padding type to use. Might affect reliance on spatial cues. Defaults to "circular".
-        :param use_laplace [bool]: Whether to use Laplace filter (only if num_learned_filters == 0)
-        :param kernel_size [int]: Filter kernel size (only for learned filters)
-        :param pad_noise [bool]: Whether to pad input image tensor with noise in hidden / output channels
-        :param autostepper [Optional[AutoStepper]]: AutoStepper object to select number of time steps based on activity
+        :param device: Pytorch device descriptor.
+        :param num_image_channels: Number of channels reserved for input image.
+        :param num_hidden_channels: Number of hidden channels (communication channels).
+        :param num_output_channels: Number of output channels.
+        :param fire_rate: Fire rate for stochastic weight update. Defaults to 0.5.
+        :param hidden_size: Number of neurons in hidden layer. Defaults to 128.
+        :param use_alive_mask: Whether to use alive masking (channel 3) during training. Defaults to False.
+        :param immutable_image_channels: If image channels should be fixed during inference, which is the case for most segmentation or classification problems. Defaults to True.
+        :param num_learned_filters: Number of learned filters. If zero, use two sobel filters instead. Defaults to 2.
+        :param filter_padding: Padding type to use. Might affect reliance on spatial cues. Defaults to "circular".
+        :param use_laplace: Whether to use Laplace filter (only if num_learned_filters == 0)
+        :param kernel_size: Filter kernel size (only for learned filters)
+        :param pad_noise: Whether to pad input image tensor with noise in hidden / output channels
+        :param autostepper: AutoStepper object to select number of time steps based on activity
         """
         super(BasicNCAModel, self).__init__()
 
@@ -83,41 +86,24 @@ class BasicNCAModel(nn.Module):
         self._define_filters(num_learned_filters)
 
         # define model structure
-        self.network = self._define_network().to(self.device)
-
-    def _define_network(self):
-        input_vector_size = self.num_channels * (self.num_filters + 1)
+        self.input_vector_size = self.num_channels * (self.num_filters + 1)
         if self.use_temporal_encoding:
-            input_vector_size += 1
-        network = nn.Sequential(
-            nn.Conv2d(
-                in_channels=input_vector_size,
-                out_channels=self.hidden_size,
-                bias=True,
-                stride=1,
-                padding=0,
-                kernel_size=1,
-            ),
-            nn.ReLU(),
-            nn.Conv2d(
-                in_channels=self.hidden_size,
-                out_channels=self.num_channels,
-                bias=False,
-                stride=1,
-                padding=0,
-                kernel_size=1,
-            ),
+            self.input_vector_size += 1
+        self.rule_type = rule_type
+        self.rule = self._define_rule()
+        self.head: BasicNCAHead | None = None
+
+    def _define_rule(self):
+        return self.rule_type(
+            self.device, self.input_vector_size, self.hidden_size, self.num_channels
         )
-        # initialize final layer with 0
-        with torch.no_grad():
-            network[-1].weight.data.fill_(0)
-        return network
 
     def _define_filters(self, num_learned_filters: int):
         """
         Define list of perception filters, based on parameters passed in constructor.
 
-        :param num_learned_filters [int]: Number of learned filters in perception filter bank.
+        :param num_learned_filters: Number of learned filters in perception filter bank.
+        :type num_learned_filters: int
         """
         self.filters: list | nn.ModuleList = []
         if num_learned_filters > 0:
@@ -210,7 +196,7 @@ class BasicNCAModel(nn.Module):
         dx = self._perceive(x, step)
 
         # Compute delta from FFNN network
-        dx = self.network(dx)
+        dx = self.rule(dx)
 
         # Stochastic weight update
         fire_rate = self.fire_rate
@@ -274,7 +260,7 @@ class BasicNCAModel(nn.Module):
             ]
         return Prediction(self, self.autostepper.max_steps, x)
 
-    def loss(self, image: torch.Tensor, label: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def loss(self, pred: Prediction, label: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
         Compute loss. Needs to be overloaded by any subclass.
         Please note that the returned dict needs to hold "total" key in which the
@@ -289,7 +275,7 @@ class BasicNCAModel(nn.Module):
         """
         return NotImplemented
 
-    def finetune(self):
+    def finetune(self, freeze_head: bool = False):
         """
         Prepare model for fine tuning by freezing everything except the final layer,
         and setting to "train" mode.
@@ -297,16 +283,18 @@ class BasicNCAModel(nn.Module):
         self.train()
         if self.num_learned_filters != 0:
             for filter in self.filters:
-                filter.requires_grad_ = False
-        for layer in self.network[:-1]:
-            layer.requires_grad_ = False
+                filter.requires_grad_(False)
+        self.rule.freeze()
+        if freeze_head and self.head is not None:
+            self.head.freeze()
 
-    def metrics(self, pred: torch.Tensor, label: torch.Tensor) -> Dict[str, float]:
+    def metrics(self, pred: Prediction, label: torch.Tensor) -> Dict[str, float]:
         """
         Return dict of standard evaluation metrics.
 
-        :param pred [torch.Tensor]: Predicted image, BCWH.
-        :param label [torch.Tensor]: Ground truth label.
+        :param pred: Prediction.
+        :type pred: Prediction
+        :param label: Ground truth label.
 
         :returns [Dict]: Dict of metrics, mapped by their names.
         """
@@ -365,7 +353,7 @@ class BasicNCAModel(nn.Module):
         :returns [Tuple[float, Prediction]]: Validation metric, predicted image BCWH
         """
         prediction = self.predict(image.to(self.device), steps=steps)
-        metrics = self.metrics(prediction.output_image, label.to(self.device))
+        metrics = self.metrics(prediction, label.to(self.device))
         return metrics, prediction
 
     def to_dict(self) -> Dict[str, Any]:

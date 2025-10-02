@@ -7,11 +7,12 @@ for tensorboard "images" tab.
 import warnings
 
 import matplotlib.pyplot as plt  # type: ignore[import-untyped]
-from matplotlib.figure import Figure  # type: ignore[import-untyped]
 import numpy as np
+from matplotlib.figure import Figure  # type: ignore[import-untyped]
 from scipy.special import softmax
 
 from ..prediction import Prediction
+from ..utils import unwrap
 
 
 def abbreviate_label(L, max_len=8):
@@ -157,7 +158,7 @@ class VisualRGBImageClassification(Visual):
         batch_size, _, image_width, image_height = image.shape
 
         figure, ax = plt.subplots(
-            3, batch_size, figsize=[batch_size * 2, 5], tight_layout=True
+            2, batch_size, figsize=[batch_size * 2, 4], tight_layout=True
         )
 
         # 1st row: input image
@@ -171,9 +172,11 @@ class VisualRGBImageClassification(Visual):
             mask = np.max(hidden_channels[i]) > 0.1
             class_channels[i] *= mask
 
-        y_prob = np.mean(class_channels, (2, 3))
+        if prediction.head_prediction is not None:
+            y_prob = unwrap(prediction.head_prediction_array)
+        else:
+            y_prob = np.mean(class_channels, (2, 3))
         y_logit = softmax(y_prob, axis=-1)
-        y_pred = np.argmax(y_logit, axis=-1)
 
         if len(label.shape) > 1:
             label = label.flatten()
@@ -191,21 +194,6 @@ class VisualRGBImageClassification(Visual):
             )
             ax[1, j].get_xaxis().set_visible(False)
             [spine.set_linewidth(2) for spine in ax[1, j].spines.values()]
-
-        # 3rd row: predicted classes per pixel
-        class_channels = prediction.output_channels_np
-        y_pred = np.argmax(class_channels, axis=1)
-        images = np.ones_like(image[:, 0, :, :], dtype=np.float32)
-        for i in range(batch_size):
-            images[i, :, :] *= y_pred[i]
-        show_image_row(
-            ax[2],
-            images,
-            vmin=-1,
-            vmax=model.num_classes,
-            cmap="Set3",
-            label="PREDICTION",
-        )
         figure.subplots_adjust()
         return figure
 

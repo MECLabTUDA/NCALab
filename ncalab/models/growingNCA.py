@@ -53,18 +53,17 @@ class GrowingNCAModel(BasicNCAModel):
             **kwargs,
         )
 
-    def loss(self, image: torch.Tensor, label: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def loss(self, pred: Prediction, label: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
         Implements a simple MSE loss between target and prediction.
 
-        :param x [Tensor]: Prediction, BCWH
-        :param y [Tensor]: Target, BCWH
+        :param pred: Prediction
+        :param label: Target
 
         :returns [Tensor]: MSE Loss
         """
-        assert image.shape[1] == self.num_channels
         assert label.shape[1] == self.num_image_channels
-        loss = F.mse_loss(image[:, : self.num_image_channels, :, :], label)
+        loss = F.mse_loss(pred.image_channels, label)
         return {"total": loss}
 
     def validate(
