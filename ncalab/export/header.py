@@ -34,6 +34,18 @@ def export_header(
     number_type: str = "float",
     imports: list | None = None,
 ):
+    """
+    Export parameters of an NCA model to a C header.
+
+    :param nca: _description_
+    :type nca: BasicNCAModel
+    :param outfile: _description_
+    :type outfile: str | Path | PosixPath
+    :param number_type: _description_, defaults to "float"
+    :type number_type: str, optional
+    :param imports: _description_, defaults to None
+    :type imports: list | None, optional
+    """
     ## prepare preamble
     # guard
     preamble = f"#pragma once{os.linesep}"
@@ -45,9 +57,12 @@ def export_header(
 
     with open(outfile, "w") as f:
         f.write(preamble)
-        W_0 = nca.network[0].weight.data
-        b_0 = nca.network[0].bias.data
-        W_1 = nca.network[1].weight.data
+        W_0 = nca.rule.network[0].weight.data
+        b_0 = nca.rule.network[0].bias.data
+        W_1 = nca.rule.network[1].weight.data
+        assert type(W_0) is torch.Tensor
+        assert type(b_0) is torch.Tensor
+        assert type(W_1) is torch.Tensor
         f.write(tensor_to_C(W_0, "weight_0", number_type))
         f.write(tensor_to_C(b_0, "bias_0", number_type))
         f.write(tensor_to_C(W_1, "weight_1", number_type))
