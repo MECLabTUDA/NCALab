@@ -224,7 +224,9 @@ class BasicNCATrainer:
             optimizer = optim.Adam(
                 self.nca.parameters(), lr=self.lr, betas=self.adam_betas
             )
-        scheduler = optim.lr_scheduler.ExponentialLR(optimizer, self.lr_gamma)
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=self.max_epochs
+        )
 
         # MAIN LOOP
         total_batch_iterations = 0
