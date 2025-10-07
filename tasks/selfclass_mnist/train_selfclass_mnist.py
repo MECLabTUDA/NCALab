@@ -74,6 +74,7 @@ def train_selfclass_mnist(
         num_hidden_channels=hidden_channels,
         num_classes=10,
         pixel_wise_loss=True,
+        use_classifier=False,
     )
 
     trainer = BasicNCATrainer(
