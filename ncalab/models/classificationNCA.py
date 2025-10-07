@@ -55,7 +55,7 @@ class ClassificationNCAModel(BasicNCAModel):
             device=device,
             num_image_channels=num_image_channels,
             num_hidden_channels=num_hidden_channels,
-            num_output_channels=num_classes,
+            num_output_channels=0 if use_classifier else num_classes,
             fire_rate=fire_rate,
             hidden_size=hidden_size,
             use_alive_mask=use_alive_mask,
@@ -102,7 +102,7 @@ class ClassificationNCAModel(BasicNCAModel):
     @num_classes.setter
     def num_classes(self, x: int):
         self._num_classes = x
-        self.num_output_channels = x
+        self.num_output_channels = 0 if self.use_classifier else x
 
     def classify(
         self, image: torch.Tensor, steps: int = 100, reduce: bool = False
@@ -130,7 +130,7 @@ class ClassificationNCAModel(BasicNCAModel):
             if self.num_image_channels == 1:
                 for i in range(image.shape[0]):
                     mask = image[i, 0, :, :]
-                    for c in range(self.num_classes):
+                    for c in range(self.num_output_channels):
                         class_channels[i, c, :, :] *= mask
 
             # Average over all pixels if a single categorial prediction is desired
@@ -151,13 +151,17 @@ class ClassificationNCAModel(BasicNCAModel):
         steps: int = 1,
     ):
         assert x.shape[1] == self.num_channels
-        x[:, -self.num_output_channels :, :, :] *= 0
         for step in range(steps):
             x = self._forward_step(x, step)
-        x[:, -self.num_output_channels :, :, :] *= 0
 
         if self.head is not None:
-            hidden = x[:, self.num_image_channels : -self.num_output_channels, :, :]
+            hidden = x[
+                :,
+                self.num_image_channels : self.num_image_channels
+                + self.num_hidden_channels,
+                :,
+                :,
+            ]
             head_prediction = self.head(hidden)
             return Prediction(self, steps, x, head_prediction)
         return Prediction(self, steps, x)
@@ -184,7 +188,7 @@ class ClassificationNCAModel(BasicNCAModel):
             # mask alpha channel / designated mask channel
             else:
                 mask = image[:, 3, :, :] > 0
-            for i in range(image.shape[0]):
+            for i in range(y.shape[0]):
                 y[i] *= label[i]
             loss_ce = (
                 F.cross_entropy(
@@ -201,13 +205,11 @@ class ClassificationNCAModel(BasicNCAModel):
             else:
                 y_logits = torch.mean(pred.output_channels, dim=(2, 3))
 
-            loss_ce = (
-                F.cross_entropy(
-                    y_logits,
-                    label.squeeze(),
-                    reduction="none",
-                )
-            ).mean()
+            loss_ce = F.cross_entropy(
+                y_logits,
+                label.squeeze(),
+            )
+
             loss_classification = loss_ce
 
         loss = loss_classification
@@ -240,6 +242,16 @@ class ClassificationNCAModel(BasicNCAModel):
 
         if self.use_classifier:
             y_logits = unwrap(pred.head_prediction)
+        elif self.pixel_wise_loss:
+            image = pred.image_channels
+            class_channels = pred.output_channels
+            # if binary images are classified: mask with first image channel
+            if self.num_image_channels == 1:
+                mask = image[:, 0, :, :] > 0
+            # mask alpha channel / designated mask channel
+            else:
+                mask = image[:, 3, :, :] > 0
+            y_logits = torch.sum(class_channels, dim=(2, 3)) / torch.sum(mask)
         else:
             class_channels = pred.output_channels
             y_logits = torch.mean(class_channels, dim=(2, 3))

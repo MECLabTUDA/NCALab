@@ -125,8 +125,6 @@ class VisualBinaryImageClassification(Visual):
         show_image_row(
             ax[0],
             images,
-            vmin=-1,
-            vmax=model.num_classes,
             cmap="Set3",
             label="INPUT",
             normalize=True,
