@@ -103,6 +103,7 @@ def train_class_dermamnist(
     num_classes = len(INFO["dermamnist"]["label"])
     nca = ClassificationNCAModel(
         device,
+        filter_padding="zeros",
         num_image_channels=3,
         num_hidden_channels=hidden_channels,
         num_classes=num_classes,
@@ -117,7 +118,7 @@ def train_class_dermamnist(
         nca,
         WEIGHTS_PATH / "classification_dermamnist",
         batch_repeat=2,
-        max_epochs=500,
+        max_epochs=40,
         gradient_clipping=gradient_clipping,
         steps_range=(32, 33),
         steps_validation=32,

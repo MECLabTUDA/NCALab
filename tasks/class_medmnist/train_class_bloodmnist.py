@@ -18,6 +18,7 @@ from ncalab import (  # noqa: E402
     BasicNCATrainer,
     ClassificationNCAModel,
     get_compute_device,
+    print_NCALab_banner,
 )
 
 TASK_PATH = Path(__file__).parent.resolve()
@@ -38,6 +39,8 @@ def train_class_bloodmnist(
     gpu: bool,
     gpu_index: int,
 ):
+    print_NCALab_banner()
+
     comment = "BloodMNIST"
     comment += f"_hidden_{hidden_channels}"
     comment += f"_gc_{gradient_clipping}"
