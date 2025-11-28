@@ -1072,7 +1072,7 @@ wheels = [
 
 [[package]]
 name = "keras"
-version = "3.11.3"
+version = "3.12.0"
 source = { registry = "https://pypi.org/simple" }
 dependencies = [
     { name = "absl-py" },
@@ -1084,9 +1084,9 @@ dependencies = [
     { name = "packaging" },
     { name = "rich" },
 ]
-sdist = { url = "https://files.pythonhosted.org/packages/6a/89/646425fe9a46f9053430e1271f817c36041c6f33469950a3caafc3d2591e/keras-3.11.3.tar.gz", hash = "sha256:efda616835c31b7d916d72303ef9adec1257320bc9fd4b2b0138840fc65fb5b7", size = 1065906, upload-time = "2025-08-21T22:08:57.643Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/9b/b8/8df141314a64a31d3a21762658826f716cdf4c261c7fcdb3f729958def55/keras-3.12.0.tar.gz", hash = "sha256:536e3f8385a05ae04e82e08715a1a59988578087e187b04cb0a6fad11743f07f", size = 1129187, upload-time = "2025-10-27T20:23:11.574Z" }
 wheels = [
-    { url = "https://files.pythonhosted.org/packages/94/5b/4c778cc921ce4b864b238f63f8e3ff6e954ab19b80c9fa680593ad8093d4/keras-3.11.3-py3-none-any.whl", hash = "sha256:f484f050e05ee400455b05ec8c36ed35edc34de94256b6073f56cfe68f65491f", size = 1408438, upload-time = "2025-08-21T22:08:55.858Z" },
+    { url = "https://files.pythonhosted.org/packages/ba/61/cc8be27bd65082440754be443b17b6f7c185dec5e00dfdaeab4f8662e4a8/keras-3.12.0-py3-none-any.whl", hash = "sha256:02b69e007d5df8042286c3bcc2a888539e3e487590ffb08f6be1b4354df50aa8", size = 1474424, upload-time = "2025-10-27T20:23:09.571Z" },
 ]
 
 [[package]]
@@ -1754,7 +1754,7 @@ requires-dist = [
     { name = "jedi", specifier = "==0.19.2" },
     { name = "jinja2", specifier = "==3.1.6" },
     { name = "joblib", specifier = "==1.4.2" },
-    { name = "keras", specifier = "==3.11.3" },
+    { name = "keras", specifier = "==3.12.0" },
     { name = "keras-applications", specifier = "==1.0.8" },
     { name = "kiwisolver", specifier = "==1.4.8" },
     { name = "lazy-loader", specifier = "==0.4" },
@@ -3554,7 +3554,6 @@ wheels = [
     { url = "https://files.pythonhosted.org/packages/ea/99/ade7915f577bcfa9c3f9e58977f335dd91de5a8a4328d253af3bbef41d3e/tensorboard_plugin_profile-2.19.4-cp312-none-macosx_12_0_arm64.whl", hash = "sha256:1059c9a85302d08b23e8a6a6882c985a24857d6222487a45ee558a40182f2b43", size = 14482952, upload-time = "2025-04-16T20:32:31.81Z" },
     { url = "https://files.pythonhosted.org/packages/21/25/520a0cd5334f92c6ef6a8be31b4a482e2c918a7e855ddc0df6ee6106fc70/tensorboard_plugin_profile-2.19.4-cp312-none-manylinux2014_x86_64.whl", hash = "sha256:f77555bb5468d135884069c6bbf5c9e22a6b2e5ff580c71579ecba2346674864", size = 12795543, upload-time = "2025-04-16T20:53:45.266Z" },
     { url = "https://files.pythonhosted.org/packages/af/d0/be9f9a8e464f54fa21a9ae5bde31de571ccb4b4bff6c5a01bc96bee61309/tensorboard_plugin_profile-2.19.4-cp312-none-win_amd64.whl", hash = "sha256:976d726bfe57ea760ae925aa10aca0129d3441e89c721c8761966aacbad64f19", size = 10971874, upload-time = "2025-04-16T20:39:09.023Z" },
-    { url = "https://files.pythonhosted.org/packages/96/4b/8d3436db5f33cd6ac54a6cb26a1665c3517ce82642d2a2eb163abf4c2baa/tensorboard_plugin_profile-2.19.4-py3-none-any.whl", hash = "sha256:99f316a3d2780baa837bbd3ecb6a53eb50049810ac50f675abb5f3ae9990d734", size = 6002231, upload-time = "2025-04-16T20:51:07.14Z" },
 ]
 
 [[package]]
