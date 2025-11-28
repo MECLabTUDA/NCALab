@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict
 
 import torch  # type: ignore[import-untyped]
 import torch.nn as nn  # type: ignore[import-untyped]
@@ -7,7 +7,7 @@ from pytorch_msssim import ssim  # type: ignore[import-untyped]
 
 from ..prediction import Prediction
 from ..visualization import VisualDepthEstimation
-from .basicNCA import AutoStepper, BasicNCAModel
+from .basicNCA import BasicNCAModel
 
 # TODO use torchmetrics ssim
 
@@ -74,7 +74,6 @@ class DepthNCAModel(BasicNCAModel):
         fire_rate: float = 0.8,
         hidden_size: int = 128,
         num_learned_filters: int = 2,
-        autostepper: Optional[AutoStepper] = None,
         pad_noise: bool = False,
         **kwargs,
     ):
@@ -91,7 +90,6 @@ class DepthNCAModel(BasicNCAModel):
             immutable_image_channels=True,
             num_learned_filters=num_learned_filters,
             kernel_size=3,
-            autostepper=autostepper,
             pad_noise=pad_noise,
             **kwargs,
         )
@@ -156,7 +154,5 @@ class DepthNCAModel(BasicNCAModel):
 
         :returns [Dict]: Dict of metrics, mapped by their names.
         """
-        s = ssim(
-            pred.output_channels, label.unsqueeze(1), data_range=1.0
-        ).item()
+        s = ssim(pred.output_channels, label.unsqueeze(1), data_range=1.0).item()
         return {"ssim": s}

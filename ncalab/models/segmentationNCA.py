@@ -1,4 +1,4 @@
-from typing import Dict, Optional
+from typing import Dict
 
 import segmentation_models_pytorch as smp  # type: ignore[import-untyped]
 import torch  # type: ignore[import-untyped]
@@ -6,7 +6,7 @@ import torch  # type: ignore[import-untyped]
 from ..losses import DiceBCELoss
 from ..prediction import Prediction
 from ..visualization import VisualBinaryImageSegmentation
-from .basicNCA import AutoStepper, BasicNCAModel
+from .basicNCA import BasicNCAModel
 
 
 class SegmentationNCAModel(BasicNCAModel):
@@ -27,7 +27,6 @@ class SegmentationNCAModel(BasicNCAModel):
         hidden_size: int = 128,
         num_learned_filters: int = 2,
         pad_noise: bool = True,
-        autostepper: Optional[AutoStepper] = None,
         filter_padding: str = "reflect",
         **kwargs,
     ):
@@ -56,7 +55,6 @@ class SegmentationNCAModel(BasicNCAModel):
             immutable_image_channels=True,
             num_learned_filters=num_learned_filters,
             pad_noise=pad_noise,
-            autostepper=autostepper,
             filter_padding=filter_padding,
             **kwargs,
         )

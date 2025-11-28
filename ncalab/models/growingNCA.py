@@ -5,7 +5,7 @@ import torch.nn.functional as F  # type: ignore[import-untyped]
 
 import numpy as np
 
-from .basicNCA import AutoStepper, BasicNCAModel
+from .basicNCA import BasicNCAModel
 from ..prediction import Prediction
 from ..visualization import VisualGrowing
 
@@ -27,7 +27,6 @@ class GrowingNCAModel(BasicNCAModel):
         fire_rate: float = 0.5,
         hidden_size: int = 128,
         use_alive_mask: bool = False,
-        autostepper: Optional[AutoStepper] = None,
         **kwargs,
     ):
         """
@@ -49,7 +48,6 @@ class GrowingNCAModel(BasicNCAModel):
             use_alive_mask=use_alive_mask,
             immutable_image_channels=False,
             pad_noise=False,
-            autostepper=autostepper,
             **kwargs,
         )
 
@@ -67,7 +65,7 @@ class GrowingNCAModel(BasicNCAModel):
         return {"total": loss}
 
     def validate(
-        self, image: torch.Tensor, label: torch.Tensor, steps: int
+        self, image: torch.Tensor, label: torch.Tensor, steps: Optional[int] = None
     ) -> Optional[Tuple[Dict[str, float], Prediction]]:
         """
         We typically don't validate during training of Growing NCA,

@@ -1,7 +1,7 @@
 from __future__ import annotations
 import os
 import random
-from typing import Any
+from typing import Any, Tuple
 
 import numpy as np
 
@@ -157,3 +157,25 @@ def unwrap(x: Any):
     if x is None:
         raise RuntimeError("unwrap() failed: Expected return other than None.")
     return x
+
+
+def intepret_range_parameter(x: int | Tuple[int, int]) -> int:
+    """
+    Interpret a range parameter that is passed for NCA timesteps.
+
+    If the parameter is a single int, just return it as is.
+    If the parameter is a two-valued tuple, interpret it as a [min,max) and randomly
+    sample from that range.
+
+    :param x: _description_
+    :type x: int | Tuple[int, int]
+    :raises TypeError: If something else than an int or a tuple was passed.
+    :return: _description_
+    :rtype: int
+    """
+    if type(x) is int:
+        return x
+    elif type(x) is tuple:
+        return np.random.randint(x[0], x[1])
+    else:
+        raise TypeError("Invalid type for time steps argument.")

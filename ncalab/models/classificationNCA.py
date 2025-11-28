@@ -5,7 +5,6 @@ import torch.nn.functional as F  # type: ignore[import-untyped]
 import torchmetrics
 import torchmetrics.classification
 
-from ..autostepper import AutoStepper
 from ..prediction import Prediction
 from ..utils import pad_input, unwrap
 from ..visualization import (
@@ -32,11 +31,11 @@ class ClassificationNCAModel(BasicNCAModel):
         use_laplace: bool = False,
         kernel_size: int = 3,
         pad_noise: bool = False,
-        autostepper: Optional[AutoStepper] = None,
         use_temporal_encoding: bool = False,
         use_classifier: bool = True,
         class_names: Optional[List[str]] = None,
         avg_pool_size: int = 5,
+        **kwargs,
     ):
         """
         :param device: Pytorch device descriptor.
@@ -67,8 +66,8 @@ class ClassificationNCAModel(BasicNCAModel):
             use_laplace=use_laplace,
             kernel_size=kernel_size,
             pad_noise=pad_noise,
-            autostepper=autostepper,
             use_temporal_encoding=use_temporal_encoding,
+            **kwargs,
         )
         self._num_classes = num_classes
         self.pixel_wise_loss = pixel_wise_loss
@@ -144,27 +143,6 @@ class ClassificationNCAModel(BasicNCAModel):
                 y_pred = torch.argmax(y_pred, dim=0)
                 return y_pred
             return y_pred
-
-    def forward(
-        self,
-        x: torch.Tensor,
-        steps: int = 1,
-    ):
-        assert x.shape[1] == self.num_channels
-        for step in range(steps):
-            x = self._forward_step(x, step)
-
-        if self.head is not None:
-            hidden = x[
-                :,
-                self.num_image_channels : self.num_image_channels
-                + self.num_hidden_channels,
-                :,
-                :,
-            ]
-            head_prediction = self.head(hidden)
-            return Prediction(self, steps, x, head_prediction)
-        return Prediction(self, steps, x)
 
     def loss(self, pred: Prediction, label: torch.Tensor) -> Dict[str, torch.Tensor]:
         """

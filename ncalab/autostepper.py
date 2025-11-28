@@ -1,6 +1,10 @@
 import logging
+from typing import Any
 
 import torch
+
+from .models import BasicNCAModel
+from .prediction import Prediction
 
 
 class AutoStepper:
@@ -41,7 +45,7 @@ class AutoStepper:
         self.hidden_i: torch.Tensor | None = None
         self.hidden_i_1: torch.Tensor | None = None
 
-    def score(self) -> torch.Tensor:
+    def _score(self) -> torch.Tensor:
         """
         Calculates activity score.
 
@@ -57,7 +61,7 @@ class AutoStepper:
             self.hidden_i
         )
 
-    def check(self, step: int) -> bool:
+    def _check(self, step: int) -> bool:
         """
         Checks whether to interrupt inference after the current step.
 
@@ -74,7 +78,7 @@ class AutoStepper:
                 return True
             if self.hidden_i is None or self.hidden_i_1 is None:
                 return False
-            if self.score() >= self.threshold:
+            if self._score() >= self.threshold:
                 self.cooldown = 0
             else:
                 self.cooldown += 1
@@ -83,3 +87,15 @@ class AutoStepper:
                     logging.info(f"Breaking after {step} steps.")
                 return True
             return False
+
+    def run(self, nca: BasicNCAModel, x):
+        prediction: Prediction = nca(x, steps=self.min_steps)
+        for step in range(self.min_steps, self.max_steps):
+            self.hidden_i_1 = prediction.hidden_channels
+            prediction = nca(x, steps=self.min_steps)
+            self.hidden_i = prediction.hidden_channels
+            if self._check(step):
+                return prediction
+
+    def __call__(self, *args: Any, **kwargs: Any) -> Any:
+        return self.run(args[0], args[1])

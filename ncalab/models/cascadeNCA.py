@@ -90,8 +90,9 @@ class CascadeNCA(BasicNCAModel):
             validation_metric=wrapped.validation_metric,
             use_laplace=wrapped.use_laplace,
             pad_noise=wrapped.pad_noise,
-            autostepper=wrapped.autostepper,
             use_temporal_encoding=wrapped.use_temporal_encoding,
+            training_timesteps=wrapped.training_timesteps,
+            inference_timesteps=wrapped.inference_timesteps,
         )
         self.loss = wrapped.loss  # type: ignore[method-assign]
         self.finetune = wrapped.finetune  # type: ignore[method-assign]
@@ -114,7 +115,7 @@ class CascadeNCA(BasicNCAModel):
         self.steps = steps
 
         self.single_model = single_model
-        self.models: nn.ModuleList | List[nn.Module]
+        self.models: nn.ModuleList | List[BasicNCAModel]
         if single_model:
             self.models = [wrapped for _ in scales]
         else:
@@ -151,10 +152,13 @@ class CascadeNCA(BasicNCAModel):
                     x[:, : model.num_image_channels, :, :],
                     self.scales[i + 1],
                 )
-        # TODO prediction has incorrect number of steps
+        assert prediction is not None
+        prediction.steps = sum(self.steps)
         return unwrap(prediction)
 
-    def record(self, image: torch.Tensor, steps: int = 100) -> List[Prediction]:
+    def record(
+        self, image: torch.Tensor, steps: Optional[int] = None
+    ) -> List[Prediction]:
         """
         Records predictions for all time steps and returns the resulting
         sequence of predictions.
@@ -167,7 +171,6 @@ class CascadeNCA(BasicNCAModel):
         :returns: List of Prediction objects.
         :rtype: List[Prediction]
         """
-        assert steps >= 1
         assert image.shape[1] <= self.num_channels
         self.eval()
         sequence = []
@@ -193,7 +196,7 @@ class CascadeNCA(BasicNCAModel):
         return sequence
 
     def validate(
-        self, image: torch.Tensor, label: torch.Tensor, steps: int = 1
+        self, image: torch.Tensor, label: torch.Tensor, steps: Optional[int] = None
     ) -> Optional[Tuple[Dict[str, float], Prediction]]:
         """
         Validation method.

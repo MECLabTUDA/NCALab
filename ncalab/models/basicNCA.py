@@ -7,17 +7,20 @@ import torch  # type: ignore[import-untyped]
 import torch.nn as nn  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
 
-from ..autostepper import AutoStepper
 from ..prediction import Prediction
-from ..utils import pad_input
+from ..utils import intepret_range_parameter, pad_input, unwrap
 from ..visualization import Visual
-from .basicNCArule import BasicNCARule
 from .basicNCAhead import BasicNCAHead
+from .basicNCAperception import BasicNCAPerception
+from .basicNCArule import BasicNCARule
 
 
 class BasicNCAModel(nn.Module):
     """
     Abstract base class for NCA models.
+
+    BasicNCAModel is a composition of an NCA backbone model (called "rule"), and
+    an (optional) head module for downstream tasks.
     """
 
     def __init__(
@@ -37,9 +40,10 @@ class BasicNCAModel(nn.Module):
         use_laplace: bool = False,
         kernel_size: int = 3,
         pad_noise: bool = False,
-        autostepper: Optional[AutoStepper] = None,
         use_temporal_encoding: bool = False,
         rule_type: type[BasicNCARule] = BasicNCARule,
+        training_timesteps: int | Tuple[int, int] = 100,
+        inference_timesteps: int | Tuple[int, int] = 100,
     ):
         """
         :param device: Pytorch device descriptor.
@@ -55,7 +59,6 @@ class BasicNCAModel(nn.Module):
         :param use_laplace: Whether to use Laplace filter (only if num_learned_filters == 0)
         :param kernel_size: Filter kernel size (only for learned filters)
         :param pad_noise: Whether to pad input image tensor with noise in hidden / output channels
-        :param autostepper: AutoStepper object to select number of time steps based on activity
         """
         super(BasicNCAModel, self).__init__()
 
@@ -77,60 +80,29 @@ class BasicNCAModel(nn.Module):
         self.kernel_size = kernel_size
         self.filter_padding = filter_padding
         self.pad_noise = pad_noise
-        self.autostepper = autostepper
         self.use_temporal_encoding = use_temporal_encoding
         self.plot_function = plot_function
         self.validation_metric = validation_metric
-
-        # define input filters
-        self._define_filters(num_learned_filters)
+        self.training_timesteps = training_timesteps
+        self.inference_timesteps = inference_timesteps
 
         # define model structure
-        self.input_vector_size = self.num_channels * (self.num_filters + 1)
+        # perception
+        self.perception = BasicNCAPerception(self)
+        self.input_vector_size = self.num_channels * (self.perception.num_filters + 1)
         if self.use_temporal_encoding:
             self.input_vector_size += 1
+        # rule
         self.rule_type = rule_type
         self.rule = self._define_rule()
         self.head: BasicNCAHead | None = None
+        # pre-compute stochastic weight update
+        self._stochastic: torch.Tensor | None = None
 
     def _define_rule(self):
         return self.rule_type(
             self.device, self.input_vector_size, self.hidden_size, self.num_channels
         )
-
-    def _define_filters(self, num_learned_filters: int):
-        """
-        Define list of perception filters, based on parameters passed in constructor.
-
-        :param num_learned_filters: Number of learned filters in perception filter bank.
-        :type num_learned_filters: int
-        """
-        self.filters: list | nn.ModuleList = []
-        if num_learned_filters > 0:
-            self.num_filters = num_learned_filters
-            filters = []
-            for _ in range(num_learned_filters):
-                filters.append(
-                    nn.Conv2d(
-                        self.num_channels,
-                        self.num_channels,
-                        kernel_size=self.kernel_size,
-                        stride=1,
-                        padding=(self.kernel_size // 2),
-                        padding_mode=self.filter_padding,
-                        groups=self.num_channels,
-                        bias=False,
-                    )
-                )
-            self.filters = nn.ModuleList(filters).to(self.device)
-        else:
-            sobel_x = np.outer([1, 2, 1], [-1, 0, 1]) / 8.0
-            sobel_y = sobel_x.T
-            laplace = np.array([[0, 1, 0], [1, -4, 1], [0, 1, 0]])
-            self.filters.extend([sobel_x, sobel_y])
-            if self.use_laplace:
-                self.filters.append(laplace)
-            self.num_filters = len(self.filters)
 
     def prepare_input(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -155,34 +127,6 @@ class BasicNCAModel(nn.Module):
         )
         return mask
 
-    def _perceive(self, x, step) -> torch.Tensor:
-        def _perceive_with(x, weight):
-            if isinstance(weight, nn.Conv2d):
-                return weight(x)
-            # if using a hard coded filter matrix.
-            # this is done in the original Growing NCA paper, but learned filters typically
-            # work better.
-            conv_weights = torch.from_numpy(weight.astype(np.float32)).to(self.device)
-            conv_weights = conv_weights.view(1, 1, 3, 3).repeat(
-                self.num_channels, 1, 1, 1
-            )
-            return F.conv2d(x, conv_weights, padding=1, groups=self.num_channels)
-
-        perception = [x]
-        perception.extend([_perceive_with(x, w) for w in self.filters])
-        if self.use_temporal_encoding:
-            normalization = 100
-            if self.autostepper is not None:
-                normalization = self.autostepper.max_steps
-            perception.append(
-                torch.mul(
-                    torch.ones((x.shape[0], 1, x.shape[2], x.shape[3])),
-                    step / normalization,
-                ).to(self.device)
-            )
-        dx = torch.cat(perception, 1)
-        return dx
-
     def _update(self, x: torch.Tensor, step: int) -> torch.Tensor:
         """
         Compute residual cell update.
@@ -193,16 +137,13 @@ class BasicNCAModel(nn.Module):
         assert x.shape[1] == self.num_channels
 
         # Perception
-        dx = self._perceive(x, step)
+        dx = self.perception.perceive(x, step)
 
         # Compute delta from FFNN network
         dx = self.rule(dx)
 
         # Stochastic weight update
-        fire_rate = self.fire_rate
-        stochastic = torch.rand([dx.size(0), 1, dx.size(2), dx.size(3)]) < fire_rate
-        stochastic = stochastic.float().to(self.device)
-        dx = dx * stochastic
+        dx = dx * unwrap(self._stochastic)[step % len(unwrap(self._stochastic))]
 
         if self.immutable_image_channels:
             dx[:, : self.num_image_channels, :, :] *= 0
@@ -232,33 +173,23 @@ class BasicNCAModel(nn.Module):
 
         :returns [Prediction]: Prediction object.
         """
-        if self.autostepper is None:
-            for step in range(steps):
-                x = self._forward_step(x, step)
-            return Prediction(self, steps, x)
-
-        for step in range(self.autostepper.max_steps):
-            if self.autostepper.check(step):
-                return Prediction(self, step, x)
-            # save previous hidden state
-            self.autostepper.hidden_i_1 = x[
-                :,
-                self.num_image_channels : self.num_image_channels
-                + self.num_hidden_channels,
-                :,
-                :,
-            ]
+        assert x.shape[1] == self.num_channels
+        S = torch.rand([steps, 1, 1, x.size(2), x.size(3)]) < self.fire_rate
+        self._stochastic = S.float().to(self.device)
+        for step in range(steps):
             x = self._forward_step(x, step)
 
-            # set current hidden state
-            self.autostepper.hidden_i = x[
+        if self.head is not None:
+            hidden = x[
                 :,
                 self.num_image_channels : self.num_image_channels
                 + self.num_hidden_channels,
                 :,
                 :,
             ]
-        return Prediction(self, self.autostepper.max_steps, x)
+            head_prediction = self.head(hidden)
+            return Prediction(self, steps, x, head_prediction)
+        return Prediction(self, steps, x)
 
     def loss(self, pred: Prediction, label: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
@@ -281,9 +212,7 @@ class BasicNCAModel(nn.Module):
         and setting to "train" mode.
         """
         self.train()
-        if self.num_learned_filters != 0:
-            for filter in self.filters:
-                filter.requires_grad_(False)
+        self.perception.freeze()
         self.rule.freeze()
         if freeze_head and self.head is not None:
             self.head.freeze()
@@ -316,7 +245,9 @@ class BasicNCAModel(nn.Module):
             prediction = self.forward(x, steps=steps)
             return prediction
 
-    def record(self, image: torch.Tensor, steps: int = 100) -> List[Prediction]:
+    def record(
+        self, image: torch.Tensor, steps: Optional[int] = None
+    ) -> List[Prediction]:
         """
         Record predictions for all time steps and return the resulting
         sequence of predictions.
@@ -325,8 +256,9 @@ class BasicNCAModel(nn.Module):
 
         :returns [List[Prediction]]: List of Prediction objects.
         """
-        assert steps >= 1
         assert image.shape[1] <= self.num_channels
+        if steps is None:
+            steps = intepret_range_parameter(self.inference_timesteps)
         self.eval()
         sequence = []
         with torch.no_grad():
@@ -340,7 +272,7 @@ class BasicNCAModel(nn.Module):
             return sequence
 
     def validate(
-        self, image: torch.Tensor, label: torch.Tensor, steps: int
+        self, image: torch.Tensor, label: torch.Tensor, steps: Optional[int] = None
     ) -> Optional[Tuple[Dict[str, float], Prediction]]:
         """
         Make a prediction on an image of the validation set and return metrics computed
@@ -352,6 +284,8 @@ class BasicNCAModel(nn.Module):
 
         :returns [Tuple[float, Prediction]]: Validation metric, predicted image BCWH
         """
+        if steps is None:
+            steps = intepret_range_parameter(self.inference_timesteps)
         prediction = self.predict(image.to(self.device), steps=steps)
         metrics = self.metrics(prediction, label.to(self.device))
         return metrics, prediction

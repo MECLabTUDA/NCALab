@@ -3,6 +3,13 @@ from torch import nn
 
 
 class BasicNCARule(nn.Module):
+    """
+    NCA rule module based on a two-layer Multi-Layer-Perceptron (MLP).
+
+    :param nn: _description_
+    :type nn: _type_
+    """
+
     def __init__(
         self,
         device: torch.device,
@@ -43,15 +50,27 @@ class BasicNCARule(nn.Module):
         )
 
     def _initialize_network(self):
+        """
+        Initialize network weights of the MLP.
+
+        We assume that the default initialization of the first layer is good enough.
+        Since the final layer is purely linear and unbiased, we initalize with 0.
+        """
         with torch.no_grad():
             data = self.network[-1].weight
             assert type(data) is torch.nn.parameter.Parameter
             data.fill_(0)
 
-    def forward(self, x: torch.Tensor):
+    def forward(self, x: torch.Tensor) -> torch.Tensor:
         return self.network(x)
 
     def freeze(self, freeze_last: bool = False):
+        """
+        Freeze the first layer of the NCA rule network and, optionally, the final layer.
+
+        :param freeze_last: _description_, defaults to False
+        :type freeze_last: bool, optional
+        """
         layers = self.network
         if not freeze_last:
             layers = self.network[:-1]

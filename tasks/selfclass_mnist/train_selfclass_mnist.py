@@ -75,13 +75,13 @@ def train_selfclass_mnist(
         num_classes=10,
         pixel_wise_loss=True,
         use_classifier=False,
+        training_timesteps=(40, 60),
+        inference_timesteps=50,
     )
 
     trainer = BasicNCATrainer(
         nca,
         WEIGHTS_PATH / "selfclass_mnist",
-        steps_range=(40, 60),
-        steps_validation=50,
         max_epochs=5,
     )
     trainer.train(

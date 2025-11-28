@@ -52,6 +52,8 @@ def train_segmentation_kvasir_seg(
         fire_rate=0.5,
         use_temporal_encoding=True,
         filter_padding="circular",
+        training_timesteps=(30, 40),
+        inference_timesteps=35,
     )
     cascade = CascadeNCA(nca, [4, 2, 1], [32, 16, 10])
 
@@ -86,8 +88,6 @@ def train_segmentation_kvasir_seg(
         cascade,
         WEIGHTS_PATH / "segmentation_kvasir_seg",
         max_epochs=1000,
-        steps_range=(30, 40),
-        steps_validation=35,
     )
     trainer.train(
         loader_train,

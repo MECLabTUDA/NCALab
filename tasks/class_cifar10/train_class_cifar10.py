@@ -61,7 +61,6 @@ def train_class_cifar10(
             transforms.RandomPerspective(distortion_scale=0.5, p=0.5),
             transforms.RandomHorizontalFlip(),
             transforms.RandomVerticalFlip(),
-            transforms.RandomCrop(32, padding=4),
             transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
         ]
     )
@@ -136,16 +135,16 @@ def train_class_cifar10(
         pad_noise=pad_noise,
         use_temporal_encoding=use_temporal_encoding,
         class_names=class_names,
+        training_timesteps=(32, 48),
+        inference_timesteps=42,
     )
     # Train the NCA model
     trainer = BasicNCATrainer(
         nca,
         WEIGHTS_PATH / "classification_cifar10",
         batch_repeat=2,
-        max_epochs=500,
+        max_epochs=120,
         gradient_clipping=gradient_clipping,
-        steps_range=(32, 48),
-        steps_validation=42,
     )
     trainer.train(
         loader_train,

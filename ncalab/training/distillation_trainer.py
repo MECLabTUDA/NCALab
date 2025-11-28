@@ -1,41 +1,42 @@
 from __future__ import annotations
-
 import logging
 from pathlib import Path, PosixPath  # for type hint
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, List, Tuple
 
 import numpy as np
+
 import torch  # type: ignore[import-untyped]
 import torch.optim as optim  # type: ignore[import-untyped]
 from torch.utils.data import DataLoader  # for type hint
 from torch.utils.tensorboard import SummaryWriter  # for type hint
+
 from tqdm import tqdm  # type: ignore[import-untyped]
 
 from ..models.basicNCA import BasicNCAModel  # for type hint
 from ..prediction import Prediction
-from ..utils import intepret_range_parameter, pad_input, unwrap
+from ..utils import pad_input, unwrap
 from ..visualization import Visual
+
 from .earlystopping import EarlyStopping
 from .pool import Pool
 from .traininghistory import TrainingHistory
 
 
-class BasicNCATrainer:
-    """
-    Trainer class for any model subclassing BasicNCA.
-    """
-
+class DistillationNCATrainer:
     def __init__(
         self,
         nca: BasicNCAModel,
+        teacher: torch.nn.Module,
         model_path: Path | PosixPath,
         gradient_clipping: bool = False,
+        steps_range: tuple = (90, 110),
+        steps_validation: int = 100,
         lr: Optional[float] = None,
         lr_gamma: float = 0.99,
-        adam_betas=(0.9, 0.95),
+        adam_betas=(0.4, 0.95),
         batch_repeat: int = 2,
         max_epochs: int = 200,
-        optimizer_method: str = "adam",
+        optimizer_method: str = "adamw",
         pool: Optional[Pool] = None,
     ):
         """
@@ -45,6 +46,10 @@ class BasicNCATrainer:
         :type model_path: Path | PosixPath, optional
         :param gradient_clipping: Whether to clip gradients, defaults to False.
         :type gradient_clipping: bool, optional
+        :param steps_range: Inclusive range of NCA time steps, randomized in each forward pass, defaults to (90, 110).
+        :type steps_range: tuple, optional
+        :param steps_validation: Number of steps to use during validation, defaults to 100.
+        :type steps_validation: int, optional
         :param lr: Initial learning rate, defaults to 16e-4.
         :type lr: float, optional
         :param lr_gamma: Exponential learning rate decay, defaults to 0.9999.
@@ -59,6 +64,7 @@ class BasicNCATrainer:
         :type pool: ncalab.Pool
         """
         assert batch_repeat >= 1
+        assert steps_range[0] < steps_range[1]
         assert max_epochs > 0
         assert optimizer_method.lower() in (
             "adam",
@@ -69,8 +75,11 @@ class BasicNCATrainer:
             "sgd",
         )
         self.nca = nca
+        self.teacher = teacher
         self.model_path = model_path
         self.gradient_clipping = gradient_clipping
+        self.steps_range = steps_range
+        self.steps_validation = steps_validation
         self.lr_gamma = lr_gamma
         self.adam_betas = adam_betas
         self.batch_repeat = batch_repeat
@@ -118,6 +127,7 @@ class BasicNCATrainer:
         self,
         x: torch.Tensor,
         y: torch.Tensor,
+        steps: int,
         optimizer: torch.optim.Optimizer,
         total_batch_iterations: int,
         summary_writer: Optional[SummaryWriter] = None,
@@ -141,9 +151,7 @@ class BasicNCATrainer:
         self.nca.train()
         optimizer.zero_grad()
         x_in = x.clone().to(self.nca.device)
-        prediction = self.nca(
-            x_in, steps=intepret_range_parameter(self.nca.training_timesteps)
-        )
+        prediction = self.nca(x_in, steps=steps)
         losses = self.nca.loss(prediction, y.to(device))
         losses["total"].backward()
 
@@ -214,6 +222,9 @@ class BasicNCATrainer:
             optimizer = optim.Adam(
                 self.nca.parameters(), lr=self.lr, betas=self.adam_betas
             )
+        scheduler = optim.lr_scheduler.CosineAnnealingLR(
+            optimizer, T_max=self.max_epochs
+        )
 
         # MAIN LOOP
         total_batch_iterations = 0
@@ -248,9 +259,11 @@ class BasicNCATrainer:
                     x = torch.cat(self.batch_repeat * [x])
                     y = torch.cat(self.batch_repeat * [y])
 
+                steps = np.random.randint(*self.steps_range)
                 prediction, losses = self._train_iteration(
                     x,
                     y,
+                    steps,
                     optimizer,
                     total_batch_iterations,
                     summary_writer,
@@ -261,6 +274,7 @@ class BasicNCATrainer:
                     if self.pool is not None:
                         self.pool.update(prediction.output_image)
                     all_losses.append(losses["total"].item())
+            scheduler.step()
             with torch.no_grad():
                 # VISUALIZATION
                 # TODO visualize samples in training and validation batches
@@ -284,7 +298,10 @@ class BasicNCATrainer:
                     all_metrics: Dict[str, List[float]] = {}
                     for sample in dataloader_val:
                         x, y = sample
-                        metrics, _ = unwrap(self.nca.validate(x, y))
+                        # TODO: move validation/inference steps parameter to NCA model itself
+                        metrics, _ = unwrap(
+                            self.nca.validate(x, y, self.steps_validation)
+                        )
                         for name in metrics:
                             if name not in all_metrics:
                                 all_metrics[name] = []
