@@ -26,3 +26,7 @@ A curated collection of recent advancements and resources related to Neural Cell
 can be found in our `Awesome List <https://github.com/MECLabTUDA/awesome-nca>`__.
 This list includes papers, code repositories, and applications that highlight the versatility
 and potential of NCAs in various fields, including computer graphics, biology, and medical imaging.
+
+NCALab aims to facilitate and unify the desgin, training and inference with NCAs.
+The following chapters of this documentation will explain the inner workings of NCALab and
+provide practical guidelines for adding new models, tweaking parameters and troubleshooting errors.
