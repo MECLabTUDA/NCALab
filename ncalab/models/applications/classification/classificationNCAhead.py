@@ -34,8 +34,8 @@ class ClassificationNCAHead(BasicNCAHead):
         return self.classifier(x)
 
     def freeze(self, freeze_last: bool = False):
-        layers = self.classifier
+        layers = [L for L in self.classifier.modules()]
         if not freeze_last:
-            layers = self.classifier[:-1]
+            layers = layers[:-1]
         for layer in layers:
             layer.requires_grad_(False)

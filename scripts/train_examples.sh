@@ -1,4 +1,5 @@
 #!/bin/bash
+set -e
 
 uv run tasks/class_cifar10/train_class_cifar10.py
 uv run tasks/growing_emoji/train_growing_emoji.py

@@ -37,6 +37,8 @@ def train_class_cifar10(
     hidden_channels: int,
     gpu: bool,
     gpu_index: int,
+    max_epochs: int,
+    dry: bool,
 ):
     comment = "CIFAR10"
     comment += f"_hidden_{hidden_channels}"
@@ -45,7 +47,7 @@ def train_class_cifar10(
     comment += f"_AM_{alive_mask}"
     comment += f"_TE_{use_temporal_encoding}"
 
-    writer = SummaryWriter(comment=comment)
+    writer = SummaryWriter(comment=comment) if not dry else None
 
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
@@ -141,9 +143,9 @@ def train_class_cifar10(
     # Train the NCA model
     trainer = BasicNCATrainer(
         nca,
-        WEIGHTS_PATH / "classification_cifar10",
+        WEIGHTS_PATH / "classification_cifar10" if not dry else None,
         batch_repeat=2,
-        max_epochs=120,
+        max_epochs=max_epochs,
         gradient_clipping=gradient_clipping,
     )
     trainer.train(
@@ -151,7 +153,8 @@ def train_class_cifar10(
         loader_val,
         summary_writer=writer,
     )
-    writer.close()
+    if writer is not None:
+        writer.close()
 
 
 @click.command()
@@ -163,12 +166,18 @@ def train_class_cifar10(
 @click.option(
     "--gpu-index", type=int, default=0, help="Index of GPU to use, if --gpu in use."
 )
-def main(batch_size, hidden_channels, gpu: bool, gpu_index: int):
+@click.option("--max-epochs", "-E", type=int, default=120)
+@click.option("--dry", "-D", is_flag=True)
+def main(
+    batch_size, hidden_channels, gpu: bool, gpu_index: int, max_epochs: int, dry: bool
+):
     train_class_cifar10(
         batch_size=batch_size,
         hidden_channels=hidden_channels,
         gpu=gpu,
         gpu_index=gpu_index,
+        max_epochs=max_epochs,
+        dry=dry,
     )
 
 

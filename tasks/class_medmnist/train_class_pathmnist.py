@@ -36,6 +36,8 @@ def train_class_pathmnist(
     hidden_channels: int,
     gpu: bool,
     gpu_index: int,
+    max_epochs: int,
+    dry: bool,
 ):
     comment = "PathMNIST"
     comment += f"_hidden_{hidden_channels}"
@@ -44,7 +46,7 @@ def train_class_pathmnist(
     comment += f"_AM_{alive_mask}"
     comment += f"_TE_{use_temporal_encoding}"
 
-    writer = SummaryWriter(comment=comment)
+    writer = SummaryWriter(comment=comment) if not dry else None
 
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
@@ -80,22 +82,23 @@ def train_class_pathmnist(
         pad_noise=pad_noise,
         use_temporal_encoding=use_temporal_encoding,
         class_names=list(INFO["pathmnist"]["label"].values()),
+        training_timesteps=32,
+        inference_timesteps=32,
     )
     trainer = BasicNCATrainer(
         nca,
-        WEIGHTS_PATH / "classification_pathmnist",
+        WEIGHTS_PATH / "classification_pathmnist" if not dry else None,
         batch_repeat=2,
-        max_epochs=10,
+        max_epochs=max_epochs,
         gradient_clipping=gradient_clipping,
-        steps_range=(32, 33),
-        steps_validation=32,
     )
     trainer.train(
         loader_train,
         loader_val,
         summary_writer=writer,
     )
-    writer.close()
+    if writer is not None:
+        writer.close()
 
 
 @click.command()
@@ -107,12 +110,18 @@ def train_class_pathmnist(
 @click.option(
     "--gpu-index", type=int, default=0, help="Index of GPU to use, if --gpu in use."
 )
-def main(batch_size, hidden_channels, gpu: bool, gpu_index: int):
+@click.option("--max-epochs", "-E", type=int, default=10)
+@click.option("--dry", "-D", is_flag=True)
+def main(
+    batch_size, hidden_channels, gpu: bool, gpu_index: int, max_epochs: int, dry: bool
+):
     train_class_pathmnist(
         batch_size=batch_size,
         hidden_channels=hidden_channels,
         gpu=gpu,
         gpu_index=gpu_index,
+        max_epochs=max_epochs,
+        dry=dry,
     )
 
 

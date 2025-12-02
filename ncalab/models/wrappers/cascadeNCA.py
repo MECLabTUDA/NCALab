@@ -1,4 +1,5 @@
-from typing import Dict, Optional, Tuple, List
+import copy
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import torch  # type: ignore[import-untyped]
@@ -115,11 +116,11 @@ class CascadeNCA(BasicNCAModel):
         self.steps = steps
 
         self.single_model = single_model
-        self.models: nn.ModuleList | List[BasicNCAModel]
+        self.models: List[BasicNCAModel]
         if single_model:
             self.models = [wrapped for _ in scales]
         else:
-            self.models = nn.ModuleList([wrapped for _ in scales])
+            self.models = [copy.deepcopy(wrapped) for _ in scales]
 
     def forward(self, x: torch.Tensor, *args, **kwargs) -> Prediction:
         """

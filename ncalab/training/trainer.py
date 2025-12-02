@@ -28,7 +28,7 @@ class BasicNCATrainer:
     def __init__(
         self,
         nca: BasicNCAModel,
-        model_path: Path | PosixPath,
+        model_path: Optional[Path | PosixPath],
         gradient_clipping: bool = False,
         lr: Optional[float] = None,
         lr_gamma: float = 0.99,

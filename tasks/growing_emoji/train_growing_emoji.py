@@ -28,7 +28,12 @@ WEIGHTS_PATH.mkdir(exist_ok=True)
 
 
 def train_growing_emoji(
-    batch_size: int, hidden_channels: int, gpu: bool, gpu_index: int, max_epochs: int
+    batch_size: int,
+    hidden_channels: int,
+    gpu: bool,
+    gpu_index: int,
+    max_epochs: int,
+    dry: bool,
 ):
     """
     Main function to run the "growing emoji" example task.
@@ -40,7 +45,7 @@ def train_growing_emoji(
     fix_random_seed()
 
     # Create tensorboard summary writer
-    writer = SummaryWriter(comment=" Growing NCA (Lizard)")
+    writer = SummaryWriter(comment=" Growing NCA (Lizard)") if not dry else None
 
     # Select device, try to use GPU or fall back to CPU
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
@@ -63,12 +68,13 @@ def train_growing_emoji(
     # Create Trainer and run training
     trainer = BasicNCATrainer(
         nca,
-        WEIGHTS_PATH / "ncalab_growing_emoji",
+        WEIGHTS_PATH / "ncalab_growing_emoji" if not dry else None,
         max_epochs=max_epochs,
         pool=pool,
     )
     trainer.train(dataloader_train, summary_writer=writer, save_every=500)
-    writer.close()
+    if writer is not None:
+        writer.close()
 
 
 @click.command()
@@ -81,13 +87,15 @@ def train_growing_emoji(
     "--gpu-index", type=int, default=0, help="Index of GPU to use, if --gpu in use."
 )
 @click.option("--epochs", "-e", type=int, default=5000)
-def main(batch_size, hidden_channels, gpu, gpu_index, epochs):
+@click.option("--dry", "-D", is_flag=True)
+def main(batch_size, hidden_channels, gpu, gpu_index: int, epochs: int, dry: bool):
     train_growing_emoji(
         batch_size=batch_size,
         hidden_channels=hidden_channels,
         gpu=gpu,
         gpu_index=gpu_index,
         max_epochs=epochs,
+        dry=dry,
     )
 
 

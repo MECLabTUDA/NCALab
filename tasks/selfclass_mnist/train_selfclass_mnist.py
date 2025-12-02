@@ -28,7 +28,12 @@ WEIGHTS_PATH.mkdir(exist_ok=True)
 
 
 def train_selfclass_mnist(
-    batch_size: int, hidden_channels: int, gpu: bool, gpu_index: int
+    batch_size: int,
+    hidden_channels: int,
+    gpu: bool,
+    gpu_index: int,
+    max_epochs: int,
+    dry: bool,
 ):
     print_NCALab_banner()
     print()
@@ -41,7 +46,7 @@ def train_selfclass_mnist(
     )
     fix_random_seed()
 
-    writer = SummaryWriter(comment="Selfclassifying MNIST")
+    writer = SummaryWriter(comment="Selfclassifying MNIST") if not dry else None
 
     mnist_train = MNIST(
         "mnist",
@@ -81,15 +86,16 @@ def train_selfclass_mnist(
 
     trainer = BasicNCATrainer(
         nca,
-        WEIGHTS_PATH / "selfclass_mnist",
-        max_epochs=5,
+        WEIGHTS_PATH / "selfclass_mnist" if not dry else None,
+        max_epochs=max_epochs,
     )
     trainer.train(
         loader_train,
         loader_val,
         summary_writer=writer,
     )
-    writer.close()
+    if writer is not None:
+        writer.close()
 
 
 @click.command()
@@ -101,12 +107,16 @@ def train_selfclass_mnist(
 @click.option(
     "--gpu-index", type=int, default=0, help="Index of GPU to use, if --gpu in use."
 )
-def main(batch_size, hidden_channels, gpu, gpu_index):
+@click.option("--max-epochs", "-E", type=int, default=5)
+@click.option("--dry", "-D", is_flag=True)
+def main(batch_size, hidden_channels, gpu, gpu_index, max_epochs: int, dry: bool):
     train_selfclass_mnist(
         batch_size=batch_size,
         hidden_channels=hidden_channels,
         gpu=gpu,
         gpu_index=gpu_index,
+        max_epochs=max_epochs,
+        dry=dry,
     )
 
 

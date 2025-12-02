@@ -36,9 +36,14 @@ WEIGHTS_PATH.mkdir(exist_ok=True)
 
 
 def train_segmentation_kvasir_seg(
-    batch_size: int, hidden_channels: int, gpu: bool, gpu_index: int
+    batch_size: int,
+    hidden_channels: int,
+    gpu: bool,
+    gpu_index: int,
+    max_epochs: int,
+    dry: bool,
 ):
-    writer = SummaryWriter(comment="Segmentation Kvasir-SEG")
+    writer = SummaryWriter(comment="Segmentation Kvasir-SEG") if not dry else None
     print_NCALab_banner()
     fix_random_seed()
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
@@ -86,8 +91,8 @@ def train_segmentation_kvasir_seg(
 
     trainer = BasicNCATrainer(
         cascade,
-        WEIGHTS_PATH / "segmentation_kvasir_seg",
-        max_epochs=1000,
+        WEIGHTS_PATH / "segmentation_kvasir_seg" if not dry else None,
+        max_epochs=max_epochs,
     )
     trainer.train(
         loader_train,
@@ -95,7 +100,8 @@ def train_segmentation_kvasir_seg(
         summary_writer=writer,
         save_every=1,
     )
-    writer.close()
+    if writer is not None:
+        writer.close()
 
 
 @click.command()
@@ -107,7 +113,9 @@ def train_segmentation_kvasir_seg(
 @click.option(
     "--gpu-index", type=int, default=0, help="Index of GPU to use, if --gpu in use."
 )
-def main(batch_size, hidden_channels, gpu, gpu_index):
+@click.option("--max-epochs", "-E", type=int, default=1000)
+@click.option("--dry", "-D", is_flag=True)
+def main(batch_size, hidden_channels, gpu, gpu_index, max_epochs, dry):
     print_mascot(
         "You're training NCAs on a medical dataset now.\n"
         "\n"
@@ -126,6 +134,8 @@ def main(batch_size, hidden_channels, gpu, gpu_index):
         hidden_channels=hidden_channels,
         gpu=gpu,
         gpu_index=gpu_index,
+        max_epochs=max_epochs,
+        dry=dry,
     )
 
 
