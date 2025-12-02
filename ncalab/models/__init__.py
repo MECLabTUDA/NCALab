@@ -1,7 +1,3 @@
-from .basicNCA import BasicNCAModel  # noqa: F401
-from .basicNCArule import BasicNCARule  # noqa: F401
-from .cascadeNCA import CascadeNCA  # noqa: F401
-from .classificationNCA import ClassificationNCAModel  # noqa: F401
-from .depthNCA import DepthNCAModel  # noqa: F401
-from .growingNCA import GrowingNCAModel  # noqa: F401
-from .segmentationNCA import SegmentationNCAModel  # noqa: F401
+from .basicNCA import *  # noqa: F401,F403
+from .wrappers import *  # noqa: F401,F403
+from .applications import *  # noqa: F401,F403

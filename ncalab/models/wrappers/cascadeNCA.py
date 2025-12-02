@@ -4,9 +4,9 @@ import numpy as np
 import torch  # type: ignore[import-untyped]
 import torch.nn as nn  # type: ignore[import-untyped]
 
-from .basicNCA import BasicNCAModel
-from ..prediction import Prediction
-from ..utils import unwrap
+from ncalab.models.basicNCA import BasicNCAModel
+from ncalab.prediction import Prediction
+from ncalab.utils import unwrap
 
 
 def upscale(image: torch.Tensor, scale: float, mode: str = "nearest") -> torch.Tensor:

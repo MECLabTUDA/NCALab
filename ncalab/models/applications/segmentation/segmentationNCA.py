@@ -3,10 +3,10 @@ from typing import Dict
 import segmentation_models_pytorch as smp  # type: ignore[import-untyped]
 import torch  # type: ignore[import-untyped]
 
-from ..losses import DiceBCELoss
-from ..prediction import Prediction
-from ..visualization import VisualBinaryImageSegmentation
-from .basicNCA import BasicNCAModel
+from ncalab.losses import DiceBCELoss
+from ncalab.models.basicNCA import BasicNCAModel
+from ncalab.prediction import Prediction
+from ncalab.visualization import VisualBinaryImageSegmentation
 
 
 class SegmentationNCAModel(BasicNCAModel):

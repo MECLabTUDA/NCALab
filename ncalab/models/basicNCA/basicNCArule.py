@@ -18,6 +18,20 @@ class BasicNCARule(nn.Module):
         output_size: int,
         nonlinearity: type[nn.Module] = nn.ReLU,
     ):
+        """
+        _summary_
+
+        :param device: _description_
+        :type device: torch.device
+        :param input_size: _description_
+        :type input_size: int
+        :param hidden_size: _description_
+        :type hidden_size: int
+        :param output_size: _description_
+        :type output_size: int
+        :param nonlinearity: _description_, defaults to nn.ReLU
+        :type nonlinearity: type[nn.Module], optional
+        """
         super().__init__()
         self.nonlinearity = nonlinearity
         self.input_size = input_size
@@ -62,6 +76,12 @@ class BasicNCARule(nn.Module):
             data.fill_(0)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
+        """
+        :param x: BCWH perception vector
+        :type x: torch.Tensor
+        :return: BCWH residual update
+        :rtype: torch.Tensor
+        """
         return self.network(x)
 
     def freeze(self, freeze_last: bool = False):

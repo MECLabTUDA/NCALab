@@ -5,9 +5,9 @@ import torch.nn as nn  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
 from pytorch_msssim import ssim  # type: ignore[import-untyped]
 
-from ..prediction import Prediction
-from ..visualization import VisualDepthEstimation
-from .basicNCA import BasicNCAModel
+from ....prediction import Prediction
+from ....visualization import VisualDepthEstimation
+from ...basicNCA import BasicNCAModel
 
 # TODO use torchmetrics ssim
 

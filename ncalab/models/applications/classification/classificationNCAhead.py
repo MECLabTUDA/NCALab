@@ -1,11 +1,17 @@
+import torch
 from torch import nn
 
-from .basicNCAhead import BasicNCAHead
+from ncalab.models.basicNCA.basicNCAhead import BasicNCAHead
 
 
 class ClassificationNCAHead(BasicNCAHead):
     def __init__(
-        self, num_hidden_channels, num_classes, device, avg_pool_size=3, hidden_size=64
+        self,
+        num_hidden_channels: int,
+        num_classes: int,
+        device: torch.device,
+        avg_pool_size: int = 3,
+        hidden_size: int = 64,
     ):
         super().__init__()
         self.num_hidden_channels = num_hidden_channels

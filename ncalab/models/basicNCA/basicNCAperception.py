@@ -6,7 +6,7 @@ import torch.nn as nn  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
 
 if TYPE_CHECKING:
-    from .basicNCA import BasicNCAModel
+    from . import BasicNCAModel
 
 
 class BasicNCAPerception:

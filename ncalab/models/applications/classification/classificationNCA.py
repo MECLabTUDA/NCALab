@@ -5,13 +5,14 @@ import torch.nn.functional as F  # type: ignore[import-untyped]
 import torchmetrics
 import torchmetrics.classification
 
-from ..prediction import Prediction
-from ..utils import pad_input, unwrap
-from ..visualization import (
+from ncalab.models.basicNCA import BasicNCAModel
+from ncalab.prediction import Prediction
+from ncalab.utils import pad_input, unwrap
+from ncalab.visualization import (
     VisualBinaryImageClassification,
     VisualRGBImageClassification,
 )
-from .basicNCA import BasicNCAModel
+
 from .classificationNCAhead import ClassificationNCAHead
 
 

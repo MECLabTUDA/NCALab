@@ -1,13 +1,12 @@
 from typing import Dict, List, Optional, Tuple
 
+import numpy as np
 import torch  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
 
-import numpy as np
-
-from .basicNCA import BasicNCAModel
-from ..prediction import Prediction
-from ..visualization import VisualGrowing
+from ....prediction import Prediction
+from ....visualization import VisualGrowing
+from ...basicNCA import BasicNCAModel
 
 
 class GrowingNCAModel(BasicNCAModel):

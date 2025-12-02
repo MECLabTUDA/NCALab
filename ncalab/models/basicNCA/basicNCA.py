@@ -7,9 +7,9 @@ import torch  # type: ignore[import-untyped]
 import torch.nn as nn  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
 
-from ..prediction import Prediction
-from ..utils import intepret_range_parameter, pad_input, unwrap
-from ..visualization import Visual
+from ...prediction import Prediction
+from ...utils import intepret_range_parameter, pad_input, unwrap
+from ...visualization import Visual
 from .basicNCAhead import BasicNCAHead
 from .basicNCAperception import BasicNCAPerception
 from .basicNCArule import BasicNCARule
@@ -92,10 +92,12 @@ class BasicNCAModel(nn.Module):
         self.input_vector_size = self.num_channels * (self.perception.num_filters + 1)
         if self.use_temporal_encoding:
             self.input_vector_size += 1
-        # rule
+        # state transition rule
         self.rule_type = rule_type
         self.rule = self._define_rule()
+        # task-specific head
         self.head: BasicNCAHead | None = None
+
         # pre-compute stochastic weight update
         self._stochastic: torch.Tensor | None = None
 
@@ -137,10 +139,10 @@ class BasicNCAModel(nn.Module):
         assert x.shape[1] == self.num_channels
 
         # Perception
-        dx = self.perception.perceive(x, step)
+        perception_vector = self.perception.perceive(x, step)
 
         # Compute delta from FFNN network
-        dx = self.rule(dx)
+        dx = self.rule(perception_vector)
 
         # Stochastic weight update
         dx = dx * unwrap(self._stochastic)[step % len(unwrap(self._stochastic))]
@@ -291,6 +293,7 @@ class BasicNCAModel(nn.Module):
         return metrics, prediction
 
     def to_dict(self) -> Dict[str, Any]:
+        # TODO implement properly
         return dict()
 
     def num_trainable_parameters(self) -> int:
