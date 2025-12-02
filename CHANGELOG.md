@@ -2,8 +2,10 @@
 * Parameterize average pooling size in classification with MLP head
 * Let user supply class label names to classifier
 * Classification visual in tensorboard: Show bar plot of softmax
-* Separation of rule and head model in BasicNCAModel for improved modularity
+* Separation of perception, rule and head model in BasicNCAModel for improved modularity
 * Classification: Average pooling between NCA backbone and classification head
+* Dependency updates
+* Moved training/inference step parameter from Trainer to BasicNCAModel
 
 # v0.3.2
 * Fix use of max() reduction in uncertainty estimator
