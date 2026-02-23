@@ -14,12 +14,6 @@ authors:
   - name: Richard Sattel
     orcid: 0009-0003-1060-3462
     affiliation: 1
-  - name: Niklas Ihm
-    affiliation: 1
-  - name: Jonathan Dewenter
-    affiliation: 1
-  - name: Dennis Grotz
-    affiliation: 1
   - name: Anirban Mukhopadhyay
     orcid: 0000-0003-0669-4018
     affiliation: 1
@@ -57,6 +51,7 @@ This step is applied in a stochastic manner, meaning that only a portion of cell
 The probability of the stochastic update is determined by a parameter called "fire rate", which is typically set to 0.5, activating only half of all cells in every time step.
 For more information, we want to point the reader to the comprehensive original paper on NCAs by Mordvintsev et al. [@mordvintsev2020growingb].
 
+
 # Statement of Need
 
 NCAs are recently gaining attention especially in medical imaging, where they are deployed for various modalities in different downstream tasks, including 3D prostate segmentation on MRI [@kalkhof2023mednca] [@kalkhof2023m3dncaa], image registration [@ranem2024ncamorph] or image synthesis [@kalkhof2024frequencytime], [@kalkhof2025parameterefficient].
@@ -76,6 +71,23 @@ Within minutes, researchers and practitioners will be able to create prototypes 
 
 We further provide weights for example tasks to enable post-hoc analyses on pre-trained NCA models.
 To our knowledge, post-hoc tasks like transfer learning or uncertainty estimation were not  evaluated for NCAs yet.
+
+
+# State of the Field
+
+
+
+
+# Research Impact Statement
+
+A conference paper utilizing `NCALab` was accepted for presentation in [IPCAI 2025](https://ipcai.org), and was published in the _International Journal of Computer-Assisted Radiology and Surgery_ [@krumb2025encapsulatea].
+For creating this paper, `NCALab` was used to train models for image segmentation and monocular depth estimation.
+The trained models are exported to C headers and ported to a microcontroller.
+
+
+# AI usage disclosure
+
+Generative AI has not been used in the scope of this project, neither for software creation nor for documentation or paper authoring.
 
 
 # Features
@@ -98,13 +110,6 @@ Until now, NCALab provides the following key features:
 * Visualization and animation of the NCA inference process
 * Cascaded training of multi-scale NCAs for training on higher-resolution images
 * Uncertainty heatmap generation
-
-
-# Ongoing Research
-
-A conference paper utilizing `NCALab` was recently accepted for presentation in [IPCAI 2025](https://ipcai.org), and was published in the _International Journal of Computer-Assisted Radiology and Surgery_ [@krumb2025encapsulatea].
-In this paper, `NCALab` is used to train models for image segmentation and monocular depth estimation.
-The trained models are exported to C headers and ported to a microcontroller.
 
 
 # Dependencies and Tooling

@@ -88,4 +88,4 @@ This method takes care of calling ``freeze()`` in both the Rule and Head modules
 The Perception module is frozen as well, if learned filters are being used.
 
 If the ``freeze_last`` parameter is set to ``False`` (default), the final, linear layer is kept trainable,
-which is interesting for transfer-learning experiments.
+which is useful for transfer-learning experiments.
