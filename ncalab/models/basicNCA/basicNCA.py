@@ -8,7 +8,7 @@ import torch.nn as nn  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
 
 from ...prediction import Prediction
-from ...utils import intepret_range_parameter, pad_input, unwrap
+from ...utils import intepret_range_parameter, pad_input
 from ...visualization import Visual
 from .basicNCAhead import BasicNCAHead
 from .basicNCAperception import BasicNCAPerception
@@ -87,7 +87,7 @@ class BasicNCAModel(nn.Module):
         self.inference_timesteps = inference_timesteps
 
         # define model structure
-        # perception
+        # perception stage
         self.perception = BasicNCAPerception(self)
         self.input_vector_size = self.num_channels * (self.perception.num_filters + 1)
         if self.use_temporal_encoding:
@@ -98,10 +98,7 @@ class BasicNCAModel(nn.Module):
         # task-specific head
         self.head: BasicNCAHead | None = None
 
-        # pre-compute stochastic weight update
-        self._stochastic: torch.Tensor | None = None
-
-    def _define_rule(self):
+    def _define_rule(self) -> BasicNCARule:
         return self.rule_type(
             self.device, self.input_vector_size, self.hidden_size, self.num_channels
         )
@@ -135,6 +132,8 @@ class BasicNCAModel(nn.Module):
 
         :param x [torch.Tensor]: Input tensor, BCWH
         :param step [int]: Current timestep, required for computing temporal encoding.
+
+        :returns: Residual cell update, BCWH.
         """
         assert x.shape[1] == self.num_channels
 
@@ -142,10 +141,15 @@ class BasicNCAModel(nn.Module):
         perception_vector = self.perception.perceive(x, step)
 
         # Compute delta from FFNN network
-        dx = self.rule(perception_vector)
+        dx: torch.Tensor = self.rule(perception_vector)
 
         # Stochastic weight update
-        dx = dx * unwrap(self._stochastic)[step % len(unwrap(self._stochastic))]
+        S = (
+            (torch.rand([x.size(0), 1, x.size(2), x.size(3)]) < self.fire_rate)
+            .float()
+            .to(self.device)
+        )
+        dx = dx * S
 
         if self.immutable_image_channels:
             dx[:, : self.num_image_channels, :, :] *= 0
@@ -176,8 +180,6 @@ class BasicNCAModel(nn.Module):
         :returns [Prediction]: Prediction object.
         """
         assert x.shape[1] == self.num_channels
-        S = torch.rand([steps, 1, 1, x.size(2), x.size(3)]) < self.fire_rate
-        self._stochastic = S.float().to(self.device)
         for step in range(steps):
             x = self._forward_step(x, step)
 
@@ -212,6 +214,8 @@ class BasicNCAModel(nn.Module):
         """
         Prepare model for fine tuning by freezing everything except the final layer,
         and setting to "train" mode.
+
+        :param: freeze_head
         """
         self.train()
         self.perception.freeze()
@@ -221,21 +225,31 @@ class BasicNCAModel(nn.Module):
 
     def metrics(self, pred: Prediction, label: torch.Tensor) -> Dict[str, float]:
         """
-        Return dict of standard evaluation metrics.
+        Return dict of standard evaluation metrics, given a prediction and corresponding
+        ground truth label.
 
         :param pred: Prediction.
         :type pred: Prediction
         :param label: Ground truth label.
+        :type label: torch.Tensor
 
-        :returns [Dict]: Dict of metrics, mapped by their names.
+        :returns: Dict of metrics, mapped by their names.
+        :rtype: Dict[str, float]
         """
         return {}
 
     def predict(self, image: torch.Tensor, steps: int = 100) -> Prediction:
         """
-        :param image [torch.Tensor]: Input image, BCWH.
+        Make an NCA prediction, performing multiple forward passes to
+        yield a final result.
 
-        :returns [Prediction]: Prediction object.
+        :param image: Input image, BCWH.
+        :type image: torch.Tensor
+        :param steps: Time steps
+        :type steps: int
+
+        :returns: Prediction object.
+        :rtype: Prediction
         """
         assert steps >= 1
         assert image.shape[1] <= self.num_channels
@@ -254,9 +268,11 @@ class BasicNCAModel(nn.Module):
         Record predictions for all time steps and return the resulting
         sequence of predictions.
 
-        :param image [torch.Tensor]: Input image, BCWH.
+        :param image: Input image, BCWH.
+        :type image: torch.Tensor
 
-        :returns [List[Prediction]]: List of Prediction objects.
+        :returns: List of Prediction objects.
+        :rtype: List[Prediction]
         """
         assert image.shape[1] <= self.num_channels
         if steps is None:
@@ -292,9 +308,13 @@ class BasicNCAModel(nn.Module):
         metrics = self.metrics(prediction, label.to(self.device))
         return metrics, prediction
 
+    def _to_dict(self) -> Dict[str, Any]:
+        return {}  # return NotImplemented
+
     def to_dict(self) -> Dict[str, Any]:
-        # TODO implement properly
-        return dict()
+        d = {}
+        d.update(self._to_dict())
+        return d
 
     def num_trainable_parameters(self) -> int:
         """

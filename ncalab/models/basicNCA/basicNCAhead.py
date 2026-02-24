@@ -1,27 +1,30 @@
+import abc
+
 import torch
 from torch import nn
 
 
-class BasicNCAHead(nn.Module):
+class BasicNCAHead(nn.Module, abc.ABC):
     def __init__(self):
         super().__init__()
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
-        _summary_
+        :param x: Input tensor
+        :type x: torch.Tensor
 
-        :param x: _description_
-        :type x: _type_
-        :raises NotImplementedError: Subclasses are required to implement this method.
+        :returns: NotImplemented, subclasses are required to implement this method.
         """
-        raise NotImplementedError()
+        return NotImplemented
 
-    def freeze(self, freeze_last: bool = True):
+    @abc.abstractmethod
+    def freeze(self, freeze_last: bool = True) -> None:
         """
-        _summary_
+        Freeze head weights.
 
-        :param freeze_last: _description_, defaults to True
+        :param freeze_last: Whether to freeze the last layer (if applicable), defaults to True
         :type freeze_last: bool, optional
-        :raises NotImplementedError: Subclasses are required to implement this method.
+        :returns: NotImplemented, subclasses are required to implement this method.
         """
-        raise NotImplementedError()
+        # FIXME: properly annotate this method, see https://github.com/python/mypy/issues/363
+        return NotImplemented  # type: ignore

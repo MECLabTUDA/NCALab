@@ -42,13 +42,13 @@ class BasicNCAPerception:
         else:
             sobel_x = np.outer([1, 2, 1], [-1, 0, 1]) / 8.0
             sobel_y = sobel_x.T
-            laplace = np.array([[0, 1, 0], [1, -4, 1], [0, 1, 0]])
+            laplace = np.array([[1, 2, 1], [2, -12, 2], [1, 2, 1]])
             self.filters.extend([sobel_x, sobel_y])
             if self.nca.use_laplace:
                 self.filters.append(laplace)
             self.num_filters = len(self.filters)
 
-    def perceive(self, x, step: int) -> torch.Tensor:
+    def perceive(self, x: torch.Tensor, step: int) -> torch.Tensor:
         def _perceive_with(x, weight):
             if isinstance(weight, nn.Conv2d):
                 return weight(x)
@@ -61,16 +61,19 @@ class BasicNCAPerception:
             conv_weights = conv_weights.view(1, 1, 3, 3).repeat(
                 self.nca.num_channels, 1, 1, 1
             )
-            return F.conv2d(x, conv_weights, padding=1, groups=self.nca.num_channels)
+            x = F.conv2d(x, conv_weights, padding=1, groups=self.nca.num_channels)
+            return x
 
         perception = [x]
         perception.extend([_perceive_with(x, w) for w in self.filters])
+
+        # temporal encoding: add normalized timestep index to perception vector
         if self.nca.use_temporal_encoding:
             normalization: int = 1
             if type(self.nca.training_timesteps) is int:
-                self.nca.training_timesteps  # maximum steps
+                normalization = self.nca.training_timesteps  # maximum steps
             elif type(self.nca.training_timesteps) is tuple:
-                 self.nca.training_timesteps[1]
+                normalization = self.nca.training_timesteps[1]
             perception.append(
                 torch.mul(
                     torch.ones((x.shape[0], 1, x.shape[2], x.shape[3])),
