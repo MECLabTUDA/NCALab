@@ -52,13 +52,17 @@ The probability of the stochastic update is determined by a parameter called "fi
 For more information, we want to point the reader to the comprehensive original paper on NCAs by Mordvintsev et al. [@mordvintsev2020growingb].
 
 
-# Statement of Need
+# State of the Field
+
 
 NCAs are recently gaining attention especially in medical imaging, where they are deployed for various modalities in different downstream tasks, including 3D prostate segmentation on MRI [@kalkhof2023mednca] [@kalkhof2023m3dncaa], image registration [@ranem2024ncamorph] or image synthesis [@kalkhof2024frequencytime], [@kalkhof2025parameterefficient].
 In most cases, they outperform other Convolutional Neural Network or Vision Transformer architectures in terms of _model size_ and robustness [@kalkhof2023mednca], while yielding similarly accurate predictions.
 Especially in constrained settings, such as radiology departments without access to GPU hardware, state-of-the art medical image segmentation is hardly possible with contemporary architectures based on Convolutional Neural Networks or Vision Transformers.
-NCAs, on the other hand, are a promising approach to enable AI support even in such settings.
-However, research of NCA models and training has just started a few years ago, and there is no _unified_ framework or reference implementation for training, evaluation and systematic experimentation with NCAs.
+NCAs, on the other hand, are a promising approach to enable AI support even in constrained settings.
+
+# Statement of Need
+
+Research of NCA models and training has just started a few years ago, and there is no _unified_ framework or reference implementation for training, evaluation and systematic experimentation with NCAs.
 Further, there is currently no set of best practices for designing NCA models with respect to their hyperparameters, such as the number of neurons, hidden channels or fire rate.
 
 A systematic analysis of different NCA hyperparameters and architectural variations is difficult, as the research code of NCA contributions is typically organized in individual repositories with different frameworks and coding styles for each downstream task under investigation.
@@ -70,12 +74,7 @@ Since there is currently no unified framework, deployment of NCA models in pract
 Within minutes, researchers and practitioners will be able to create prototypes for their ideas, inspired by the example tasks provided in this code repository.
 
 We further provide weights for example tasks to enable post-hoc analyses on pre-trained NCA models.
-To our knowledge, post-hoc tasks like transfer learning or uncertainty estimation were not  evaluated for NCAs yet.
-
-
-# State of the Field
-
-
+To our knowledge, post-hoc tasks like transfer learning or uncertainty estimation were not evaluated for NCAs yet.
 
 
 # Research Impact Statement
