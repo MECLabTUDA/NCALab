@@ -1,10 +1,41 @@
 from pathlib import Path
-from typing import Tuple
 
-import matplotlib.pyplot as plt  # type: ignore[import-untyped]
 import matplotlib.animation as animation  # type: ignore[import-untyped]
+import matplotlib.pyplot as plt  # type: ignore[import-untyped]
 import numpy as np
 import torch
+
+
+class AnimatorStyle:
+    def __init__(
+        self,
+        color_background,
+        color_overlay,
+        color_title,
+        color_progress,
+        underline: bool = True,
+        progress_h: int = 3,
+    ):
+        self.color_background = color_background
+        self.color_overlay = color_overlay
+        self.color_title = color_title
+        self.color_progress = color_progress
+        self.underline = underline
+        self.progress_h = progress_h
+
+    def apply(self, fig, ax):
+        plt.rcParams["axes.titlecolor"] = self.color_title
+        plt.rcParams["text.antialiased"] = False
+        fig.patch.set_facecolor(self.color_background)
+
+
+animator_style_dark = AnimatorStyle(
+    (0.1, 0.1, 0.1, 1.0),
+    (0.69, 1.0, 0.69, 1.0),
+    (0.9, 0.9, 0.9, 1.0),
+    (1.0, 0.69, 0.16, 1.0),
+)
+animator_styles = {"dark": animator_style_dark}
 
 
 class Animator:
@@ -22,7 +53,7 @@ class Animator:
         repeat_delay: int = 10000,
         overlay: bool = False,
         show_timestep: bool = True,
-        overlay_color: Tuple[float, float, float] = (0.0, 1.0, 0.0),
+        style: str | AnimatorStyle = "dark",
     ):
         """
         :param nca: NCA model instance
@@ -42,12 +73,18 @@ class Animator:
         :param show_timestep: Whether to display timestep in caption, defaults to True
         :type show_timestep: bool, optional
         """
+
         nca.eval()
 
         fig, ax = plt.subplots()
         fig.set_size_inches(2, 2)
-        fpath = Path(__file__) / ".." / ".." / ".." / "fonts" / "PixelOperatorMono-Bold.ttf"
-        plt.rcParams["axes.titlecolor"] = (0.15, 0.15, 0.15)
+
+        _style = style if isinstance(style, AnimatorStyle) else animator_styles[style]
+        _style.apply(fig, ax)
+
+        fpath = (
+            Path(__file__) / ".." / ".." / ".." / "fonts" / "PixelOperatorMono-Bold.ttf"
+        )
 
         # first frame is input image
         if nca.immutable_image_channels and not overlay:
@@ -62,7 +99,7 @@ class Animator:
             animated=True,
         )
         if show_timestep:
-            ax.set_title(f"Time step {0}")
+            ax.set_title(f"TIME STEP {0}")
 
         images = []
         predictions = nca.record(seed, steps)
@@ -79,11 +116,11 @@ class Animator:
 
         def update(i):
             nonlocal ax, images, nca
-            arr = images[i]
+            arr = images[i].copy()
             if not nca.immutable_image_channels:
                 arr = arr[:, :, : nca.num_image_channels]
             elif overlay:
-                color = np.ones((arr.shape[0], arr.shape[1], 3)) * overlay_color
+                color = np.ones((arr.shape[0], arr.shape[1], 3)) * _style.color_overlay[:3]
                 A = np.clip(arr[:, :, : nca.num_image_channels], 0, 1)
                 mask = np.clip(arr[:, :, -nca.num_output_channels :].squeeze(-1), 0, 1)
                 alpha = 0.5
@@ -94,14 +131,22 @@ class Animator:
                 arr = A
             else:
                 arr = arr[:, :, -nca.num_output_channels :]
+
             arr = np.clip(arr, 0, 1)
+            if arr.shape[2] == 3:
+                alpha_channel = np.ones((arr.shape[0], arr.shape[1], 1), dtype=arr.dtype)
+                arr = np.concatenate((arr, alpha_channel), axis=-1)
+            if _style.progress_h > 0:
+                progress_w = int(
+                    np.clip(np.round(arr.shape[1] * ((i % steps) / steps)), 0, arr.shape[1])
+                )
+                progress_h = _style.progress_h
+                arr[-progress_h:, :progress_w] = _style.color_progress
+            if _style.underline:
+                arr[0, :] = _style.color_progress
             im.set_array(arr)
             if show_timestep:
-                ax.set_title(
-                    f"TIME STEP {i % steps:3d}",
-                    font=fpath,
-                    fontsize=16
-                )
+                ax.set_title(f"TIME STEP {i % steps:3d}", font=fpath, fontsize=16)
             return (im,)
 
         self.animation_fig = animation.FuncAnimation(
