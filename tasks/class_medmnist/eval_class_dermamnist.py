@@ -11,6 +11,7 @@ from torchvision import transforms  # type: ignore[import-untyped]
 from torchvision.transforms import v2  # type: ignore[import-untyped]
 from tqdm import tqdm
 from train_class_dermamnist import (
+    TASK_PATH,
     WEIGHTS_PATH,
     alive_mask,
     default_hidden_channels,
@@ -22,7 +23,10 @@ from train_class_dermamnist import (
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from ncalab import ClassificationNCAModel, get_compute_device  # noqa: E402
+from ncalab import Animator, ClassificationNCAModel, get_compute_device  # noqa: E402
+
+FIGURE_PATH = TASK_PATH / "figures"
+FIGURE_PATH.mkdir(exist_ok=True)
 
 T = transforms.Compose(
     [
@@ -100,6 +104,12 @@ def eval_selfclass_dermamnist(
     micro_acc_ = micro_acc.compute().item()
     macro_auc_ = macro_auc.compute().item()
     micro_f1_ = micro_f1.compute().item()
+
+    seed = next(iter(loader_test))[0].to(device)
+    out_path = FIGURE_PATH / "classification_dermamnist.gif"
+    animator = Animator(nca, seed, interval=100, steps=32, hidden=True, show_input=True)
+    animator.save(out_path)
+    print(f"Animation saved to: {out_path}")
 
     print()
     print(
