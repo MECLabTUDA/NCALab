@@ -1,5 +1,6 @@
 from pathlib import Path
 
+import matplotlib as mpl
 import matplotlib.animation as animation  # type: ignore[import-untyped]
 import matplotlib.pyplot as plt  # type: ignore[import-untyped]
 import numpy as np
@@ -53,6 +54,7 @@ class Animator:
         repeat_delay: int = 10000,
         overlay: bool = False,
         show_timestep: bool = True,
+        hidden: bool = False,
         style: str | AnimatorStyle = "dark",
     ):
         """
@@ -99,7 +101,7 @@ class Animator:
             animated=True,
         )
         if show_timestep:
-            ax.set_title(f"TIME STEP {0}")
+            ax.set_title("TIME STEP 0")
 
         images = []
         predictions = nca.record(seed, steps)
@@ -119,8 +121,22 @@ class Animator:
             arr = images[i].copy()
             if not nca.immutable_image_channels:
                 arr = arr[:, :, : nca.num_image_channels]
+            elif hidden:
+                hidden_channels = arr[
+                    :,
+                    :,
+                    nca.num_image_channels : nca.num_image_channels
+                    + nca.num_hidden_channels,
+                ]
+                arr = np.argmax(np.abs(hidden_channels), axis=-1)
+                cmap = mpl.colormaps["Set3"]
+                arr = cmap(arr.squeeze() / np.max(arr)).reshape(
+                    (arr.shape[0], arr.shape[1], 4)
+                )
             elif overlay:
-                color = np.ones((arr.shape[0], arr.shape[1], 3)) * _style.color_overlay[:3]
+                color = (
+                    np.ones((arr.shape[0], arr.shape[1], 3)) * _style.color_overlay[:3]
+                )
                 A = np.clip(arr[:, :, : nca.num_image_channels], 0, 1)
                 mask = np.clip(arr[:, :, -nca.num_output_channels :].squeeze(-1), 0, 1)
                 alpha = 0.5
@@ -132,19 +148,27 @@ class Animator:
             else:
                 arr = arr[:, :, -nca.num_output_channels :]
 
+            # convert to 0.0 .. 1.0 RGBA image
             arr = np.clip(arr, 0, 1)
             if arr.shape[2] == 3:
-                alpha_channel = np.ones((arr.shape[0], arr.shape[1], 1), dtype=arr.dtype)
+                alpha_channel = np.ones(
+                    (arr.shape[0], arr.shape[1], 1), dtype=arr.dtype
+                )
                 arr = np.concatenate((arr, alpha_channel), axis=-1)
+            # draw progress bar
             if _style.progress_h > 0:
                 progress_w = int(
-                    np.clip(np.round(arr.shape[1] * ((i % steps) / steps)), 0, arr.shape[1])
+                    np.clip(
+                        np.round(arr.shape[1] * ((i % steps) / steps)), 0, arr.shape[1]
+                    )
                 )
                 progress_h = _style.progress_h
                 arr[-progress_h:, :progress_w] = _style.color_progress
+            # draw underline below title
             if _style.underline:
                 arr[0, :] = _style.color_progress
             im.set_array(arr)
+            # draw title
             if show_timestep:
                 ax.set_title(f"TIME STEP {i % steps:3d}", font=fpath, fontsize=16)
             return (im,)
