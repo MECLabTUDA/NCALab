@@ -55,6 +55,7 @@ class Animator:
         overlay: bool = False,
         show_timestep: bool = True,
         hidden: bool = False,
+        show_input: bool = False,
         style: str | AnimatorStyle = "dark",
     ):
         """
@@ -79,7 +80,8 @@ class Animator:
         nca.eval()
 
         fig, ax = plt.subplots()
-        fig.set_size_inches(2, 2)
+        w = 3 if show_input else 2
+        fig.set_size_inches(w, 2)
 
         _style = style if isinstance(style, AnimatorStyle) else animator_styles[style]
         _style.apply(fig, ax)
@@ -96,12 +98,12 @@ class Animator:
         first_frame_np = first_frame.permute(1, 2, 0).detach().cpu().numpy()
         first_frame_np = np.clip(first_frame_np, 0, 1)
 
-        im = ax.imshow(
-            first_frame_np,
-            animated=True,
-        )
-        if show_timestep:
-            ax.set_title("TIME STEP 0")
+        #im = ax.imshow(
+        #    first_frame_np,
+        #    animated=True,
+        #)
+        #if show_timestep:
+        #    ax.set_title("TIME STEP 0")
 
         images = []
         predictions = nca.record(seed, steps)
@@ -116,8 +118,10 @@ class Animator:
         plt.margins(0, 0)
         plt.tight_layout()
 
+        im = None
+
         def update(i):
-            nonlocal ax, images, nca
+            nonlocal ax, images, nca, im
             arr = images[i].copy()
             if not nca.immutable_image_channels:
                 arr = arr[:, :, : nca.num_image_channels]
@@ -155,6 +159,18 @@ class Animator:
                     (arr.shape[0], arr.shape[1], 1), dtype=arr.dtype
                 )
                 arr = np.concatenate((arr, alpha_channel), axis=-1)
+
+            if show_input:
+                rgb_image = images[i][:, :, : nca.num_image_channels]
+                rgb_image -= rgb_image.min()
+                rgb_image /= rgb_image.max()
+                rgb_image = np.clip(rgb_image, 0, 1)
+                alpha_channel = np.ones(
+                    (rgb_image.shape[0], rgb_image.shape[1], 1), dtype=rgb_image.dtype
+                )
+                rgba_image = np.concatenate((rgb_image, alpha_channel), axis=-1)
+                arr = np.concatenate((rgba_image, arr), axis=1)
+
             # draw progress bar
             if _style.progress_h > 0:
                 progress_w = int(
@@ -167,6 +183,11 @@ class Animator:
             # draw underline below title
             if _style.underline:
                 arr[0, :] = _style.color_progress
+            if im is None:
+                im = ax.imshow(
+                    arr,
+                    animated=True,
+                )
             im.set_array(arr)
             # draw title
             if show_timestep:
