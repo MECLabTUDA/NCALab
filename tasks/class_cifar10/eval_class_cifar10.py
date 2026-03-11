@@ -25,10 +25,14 @@ sys.path.append(root_dir)
 
 
 from ncalab import (  # noqa: E402
+    Animator,
     ClassificationNCAModel,
     fix_random_seed,
     get_compute_device,
 )
+
+FIGURE_PATH = TASK_PATH / "figures"
+FIGURE_PATH.mkdir(exist_ok=True)
 
 T = transforms.Compose(
     [
@@ -52,7 +56,7 @@ def eval_class_cifar10(
         root=TASK_PATH / "data", train=False, download=True, transform=T
     )
     loader_test = torch.utils.data.DataLoader(
-        testset, batch_size=128, shuffle=False, num_workers=2
+        testset, batch_size=8, shuffle=False, num_workers=2
     )
 
     class_names = [
@@ -124,6 +128,12 @@ def eval_class_cifar10(
     micro_acc_ = micro_acc.compute().item()
     macro_auc_ = macro_auc.compute().item()
     micro_f1_ = micro_f1.compute().item()
+
+    seed = next(iter(loader_test))[0].to(device)
+    out_path = FIGURE_PATH / "classification_cifar10.gif"
+    animator = Animator(nca, seed, interval=100, steps=42, hidden=True, show_input=True)
+    animator.save(out_path)
+    print(f"Animation saved to: {out_path}")
 
     print()
     print(
