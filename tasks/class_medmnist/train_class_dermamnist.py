@@ -28,9 +28,9 @@ WEIGHTS_PATH.mkdir(exist_ok=True)
 gradient_clipping = False
 pad_noise = False
 alive_mask = False
-use_temporal_encoding = True
-fire_rate = 0.8
-default_hidden_channels = 20
+use_temporal_encoding = False
+fire_rate = 0.5
+default_hidden_channels = 8
 
 
 def train_class_dermamnist(
@@ -114,8 +114,9 @@ def train_class_dermamnist(
         pad_noise=pad_noise,
         use_temporal_encoding=use_temporal_encoding,
         class_names=list(INFO["dermamnist"]["label"].values()),
-        training_timesteps=32,
-        inference_timesteps=32,
+        training_timesteps=16,
+        inference_timesteps=16,
+        use_classifier=True
     )
 
     trainer = BasicNCATrainer(

@@ -61,6 +61,7 @@ def eval_selfclass_dermamnist(
         fire_rate=fire_rate,
         use_temporal_encoding=use_temporal_encoding,
         pad_noise=pad_noise,
+        use_classifier=True
     )
     nca.load_state_dict(
         torch.load(
@@ -92,7 +93,7 @@ def eval_selfclass_dermamnist(
     for sample in tqdm(iter(loader_test)):
         x, y = sample
         x = x.float().to(device)
-        steps = 32
+        steps = 16
         y_prob = nca.classify(x, steps, reduce=False)
         y = y.squeeze().to(device)
 
@@ -107,7 +108,7 @@ def eval_selfclass_dermamnist(
 
     seed = next(iter(loader_test))[0].to(device)
     out_path = FIGURE_PATH / "classification_dermamnist.gif"
-    animator = Animator(nca, seed, interval=100, steps=32, hidden=True, show_input=True)
+    animator = Animator(nca, seed, interval=100, steps=16, hidden=True, show_input=True)
     animator.save(out_path)
     print(f"Animation saved to: {out_path}")
 

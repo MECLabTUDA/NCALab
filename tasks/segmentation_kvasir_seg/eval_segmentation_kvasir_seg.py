@@ -62,7 +62,7 @@ def eval_segmentation_kvasir_seg(hidden_channels: int, gpu: bool, gpu_index: int
     )
     dataset = KvasirSegDataset(KVASIR_SEG_PATH, transform=T)
     loader = torch.utils.data.DataLoader(
-        dataset, shuffle=False, batch_size=8, drop_last=True
+        dataset, shuffle=False, batch_size=4, drop_last=True
     )
 
     cascade.load_state_dict(
@@ -76,8 +76,13 @@ def eval_segmentation_kvasir_seg(hidden_channels: int, gpu: bool, gpu_index: int
     animator = Animator(
         cascade, seed, overlay=True, interval=100, steps=sum(cascade.steps)
     )
-
     out_path = FIGURE_PATH / "segmentation_kvasir_seg.gif"
+    animator.save(out_path)
+    click.secho(f"Done. You'll find the generated GIF in {out_path} .")
+    animator = Animator(
+        cascade, seed, interval=100, steps=sum(cascade.steps), hidden=True
+    )
+    out_path = FIGURE_PATH / "segmentation_kvasir_seg_hidden.gif"
     animator.save(out_path)
     click.secho(f"Done. You'll find the generated GIF in {out_path} .")
 

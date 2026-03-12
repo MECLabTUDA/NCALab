@@ -60,7 +60,7 @@ def train_segmentation_kvasir_seg(
         training_timesteps=(30, 40),
         inference_timesteps=35,
     )
-    cascade = CascadeNCA(nca, [4, 2, 1], [32, 16, 10])
+    cascade = CascadeNCA(nca, [4, 2, 1], [16, 16, 8])
 
     T = A.Compose(
         [
