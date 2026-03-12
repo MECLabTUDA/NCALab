@@ -1613,7 +1613,7 @@ wheels = [
 
 [[package]]
 name = "ncalab"
-version = "0.4.0"
+version = "0.4.1"
 source = { virtual = "." }
 dependencies = [
     { name = "absl-py" },
@@ -4072,8 +4072,10 @@ dependencies = [
 wheels = [
     { url = "https://files.pythonhosted.org/packages/e3/76/051aa3498dc6d9f0d34a09a8e09a7461649f864d87c7b4a90109f520375d/xprof-2.21.6-cp312-none-any.whl", hash = "sha256:71aeb20edd72624dac1234d45b20e4bdbdecbdff8bee361c37e50c2cc41a5f94", size = 19204067, upload-time = "2026-02-09T10:16:17.998Z" },
     { url = "https://files.pythonhosted.org/packages/d9/00/66a81559c6db6442e986afbd1bc50efbb52c166e9d4432dee2f28b0d0fe8/xprof-2.21.6-cp312-none-manylinux_2_27_x86_64.whl", hash = "sha256:37a66b7b38b99a65a7c816cb6f7118f6261cb3ad7850e14c14656765d8b70afb", size = 22731696, upload-time = "2026-02-09T09:57:44.728Z" },
+    { url = "https://files.pythonhosted.org/packages/32/da/a88841648e04fb2bf0c7da70f0dd222a9f8710c9516c43105a7ea5213d04/xprof-2.21.6-cp312-none-manylinux_2_35_aarch64.whl", hash = "sha256:aa5ab88a88b8d70632b59a4c7a4a5024d11ed4cc34e75c12ade69f453d5d4a46", size = 23662813, upload-time = "2026-02-24T22:46:22.084Z" },
     { url = "https://files.pythonhosted.org/packages/65/7b/21e7852f0783339df7842a3181bfe8ef317608a19a5c6daf6a75e12815c8/xprof-2.21.6-cp313-none-any.whl", hash = "sha256:068697deda0b30ba41e75553197905bcc43d2e81850c2db21fe9b011d908d600", size = 19204342, upload-time = "2026-02-09T10:16:16.728Z" },
     { url = "https://files.pythonhosted.org/packages/14/ef/1ba951d52d1e48dc80e4c49ad70082c721cdc3400d69741268fe3163943c/xprof-2.21.6-cp313-none-manylinux_2_27_x86_64.whl", hash = "sha256:f24526cd39206941fcb1fd0e70414a7e31be227706921291e419f75d2019aa27", size = 22732086, upload-time = "2026-02-09T09:54:41.192Z" },
+    { url = "https://files.pythonhosted.org/packages/c1/28/ef4ef3291e22bf1054cb0ea85e2b88bf370d7eaa30f4fa6f0188965d5c76/xprof-2.21.6-cp313-none-manylinux_2_35_aarch64.whl", hash = "sha256:781351ca75ba84fe9226f92d92c9fb265ab5be727564f9f0e0bac33c200ec653", size = 23662547, upload-time = "2026-02-24T22:52:32.542Z" },
 ]
 
 [[package]]
