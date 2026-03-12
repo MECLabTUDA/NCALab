@@ -1,3 +1,7 @@
+# v0.4.1
+* Significantly improve Animator API
+* Fix temporal encoding being unused
+
 # v0.4.0
 * Parameterize average pooling size in classification with MLP head
 * Let user supply class label names to classifier
