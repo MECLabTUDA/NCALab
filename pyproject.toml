@@ -67,7 +67,6 @@ dependencies = [
     "namex==0.0.9",
     "nest-asyncio==1.6.0",
     "networkx==3.4.2",
-    "onnx==1.17.0",
     "onnxscript==0.2.5",
     "opencv-python-headless==4.11.0.86",
     "opt-einsum==3.4.0",
@@ -88,7 +87,7 @@ dependencies = [
     "pure-eval==0.2.3",
     "pydantic==2.11.4",
     "pydantic-core==2.33.2",
-    "pygments==2.19.1",
+    "pygments==2.19.2",
     "pyparsing==3.2.3",
     "pytest==8.3.5",
     "python-dateutil==2.9.0.post0",
@@ -151,7 +150,7 @@ dependencies = [
     "pip-upgrader==1.4.15",
     "propcache==0.3.1",
     "proto-plus==1.26.1",
-    "pyasn1==0.6.2",
+    "pyasn1==0.6.3",
     "pyasn1-modules==0.4.2",
     "pyproject-hooks==1.2.0",
     "requests-oauthlib==2.0.0",
@@ -177,6 +176,10 @@ dependencies = [
     "torch==2.8.0",
     "tensorboard-plugin-profile>=2.21.6",
     "tornado>=6.5.5",
+    "uv>=0.10.11",
+    "onnx==1.20.1",
+    "ipykernel>=7.2.0",
+    "jupyter-core>=5.9.1",
 ]
 
 
