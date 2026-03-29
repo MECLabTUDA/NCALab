@@ -42,7 +42,8 @@ def eval_growing_emoji(gpu: bool, gpu_index: int):
         num_image_channels=4,
         num_hidden_channels=12,
         use_alive_mask=True,
-    ).to(device)
+        lambda_hidden=1e-2,
+    )
 
     nca.load_state_dict(
         torch.load(

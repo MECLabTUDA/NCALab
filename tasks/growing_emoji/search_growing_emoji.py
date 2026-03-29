@@ -55,7 +55,7 @@ def search_growing_emoji(
         # grid search parameters (iterable)
         fire_rate=[0.2, 0.5, 0.8],
         num_learned_filters=[0, 2],
-        dx_noise=[0.0, 0.01, 0.05, 0.1, 0.2, 0.5],
+        lambda_hidden=[0.0, 1e-3, 1e-2, 1e-1],
         # fixed parameters
         num_image_channels=4,
         num_hidden_channels=hidden_channels,
@@ -63,9 +63,10 @@ def search_growing_emoji(
     )
     trainer_params = ParameterSet(
         # grid search parameters (iterable)
-        lr=[1e-3, 16e-4],
+        lr=[1e-4, 1e-3, 1.5e-3, 2e-3],
         # fixed parameters
         max_epochs=100,
+        model_path=TASK_PATH / "weights"
     )
 
     # Set up hyperparameter search (grid search)
