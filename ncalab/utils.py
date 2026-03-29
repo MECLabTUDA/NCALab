@@ -12,7 +12,7 @@ import torch.nn.functional as F  # type: ignore[import-untyped]
 from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
-    from .models import BasicNCAModel
+    from .models import AbstractNCAModel
 
 
 def get_compute_device(device: str = "cuda:0") -> torch.device:
@@ -35,7 +35,7 @@ def get_compute_device(device: str = "cuda:0") -> torch.device:
 
 def pad_input(
     x: torch.Tensor,
-    nca: "BasicNCAModel",
+    nca: "AbstractNCAModel",
     noise: bool = True,
     mean: float = 0.5,
     std: float = 0.225,
@@ -59,6 +59,7 @@ def pad_input(
     :returns: Input tensor, BCWH, padded along the channel dimension.
     :rtype: torch.Tensor
     """
+    assert len(x.shape) == 4
     if x.shape[1] < nca.num_channels:
         x = F.pad(
             x, (0, 0, 0, 0, 0, nca.num_channels - x.shape[1], 0, 0), mode="constant"

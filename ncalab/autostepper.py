@@ -3,7 +3,7 @@ from typing import Any
 
 import torch
 
-from .models import BasicNCAModel
+from .models import AbstractNCAModel
 from .prediction import Prediction
 
 
@@ -88,7 +88,7 @@ class AutoStepper:
                 return True
             return False
 
-    def run(self, nca: BasicNCAModel, x):
+    def run(self, nca: AbstractNCAModel, x):
         prediction: Prediction = nca(x, steps=self.min_steps)
         for step in range(self.min_steps, self.max_steps):
             self.hidden_i_1 = prediction.hidden_channels

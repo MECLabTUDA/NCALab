@@ -5,9 +5,9 @@ import torch.nn.functional as F  # type: ignore[import-untyped]
 import torchmetrics
 import torchmetrics.classification
 
-from ncalab.models.basicNCA import BasicNCAModel
+from ncalab.losses import FocalLoss
+from ncalab.models.basicNCA import AbstractNCAModel
 from ncalab.prediction import Prediction
-from ncalab.utils import pad_input, unwrap
 from ncalab.visualization import (
     VisualBinaryImageClassification,
     VisualRGBImageClassification,
@@ -16,7 +16,7 @@ from ncalab.visualization import (
 from .classificationNCAhead import ClassificationNCAHead
 
 
-class ClassificationNCAModel(BasicNCAModel):
+class ClassificationNCAModel(AbstractNCAModel):
     def __init__(
         self,
         device: torch.device,
@@ -35,7 +35,8 @@ class ClassificationNCAModel(BasicNCAModel):
         use_temporal_encoding: bool = False,
         use_classifier: bool = True,
         class_names: Optional[List[str]] = None,
-        avg_pool_size: int = 5,
+        avg_pool_size: int = 8,
+        lambda_hidden: float = 0,
         **kwargs,
     ):
         """
@@ -62,7 +63,7 @@ class ClassificationNCAModel(BasicNCAModel):
             immutable_image_channels=True,
             plot_function=None,
             num_learned_filters=num_learned_filters,
-            validation_metric="accuracy_micro",
+            validation_metric="f1",
             filter_padding=filter_padding,
             use_laplace=use_laplace,
             kernel_size=kernel_size,
@@ -75,13 +76,13 @@ class ClassificationNCAModel(BasicNCAModel):
         self.use_classifier = use_classifier
         assert avg_pool_size >= 1
         self.avg_pool_size = avg_pool_size
+        self.lambda_hidden = lambda_hidden
         if use_classifier:
             self.head = ClassificationNCAHead(
                 self.num_hidden_channels,
                 self._num_classes,
                 self.device,
                 avg_pool_size=avg_pool_size,
-                hidden_size=64,
             )
         if class_names is None:
             self.class_names = [str(i) for i in range(num_classes)]
@@ -94,6 +95,26 @@ class ClassificationNCAModel(BasicNCAModel):
             self.plot_function = VisualBinaryImageClassification()
         else:
             self.plot_function = VisualRGBImageClassification()
+
+        accuracy_macro_metric = torchmetrics.classification.MulticlassAccuracy(
+            average="macro", num_classes=self.num_classes
+        ).to(self.device)
+        accuracy_micro_metric = torchmetrics.classification.MulticlassAccuracy(
+            average="micro", num_classes=self.num_classes
+        ).to(self.device)
+        auroc_metric = torchmetrics.classification.MulticlassAUROC(
+            num_classes=self.num_classes
+        ).to(self.device)
+        f1_metric = torchmetrics.classification.MulticlassF1Score(
+            num_classes=self.num_classes
+        ).to(self.device)
+        self.metrics = {
+            "accuracy_macro": accuracy_macro_metric,
+            "accuracy_micro": accuracy_micro_metric,
+            "auroc": auroc_metric,
+            "f1": f1_metric,
+        }
+        self.focal_loss = FocalLoss()
 
     @property
     def num_classes(self) -> int:
@@ -116,34 +137,30 @@ class ClassificationNCAModel(BasicNCAModel):
 
         :returns: Single class index or vector of logits.
         """
-        with torch.no_grad():
-            x = image.clone()
-            x = pad_input(x, self, noise=self.pad_noise)
-            prediction: Prediction = self(x, steps=steps)
-            if prediction.head_prediction is not None:
-                class_channels = prediction.head_prediction
-            else:
-                class_channels = prediction.output_channels
+        prediction: Prediction = self.predict(image, steps=steps)
+        if prediction.head_prediction is not None:
+            class_channels = prediction.head_prediction
+        else:
+            class_channels = prediction.output_channels
 
-            # if binary classification (e.g. self classifying MNIST),
-            # mask away pixels with the binary image used as a mask
-            if self.num_image_channels == 1:
-                for i in range(image.shape[0]):
-                    mask = image[i, 0, :, :]
-                    for c in range(self.num_output_channels):
-                        class_channels[i, c, :, :] *= mask
+        # if binary classification (e.g. self classifying MNIST),
+        # mask away pixels with the binary image used as a mask
+        if self.num_image_channels == 1:
+            for i in range(image.shape[0]):
+                mask = image[i, 0, :, :]
+                for c in range(self.num_output_channels):
+                    class_channels[i, c, :, :] *= mask
 
-            # Average over all pixels if a single categorial prediction is desired
-            y_pred = F.softmax(class_channels, dim=1)
-            if not self.use_classifier:
-                y_pred = torch.mean(y_pred, dim=(2, 3))
+        y_pred = F.softmax(class_channels, dim=1)
+        if not self.use_classifier:
+            y_pred = torch.mean(y_pred, dim=(2, 3))
 
-            # If reduce enabled, reduce to a single scalar.
-            # Otherwise, return logits of all channels as a vector.
-            if reduce:
-                y_pred = torch.argmax(y_pred, dim=0)
-                return y_pred
+        # If reduce enabled, reduce to a single scalar.
+        # Otherwise, return logits of all channels as a vector.
+        if reduce:
+            y_pred = torch.argmax(y_pred, dim=0)
             return y_pred
+        return y_pred
 
     def loss(self, pred: Prediction, label: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
@@ -164,7 +181,6 @@ class ClassificationNCAModel(BasicNCAModel):
             # if binary images are classified: mask with first image channel
             if self.num_image_channels == 1:
                 mask = image[:, 0, :, :] > 0
-            # mask alpha channel / designated mask channel
             else:
                 mask = image[:, 3, :, :] > 0
             for i in range(y.shape[0]):
@@ -179,78 +195,28 @@ class ClassificationNCAModel(BasicNCAModel):
             ).mean()
             loss_classification = loss_ce
         else:
-            if self.use_classifier:
-                y_logits = unwrap(pred.head_prediction)
-            else:
-                y_logits = torch.mean(pred.output_channels, dim=(2, 3))
-
-            loss_ce = F.cross_entropy(
-                y_logits,
+            loss_ce = self.focal_loss(
+                pred.logits,
                 label.squeeze(),
             )
-
             loss_classification = loss_ce
+        loss_hidden = torch.mean(torch.abs(pred.hidden_channels))
 
-        loss = loss_classification
+        loss = loss_classification + self.lambda_hidden * loss_hidden
         return {
             "total": loss,
             "classification": loss_classification,
+            "hidden": loss_hidden,
         }
 
-    def metrics(self, pred: Prediction, label: torch.Tensor) -> Dict[str, float]:
-        """
-        Return dict of standard evaluation metrics.
-
-        :param pred: Prediction
-        :type pred: Prediction
-        :param label: Ground truth label.
-        :type label: Tensor
-        """
-        accuracy_macro_metric = torchmetrics.classification.MulticlassAccuracy(
-            average="macro", num_classes=self.num_classes
-        ).to(self.device)
-        accuracy_micro_metric = torchmetrics.classification.MulticlassAccuracy(
-            average="micro", num_classes=self.num_classes
-        ).to(self.device)
-        auroc_metric = torchmetrics.classification.MulticlassAUROC(
-            num_classes=self.num_classes
-        ).to(self.device)
-        f1_metric = torchmetrics.classification.MulticlassF1Score(
-            num_classes=self.num_classes
-        ).to(self.device)
-
-        if self.use_classifier:
-            y_logits = unwrap(pred.head_prediction)
-        elif self.pixel_wise_loss:
-            image = pred.image_channels
-            class_channels = pred.output_channels
-            # if binary images are classified: mask with first image channel
-            if self.num_image_channels == 1:
-                mask = image[:, 0, :, :] > 0
-            # mask alpha channel / designated mask channel
-            else:
-                mask = image[:, 3, :, :] > 0
-            y_logits = torch.sum(class_channels, dim=(2, 3)) / torch.sum(mask)
-        else:
-            class_channels = pred.output_channels
-            y_logits = torch.mean(class_channels, dim=(2, 3))
-        y_prob = F.softmax(y_logits, dim=1)
-        y_true = label
-        if len(y_true.shape) == 2:
-            y_true = label.squeeze(1)
-
-        accuracy_macro_metric.update(y_prob, y_true)
-        accuracy_micro_metric.update(y_prob, y_true)
-        auroc_metric.update(y_prob, y_true)
-        f1_metric.update(y_prob, y_true)
-
-        accuracy_macro = accuracy_macro_metric.compute().item()
-        accuracy_micro = accuracy_micro_metric.compute().item()
-        auroc = auroc_metric.compute().item()
-        f1 = f1_metric.compute().item()
-        return {
-            "accuracy_macro": accuracy_macro,
-            "accuracy_micro": accuracy_micro,
-            "f1": f1,
-            "auroc": auroc,
-        }
+    def post_prediction(self, prediction: Prediction) -> Prediction:
+        logits = prediction.logits
+        if not self.use_classifier:
+            logits = torch.mean(torch.abs(logits), dim=(2, 3))
+        return Prediction(
+            prediction.model,
+            prediction.steps,
+            prediction.output_image,
+            logits,
+            prediction.head_prediction,
+        )

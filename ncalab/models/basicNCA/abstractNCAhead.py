@@ -4,9 +4,10 @@ import torch
 from torch import nn
 
 
-class BasicNCAHead(nn.Module, abc.ABC):
+class AbstractNCAHead(nn.Module, abc.ABC):
     def __init__(self):
         super().__init__()
+        self.optimizer = None
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """

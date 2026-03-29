@@ -169,10 +169,6 @@ class ParameterSearch:
                 )
                 list_of_summaries.append(d)
                 writer.close()
-
-                # Print intermediate results
-                df = pd.DataFrame(list_of_summaries)
-                print(df)
         return pd.DataFrame(list_of_summaries)
 
     def __call__(self, *args, **kwargs):

@@ -1,8 +1,10 @@
 import torch
 from torch import nn
 
+from .abstractNCArule import AbstractNCARule
 
-class BasicNCARule(nn.Module):
+
+class MLPNCARule(AbstractNCARule):
     """
     NCA rule module based on a two-layer Multi-Layer-Perceptron (MLP).
 
@@ -19,25 +21,19 @@ class BasicNCARule(nn.Module):
         nonlinearity: type[nn.Module] = nn.ReLU,
     ):
         """
-        _summary_
-
-        :param device: _description_
+        :param device: Compute device
         :type device: torch.device
-        :param input_size: _description_
+        :param input_size: Input neurons
         :type input_size: int
-        :param hidden_size: _description_
+        :param hidden_size: Hidden neurons
         :type hidden_size: int
-        :param output_size: _description_
+        :param output_size: Output neurons
         :type output_size: int
-        :param nonlinearity: _description_, defaults to nn.ReLU
+        :param nonlinearity: Activation function, defaults to nn.ReLU
         :type nonlinearity: type[nn.Module], optional
         """
-        super().__init__()
+        super(MLPNCARule, self).__init__(device, input_size, hidden_size, output_size)
         self.nonlinearity = nonlinearity
-        self.input_size = input_size
-        self.hidden_size = hidden_size
-        self.output_size = output_size
-        self.device = device
         self._build_network()
         self._initialize_network()
         self.network.to(self.device)
@@ -71,9 +67,9 @@ class BasicNCARule(nn.Module):
         Since the final layer is purely linear and unbiased, we initalize with 0.
         """
         with torch.no_grad():
-            data = self.network[-1].weight
-            assert type(data) is torch.nn.parameter.Parameter
-            data.fill_(0)
+            assert type(self.network[0].weight) is torch.nn.parameter.Parameter
+            assert type(self.network[-1].weight) is torch.nn.parameter.Parameter
+            self.network[-1].weight.fill_(0)
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -94,5 +90,6 @@ class BasicNCARule(nn.Module):
         layers = self.network
         if not freeze_last:
             layers = self.network[:-1]
+            assert isinstance(layers, nn.Sequential)
         for layer in layers:
             layer.requires_grad_(False)

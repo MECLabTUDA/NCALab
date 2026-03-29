@@ -4,11 +4,12 @@ import enum
 from pathlib import Path, PosixPath
 import json
 import logging
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
+import numpy as np
 import torch
 
-from ..models import BasicNCAModel
+from ..models import AbstractNCAModel
 
 
 class TrainingStatus(enum.Enum):
@@ -32,11 +33,11 @@ class TrainingHistory:
         path: Optional[Path | PosixPath],
         metrics: Dict[str, float],
         current_epoch: int,
-        current_model: BasicNCAModel,
+        current_model: AbstractNCAModel,
         # TODO current_accuracy
         best_accuracy: float = 0,
         best_epoch: int = 0,
-        best_model: Optional[BasicNCAModel] = None,
+        best_model: Optional[AbstractNCAModel] = None,
         verbose: bool = True,
     ):
         """
@@ -47,13 +48,13 @@ class TrainingHistory:
         :param current_epoch: Current training epoch.
         :type current_epoch: int
         :param current_model: Currently trained model.
-        :type current_model: BasicNCAModel
+        :type current_model: AbstractNCAModel
         :param best_accuracy: Best validation accuracy, defaults to 0
         :type best_accuracy: float, optional
         :param best_epoch: Epoch of best validation accuracy, defaults to 0
         :type best_epoch: int, optional
         :param best_model: Model with best validation accuracy, defaults to None
-        :type best_model: Optional[BasicNCAModel], optional
+        :type best_model: Optional[AbstractNCAModel], optional
         :param verbose: Whether to print updates of validation accuracy, defaults to True
         :type verbose: bool, optional
         """
@@ -68,9 +69,14 @@ class TrainingHistory:
         self.verbose = verbose
         self.created_timestamp = datetime.now()
         self.modified_timestamp = datetime.now()
+        self.loss: List[float] = []
 
     def update(
-        self, epoch: int, model: BasicNCAModel, accuracy: float, overwrite: bool = False
+        self,
+        epoch: int,
+        model: AbstractNCAModel,
+        accuracy: float,
+        overwrite: bool = False,
     ):
         """
         Populates history with current iteration's values.
@@ -80,7 +86,7 @@ class TrainingHistory:
         :param epoch: Current epoch
         :type epoch: int
         :param model: Current model
-        :type model: BasicNCAModel
+        :type model: AbstractNCAModel
         :param accuracy: Current accuracy, based on model's validation metric
         :type accuracy: float
         :param overwrite: Whether to overwrite best accuracy even with no improvement, defaults to False
@@ -130,6 +136,7 @@ class TrainingHistory:
             current_epoch=self.current_epoch,
             best_acc=self.best_accuracy,
             best_epoch=self.best_epoch,
+            best_loss=np.min(self.loss),
             created_timestamp=self.created_timestamp.isoformat(),
             modified_timestamp=self.modified_timestamp.isoformat(),
             **self.metrics,

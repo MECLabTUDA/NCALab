@@ -7,7 +7,7 @@ from pytorch_msssim import ssim  # type: ignore[import-untyped]
 
 from ....prediction import Prediction
 from ....visualization import VisualDepthEstimation
-from ...basicNCA import BasicNCAModel
+from ...basicNCA import AbstractNCAModel
 
 # TODO use torchmetrics ssim
 
@@ -61,7 +61,7 @@ class SmoothnessLoss(nn.Module):
         return total_loss
 
 
-class DepthNCAModel(BasicNCAModel):
+class DepthNCAModel(AbstractNCAModel):
     """
     NCA model for monocular depth estimation.
     """
@@ -143,16 +143,3 @@ class DepthNCAModel(BasicNCAModel):
 
         loss = 0.5 * loss_tv + loss_depthmap + 0.2 * loss_ssim
         return {"total": loss, "tv": loss_tv, "depth": loss_depthmap, "ssim": loss_ssim}
-
-    def metrics(self, pred: Prediction, label: torch.Tensor) -> Dict[str, float]:
-        """
-        Return dict of standard evaluation metrics.
-        Needs to include special item 'prediction', containing the predicted image (all channels).
-
-        :param pred:
-        :param label: Ground truth label.
-
-        :returns [Dict]: Dict of metrics, mapped by their names.
-        """
-        s = ssim(pred.output_channels, label.unsqueeze(1), data_range=1.0).item()
-        return {"ssim": s}

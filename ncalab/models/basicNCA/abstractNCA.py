@@ -1,21 +1,26 @@
 from __future__ import annotations
 
+import abc
+import os
 from typing import Any, Dict, List, Optional, Tuple
 
 import numpy as np
 import torch  # type: ignore[import-untyped]
 import torch.nn as nn  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
+from safetensors.torch import load_model, save_model
+from torchmetrics import Metric
 
 from ...prediction import Prediction
 from ...utils import intepret_range_parameter, pad_input
 from ...visualization import Visual
-from .basicNCAhead import BasicNCAHead
+from .abstractNCAhead import AbstractNCAHead
+from .abstractNCArule import AbstractNCARule
 from .basicNCAperception import BasicNCAPerception
-from .basicNCArule import BasicNCARule
+from .mlpNCArule import MLPNCARule
 
 
-class BasicNCAModel(nn.Module):
+class AbstractNCAModel(nn.Module, abc.ABC):
     """
     Abstract base class for NCA models.
 
@@ -35,13 +40,14 @@ class BasicNCAModel(nn.Module):
         hidden_size: int = 128,
         use_alive_mask: bool = False,
         immutable_image_channels: bool = True,
-        num_learned_filters: int = 2,
+        num_learned_filters: int = 0,
         filter_padding: str = "reflect",
         use_laplace: bool = False,
         kernel_size: int = 3,
         pad_noise: bool = False,
         use_temporal_encoding: bool = False,
-        rule_type: type[BasicNCARule] = BasicNCARule,
+        rule_type: type[AbstractNCARule] = MLPNCARule,
+        rule_args=None,
         training_timesteps: int | Tuple[int, int] = 100,
         inference_timesteps: int | Tuple[int, int] = 100,
     ):
@@ -60,7 +66,7 @@ class BasicNCAModel(nn.Module):
         :param kernel_size: Filter kernel size (only for learned filters)
         :param pad_noise: Whether to pad input image tensor with noise in hidden / output channels
         """
-        super(BasicNCAModel, self).__init__()
+        super(AbstractNCAModel, self).__init__()
 
         self.device = device
         self.to(device)
@@ -94,11 +100,14 @@ class BasicNCAModel(nn.Module):
             self.input_vector_size += 1
         # state transition rule
         self.rule_type = rule_type
+        self.rule_args = rule_args
         self.rule = self._define_rule()
         # task-specific head
-        self.head: BasicNCAHead | None = None
+        self.head: AbstractNCAHead | None = None
 
-    def _define_rule(self) -> BasicNCARule:
+        self.metrics: Dict[str, Metric] = {}
+
+    def _define_rule(self) -> AbstractNCARule:
         return self.rule_type(
             self.device, self.input_vector_size, self.hidden_size, self.num_channels
         )
@@ -140,16 +149,16 @@ class BasicNCAModel(nn.Module):
         # Perception
         perception_vector = self.perception.perceive(x, step)
 
-        # Compute delta from FFNN network
+        # Compute residual with MLP
         dx: torch.Tensor = self.rule(perception_vector)
 
         # Stochastic weight update
-        S = (
-            (torch.rand([x.size(0), 1, x.size(2), x.size(3)]) < self.fire_rate)
-            .float()
-            .to(self.device)
-        )
-        dx = dx * S
+        if self.fire_rate < 1.0:
+            S = (
+                torch.rand([x.size(0), 1, x.size(2), x.size(3)], device=self.device)
+                < self.fire_rate
+            ).float()
+            dx = dx * S
 
         if self.immutable_image_channels:
             dx[:, : self.num_image_channels, :, :] *= 0
@@ -183,6 +192,8 @@ class BasicNCAModel(nn.Module):
         for step in range(steps):
             x = self._forward_step(x, step)
 
+        head_prediction = None
+        logits = x[:, -self.num_output_channels :, :, :]
         if self.head is not None:
             hidden = x[
                 :,
@@ -192,8 +203,8 @@ class BasicNCAModel(nn.Module):
                 :,
             ]
             head_prediction = self.head(hidden)
-            return Prediction(self, steps, x, head_prediction)
-        return Prediction(self, steps, x)
+            logits = head_prediction
+        return self.post_prediction(Prediction(self, steps, x, logits, head_prediction))
 
     def loss(self, pred: Prediction, label: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
@@ -223,22 +234,9 @@ class BasicNCAModel(nn.Module):
         if freeze_head and self.head is not None:
             self.head.freeze()
 
-    def metrics(self, pred: Prediction, label: torch.Tensor) -> Dict[str, float]:
-        """
-        Return dict of standard evaluation metrics, given a prediction and corresponding
-        ground truth label.
-
-        :param pred: Prediction.
-        :type pred: Prediction
-        :param label: Ground truth label.
-        :type label: torch.Tensor
-
-        :returns: Dict of metrics, mapped by their names.
-        :rtype: Dict[str, float]
-        """
-        return {}
-
-    def predict(self, image: torch.Tensor, steps: int = 100) -> Prediction:
+    def predict(
+        self, image: torch.Tensor, steps: Optional[int | Tuple[int, int]] = None
+    ) -> Prediction:
         """
         Make an NCA prediction, performing multiple forward passes to
         yield a final result.
@@ -246,11 +244,15 @@ class BasicNCAModel(nn.Module):
         :param image: Input image, BCWH.
         :type image: torch.Tensor
         :param steps: Time steps
-        :type steps: int
+        :type steps: Optional[int]
 
         :returns: Prediction object.
         :rtype: Prediction
         """
+        if steps is None:
+            steps = intepret_range_parameter(self.inference_timesteps)
+        else:
+            steps = intepret_range_parameter(steps)
         assert steps >= 1
         assert image.shape[1] <= self.num_channels
         self.eval()
@@ -262,7 +264,7 @@ class BasicNCAModel(nn.Module):
             return prediction
 
     def record(
-        self, image: torch.Tensor, steps: Optional[int] = None
+        self, image: torch.Tensor, steps: Optional[int | Tuple[int, int]] = None
     ) -> List[Prediction]:
         """
         Record predictions for all time steps and return the resulting
@@ -277,6 +279,9 @@ class BasicNCAModel(nn.Module):
         assert image.shape[1] <= self.num_channels
         if steps is None:
             steps = intepret_range_parameter(self.inference_timesteps)
+        else:
+            steps = intepret_range_parameter(steps)
+        assert steps >= 1
         self.eval()
         sequence = []
         with torch.no_grad():
@@ -290,23 +295,33 @@ class BasicNCAModel(nn.Module):
             return sequence
 
     def validate(
-        self, image: torch.Tensor, label: torch.Tensor, steps: Optional[int] = None
-    ) -> Optional[Tuple[Dict[str, float], Prediction]]:
+        self,
+        dataloader: torch.utils.data.DataLoader,
+        steps: Optional[int] = None,
+    ) -> Tuple[Dict[str, float], List[Prediction]]:
         """
         Make a prediction on an image of the validation set and return metrics computed
         with respect to a labelled validation image.
 
-        :param image [torch.Tensor]: Input image, BCWH
-        :param label [torch.Tensor]: Ground truth label
+        :param dataloader [torch.utils.data.DataLoader]: Dataloader for validation images
         :param steps [int]: Inference steps
 
-        :returns [Tuple[float, Prediction]]: Validation metric, predicted image BCWH
+        :returns [Tuple[float, List[Prediction]]]: Validation metric, predicted image BCWH
         """
-        if steps is None:
-            steps = intepret_range_parameter(self.inference_timesteps)
-        prediction = self.predict(image.to(self.device), steps=steps)
-        metrics = self.metrics(prediction, label.to(self.device))
-        return metrics, prediction
+        with torch.no_grad():
+            self.eval()
+            predictions: List[Prediction] = []
+            for _, metric in self.metrics.items():
+                metric.reset()
+            for image, label in dataloader:
+                if len(label.shape) == 2:
+                    label = label.squeeze(1)
+                prediction = self.predict(image.clone().to(self.device), steps=steps)
+                predictions.append(prediction)
+                for _, metric in self.metrics.items():
+                    metric.update(prediction.logits, label.to(self.device))
+            metrics = {k: m.compute().item() for k, m in self.metrics.items()}
+        return metrics, predictions
 
     def _to_dict(self) -> Dict[str, Any]:
         return {}  # return NotImplemented
@@ -325,3 +340,14 @@ class BasicNCAModel(nn.Module):
         """
         model_parameters = filter(lambda p: p.requires_grad, self.parameters())
         return int(sum([np.prod(p.size()) for p in model_parameters]))
+
+    def save(self, path: str | os.PathLike):
+        save_model(self, str(path))
+
+    @staticmethod
+    def load(model: "AbstractNCAModel", path: str | os.PathLike) -> "AbstractNCAModel":
+        load_model(model, path)
+        return model
+
+    def post_prediction(self, prediction: Prediction) -> Prediction:
+        return prediction

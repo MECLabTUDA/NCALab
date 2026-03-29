@@ -1,7 +1,16 @@
 # NCA Models
 
 
-## applications/
+
+## How to subclass
+
+
+
+
+
+## Directory structure
+
+### applications/
 
 Contains model definitions for some common downstream tasks.
 
@@ -14,6 +23,7 @@ Contains model definitions for some common downstream tasks.
 **segmentation**: NCA model for pixel-wise image segmentation. Currently supports binary segmentation only.
 
 
-## basicNCA/
+### basicNCA/
 
-## wrappers/
+
+### wrappers/

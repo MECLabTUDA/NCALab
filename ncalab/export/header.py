@@ -1,10 +1,11 @@
 from __future__ import annotations
+
 import os
-from pathlib import PosixPath, Path
+from pathlib import Path, PosixPath
 
 import torch
 
-from ..models.basicNCA import BasicNCAModel
+from ..models.basicNCA.abstractNCA import AbstractNCAModel
 
 
 def tensor_to_C(tensor: torch.Tensor, name: str, number_type: str = "float"):
@@ -29,7 +30,7 @@ def tensor_to_C(tensor: torch.Tensor, name: str, number_type: str = "float"):
 
 
 def export_header(
-    nca: BasicNCAModel,
+    nca: AbstractNCAModel,
     outfile: str | Path | PosixPath,
     number_type: str = "float",
     imports: list | None = None,
@@ -38,7 +39,7 @@ def export_header(
     Export parameters of an NCA model to a C header.
 
     :param nca: _description_
-    :type nca: BasicNCAModel
+    :type nca: AbstractNCAModel
     :param outfile: _description_
     :type outfile: str | Path | PosixPath
     :param number_type: _description_, defaults to "float"

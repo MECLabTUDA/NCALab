@@ -17,6 +17,7 @@ class Prediction:
         model,
         steps: int,
         output_image: torch.Tensor,
+        logits: torch.Tensor,
         head_prediction: Optional[torch.Tensor] = None,
     ):
         """
@@ -36,6 +37,8 @@ class Prediction:
         assert output_image.shape[1] == model.num_channels
         self.output_image = output_image
         self._output_array: Optional[np.ndarray] = None
+        self.logits = logits
+        self._logits_array: Optional[np.ndarray] = None
         self.head_prediction = head_prediction
         self._head_prediction_array: Optional[np.ndarray] = None
 
@@ -59,7 +62,7 @@ class Prediction:
         """
         return self.output_image[
             :,
-            self.model.num_image_channels : self.model.num_hidden_channels
+            self.model.num_image_channels : self.model.num_image_channels
             + self.model.num_hidden_channels,
             :,
             :,
@@ -122,7 +125,7 @@ class Prediction:
             self._output_array = self.output_image.detach().cpu().numpy()
         return self._output_array[
             :,
-            self.model.num_image_channels : self.model.num_hidden_channels
+            self.model.num_image_channels : self.model.num_image_channels
             + self.model.num_hidden_channels,
             :,
             :,
@@ -154,3 +157,9 @@ class Prediction:
         if self._head_prediction_array is None:
             self._head_prediction_array = self.head_prediction.detach().cpu().numpy()
         return self._head_prediction_array
+
+    @property
+    def logits_array(self) -> np.ndarray:
+        if self._logits_array is None:
+            self._logits_array = self.logits.detach().cpu().numpy()
+        return self._logits_array

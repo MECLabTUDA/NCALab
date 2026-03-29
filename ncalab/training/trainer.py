@@ -1,8 +1,9 @@
 from __future__ import annotations
 
 import logging
+from copy import copy
 from pathlib import Path, PosixPath  # for type hint
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, Optional, Tuple
 
 import numpy as np
 import torch  # type: ignore[import-untyped]
@@ -11,9 +12,9 @@ from torch.utils.data import DataLoader  # for type hint
 from torch.utils.tensorboard import SummaryWriter  # for type hint
 from tqdm import tqdm  # type: ignore[import-untyped]
 
-from ..models.basicNCA import BasicNCAModel  # for type hint
+from ..models.basicNCA import AbstractNCAModel  # for type hint
 from ..prediction import Prediction
-from ..utils import intepret_range_parameter, pad_input, unwrap
+from ..utils import intepret_range_parameter, pad_input
 from ..visualization import Visual
 from .earlystopping import EarlyStopping
 from .pool import Pool
@@ -27,7 +28,7 @@ class BasicNCATrainer:
 
     def __init__(
         self,
-        nca: BasicNCAModel,
+        nca: AbstractNCAModel,
         model_path: Optional[Path | PosixPath],
         gradient_clipping: bool = False,
         lr: Optional[float] = None,
@@ -37,10 +38,11 @@ class BasicNCATrainer:
         max_epochs: int = 200,
         optimizer_method: str = "adam",
         pool: Optional[Pool] = None,
+        lr_scheduler: Optional[optim.lr_scheduler.LRScheduler] = None,
     ):
         """
         :param nca: NCA model instance to train.
-        :type nca: ncalab.BasicNCAModel
+        :type nca: ncalab.AbstractNCAModel
         :param model_path: Path to saved models. If None, models are not saved, defaults to None.
         :type model_path: Path | PosixPath, optional
         :param gradient_clipping: Whether to clip gradients, defaults to False.
@@ -90,6 +92,7 @@ class BasicNCATrainer:
         else:
             self.lr = lr
         self.pool = pool
+        self.lr_scheduler = None
 
     def info(self) -> str:
         """
@@ -119,6 +122,7 @@ class BasicNCATrainer:
         x: torch.Tensor,
         y: torch.Tensor,
         optimizer: torch.optim.Optimizer,
+        head_optimizer: torch.optim.Optimizer | None,
         total_batch_iterations: int,
         summary_writer: Optional[SummaryWriter] = None,
     ) -> Tuple[Prediction, Dict[str, torch.Tensor]]:
@@ -140,7 +144,10 @@ class BasicNCATrainer:
         device = self.nca.device
         self.nca.train()
         optimizer.zero_grad()
+        if head_optimizer is not None:
+            head_optimizer.zero_grad()
         x_in = x.clone().to(self.nca.device)
+        x_in = pad_input(x_in, self.nca, noise=self.nca.pad_noise)
         prediction = self.nca(
             x_in, steps=intepret_range_parameter(self.nca.training_timesteps)
         )
@@ -150,6 +157,8 @@ class BasicNCATrainer:
         if self.gradient_clipping:
             torch.nn.utils.clip_grad_norm_(self.nca.parameters(), 1.0)
         optimizer.step()
+        if head_optimizer is not None:
+            head_optimizer.step()
         if summary_writer:
             for key in losses:
                 summary_writer.add_scalar(
@@ -198,7 +207,9 @@ class BasicNCATrainer:
         optimizer: None | optim.Optimizer = None
         if self.optimizer_method.lower() == "adamw":
             optimizer = optim.AdamW(
-                self.nca.parameters(), lr=self.lr, betas=self.adam_betas
+                self.nca.parameters(),
+                lr=self.lr,
+                betas=self.adam_betas,
             )
         elif self.optimizer_method.lower() == "sgd":
             optimizer = optim.SGD(
@@ -212,8 +223,28 @@ class BasicNCATrainer:
             optimizer = optim.Adafactor(self.nca.parameters(), lr=self.lr)
         else:
             optimizer = optim.Adam(
-                self.nca.parameters(), lr=self.lr, betas=self.adam_betas
+                self.nca.parameters(),
+                lr=self.lr,
+                betas=self.adam_betas,
             )
+
+        # self.lr_scheduler = torch.optim.lr_scheduler.SequentialLR(
+        #    optimizer,
+        #    schedulers=[
+        #        torch.optim.lr_scheduler.ConstantLR(
+        #            optimizer, factor=1.0, total_iters=self.max_epochs // 4
+        #        ),
+        #        torch.optim.lr_scheduler.CosineAnnealingLR(
+        #            optimizer,
+        #            self.max_epochs,
+        #        ),
+        #    ],
+        #    milestones=[self.max_epochs // 4],
+        # )
+        head_optimizer = None
+        if self.nca.head is not None:
+            if self.nca.head.optimizer is not None:
+                head_optimizer = copy(self.nca.head.optimizer)
 
         # MAIN LOOP
         total_batch_iterations = 0
@@ -252,6 +283,7 @@ class BasicNCATrainer:
                     x,
                     y,
                     optimizer,
+                    head_optimizer,
                     total_batch_iterations,
                     summary_writer,
                 )
@@ -261,7 +293,11 @@ class BasicNCATrainer:
                     if self.pool is not None:
                         self.pool.update(prediction.output_image)
                     all_losses.append(losses["total"].item())
+            history.loss.append(np.mean(all_losses))
+            if self.lr_scheduler is not None:
+                self.lr_scheduler.step()
             with torch.no_grad():
+                self.nca.eval()
                 # VISUALIZATION
                 # TODO visualize samples in training and validation batches
                 if (
@@ -279,25 +315,15 @@ class BasicNCATrainer:
 
                 # VALIDATION
                 if dataloader_val is not None:
-                    self.nca.eval()
-                    val_acc = 0.0
-                    all_metrics: Dict[str, List[float]] = {}
-                    for sample in dataloader_val:
-                        x, y = sample
-                        metrics, _ = unwrap(self.nca.validate(x, y))
-                        for name in metrics:
-                            if name not in all_metrics:
-                                all_metrics[name] = []
-                            all_metrics[name].append(metrics[name])
-                    avg_metrics: Dict[str, float] = {}
-                    for name in all_metrics:
-                        avg_metrics[name] = float(np.mean(all_metrics[name]))
+                    metrics, _ = self.nca.validate(dataloader_val)
+                    for name, value in metrics.items():
                         if summary_writer is not None:
                             summary_writer.add_scalar(
-                                f"Acc/Val/{name}", avg_metrics[name], iteration
+                                f"Acc/Val/{name}", value, iteration
                             )
-                    if self.nca.validation_metric in avg_metrics:
-                        val_acc = avg_metrics.get(self.nca.validation_metric, 0.0)
+                    val_acc = 0.0
+                    if self.nca.validation_metric in metrics:
+                        val_acc = metrics.get(self.nca.validation_metric, 0.0)
                         if earlystopping is not None:
                             earlystopping.step(val_acc)
                     history.update(iteration, self.nca, val_acc)
@@ -309,11 +335,6 @@ class BasicNCATrainer:
         with torch.no_grad():
             history.metrics = {}
             if dataloader_test is not None and history.best_model is not None:
-                history.best_model.eval()
-                for image, label in dataloader_test:
-                    history.metrics.update(
-                        history.best_model.metrics(
-                            image.to(self.nca.device), label.to(self.nca.device)
-                        )
-                    )
+                metrics, _ = history.best_model.validate(dataloader_test)
+                history.metrics.update(metrics)
         return history

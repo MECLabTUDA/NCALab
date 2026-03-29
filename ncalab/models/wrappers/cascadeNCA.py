@@ -1,11 +1,11 @@
 import copy
-from typing import Dict, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 import torch  # type: ignore[import-untyped]
 import torch.nn as nn  # type: ignore[import-untyped]
 
-from ncalab.models.basicNCA import BasicNCAModel
+from ncalab.models.basicNCA import AbstractNCAModel
 from ncalab.prediction import Prediction
 from ncalab.utils import unwrap
 
@@ -25,7 +25,8 @@ def upscale(image: torch.Tensor, scale: float, mode: str = "nearest") -> torch.T
     :rtype: torch.Tensor
     """
     assert scale >= 1.0
-    return nn.Upsample(scale_factor=scale, mode=mode)(image)
+    x = nn.Upsample(scale_factor=scale, mode=mode)(image)
+    return x
 
 
 def downscale(
@@ -44,10 +45,11 @@ def downscale(
     :rtype: torch.Tensor
     """
     assert scale >= 1.0
-    return nn.Upsample(scale_factor=1.0 / scale, mode=mode, align_corners=True)(image)
+    x = nn.Upsample(scale_factor=1.0 / scale, mode=mode, align_corners=True)(image)
+    return x
 
 
-class CascadeNCA(BasicNCAModel):
+class CascadeNCA(AbstractNCAModel):
     """
     Chain multiple instances of the same NCA model, operating at different
     image scales.
@@ -62,14 +64,14 @@ class CascadeNCA(BasicNCAModel):
 
     def __init__(
         self,
-        wrapped: BasicNCAModel,
+        wrapped: AbstractNCAModel,
         scales: List[int],
         steps: List[int],
         single_model: bool = True,
     ):
         """
-        :param wrapped: Backbone model based on BasicNCAModel.
-        :type wrapped: ncalab.BasicNCAModel
+        :param wrapped: Backbone model based on AbstractNCAModel.
+        :type wrapped: ncalab.AbstractNCAModel
         :param scales: List of scales to operate at, e.g. [4, 2, 1].
         :type scales: List[int]
         :param steps: List of number of NCA inference time steps.
@@ -105,6 +107,10 @@ class CascadeNCA(BasicNCAModel):
             self.num_classes = wrapped.num_classes
         if hasattr(wrapped, "avg_pool_size"):
             self.avg_pool_size = wrapped.avg_pool_size
+        if hasattr(wrapped, "class_names"):
+            self.class_names = wrapped.class_names
+
+        self.metrics = wrapped.metrics
 
         self.wrapped = wrapped
         assert len(scales) == len(steps)
@@ -116,7 +122,7 @@ class CascadeNCA(BasicNCAModel):
         self.steps = steps
 
         self.single_model = single_model
-        self.models: List[BasicNCAModel]
+        self.models: List[AbstractNCAModel]
         if single_model:
             self.models = [wrapped for _ in scales]
         else:
@@ -135,8 +141,8 @@ class CascadeNCA(BasicNCAModel):
         assert len(self.scales) > 0
         assert len(self.models) > 0
         assert len(self.steps) > 0
-        prediction = None
         x_scaled = downscale(x, self.scales[0])
+        total_steps = 0
         for i, (model, scale, scale_steps) in enumerate(
             zip(self.models, self.scales, self.steps)
         ):
@@ -145,20 +151,38 @@ class CascadeNCA(BasicNCAModel):
             )
             if steps <= 0:
                 steps = 1
-            prediction = model(x_scaled, steps=steps)
-            if i < len(self.scales) - 1:
-                x_scaled = upscale(prediction.output_image, scale / self.scales[i + 1])
-                # replace input with downscaled variant of original image
-                x_scaled[:, : model.num_image_channels, :, :] = downscale(
-                    x[:, : model.num_image_channels, :, :],
-                    self.scales[i + 1],
-                )
-        assert prediction is not None
-        prediction.steps = sum(self.steps)
-        return unwrap(prediction)
+
+            for s in range(steps):
+                x_scaled = model._forward_step(x_scaled, step=total_steps)
+                total_steps += 1
+
+            if i == len(self.scales) - 1:
+                continue
+
+            x_scaled = upscale(x_scaled, scale / self.scales[i + 1])
+            # replace input with downscaled variant of original image
+            x_scaled[:, : model.num_image_channels, :, :] = downscale(
+                x[:, : model.num_image_channels, :, :],
+                self.scales[i + 1],
+            )
+        head_prediction = None
+        logits = x_scaled[:, -self.num_output_channels :, :, :]
+        if self.head is not None:
+            hidden = x_scaled[
+                :,
+                self.num_image_channels : self.num_image_channels
+                + self.num_hidden_channels,
+                :,
+                :,
+            ]
+            head_prediction = self.head(hidden)
+            logits = head_prediction
+        return self.wrapped.post_prediction(
+            Prediction(self, total_steps, x_scaled, logits, head_prediction)
+        )
 
     def record(
-        self, image: torch.Tensor, steps: Optional[int] = None
+        self, image: torch.Tensor, steps: Optional[int | Tuple[int, int]] = None
     ) -> List[Prediction]:
         """
         Records predictions for all time steps and returns the resulting
@@ -195,46 +219,3 @@ class CascadeNCA(BasicNCAModel):
                     self.scales[i + 1],
                 )
         return sequence
-
-    def validate(
-        self, image: torch.Tensor, label: torch.Tensor, steps: Optional[int] = None
-    ) -> Optional[Tuple[Dict[str, float], Prediction]]:
-        """
-        Validation method.
-
-        Takes care of scaling the input image and label on each scale,
-        and calls the respective validation method of the wrapped model.
-
-        :param image: Input image tensor, BCWH.
-        :param label: Ground truth.
-        :param steps: Unused, as steps are defined in constructor.
-        :type steps: int
-
-        :returns: Dict of metrics and prediction
-        :rtype: Optional[Tuple[Dict[str, float], Prediction]]
-        """
-        x_scaled = downscale(image, self.scales[0])
-        metrics = {}
-        prediction = None
-        for i, (model, scale, scale_steps) in enumerate(
-            zip(self.models, self.scales, self.steps)
-        ):
-            if len(label.shape) == 3:
-                y_scaled = downscale(label.unsqueeze(1), scale).squeeze(1)
-            else:
-                y_scaled = label
-            metrics, prediction = unwrap(
-                model.validate(
-                    x_scaled,
-                    y_scaled,
-                    steps=scale_steps,
-                )
-            )
-            if i < len(self.scales) - 1:
-                x_scaled = upscale(prediction.output_image, scale / self.scales[i + 1])
-                # replace input channel with downscaled variant of original image
-                x_scaled[:, : model.num_image_channels, :, :] = downscale(
-                    image[:, : model.num_image_channels, :, :],
-                    self.scales[i + 1],
-                )
-        return unwrap(metrics), unwrap(prediction)

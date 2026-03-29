@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional, Tuple
+from typing import Dict, List
 
 import numpy as np
 import torch  # type: ignore[import-untyped]
@@ -6,10 +6,10 @@ import torch.nn.functional as F  # type: ignore[import-untyped]
 
 from ....prediction import Prediction
 from ....visualization import VisualGrowing
-from ...basicNCA import BasicNCAModel
+from ...basicNCA import AbstractNCAModel
 
 
-class GrowingNCAModel(BasicNCAModel):
+class GrowingNCAModel(AbstractNCAModel):
     """
     NCA Model class for "growing" tasks, in which a structure is grown from a single seed pixel.
 
@@ -26,6 +26,7 @@ class GrowingNCAModel(BasicNCAModel):
         fire_rate: float = 0.5,
         hidden_size: int = 128,
         use_alive_mask: bool = False,
+        lambda_hidden: float = 0.0,
         **kwargs,
     ):
         """
@@ -49,6 +50,7 @@ class GrowingNCAModel(BasicNCAModel):
             pad_noise=False,
             **kwargs,
         )
+        self.lambda_hidden = lambda_hidden
 
     def loss(self, pred: Prediction, label: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
@@ -60,17 +62,10 @@ class GrowingNCAModel(BasicNCAModel):
         :returns [Tensor]: MSE Loss
         """
         assert label.shape[1] == self.num_image_channels
-        loss = F.mse_loss(pred.image_channels, label)
-        return {"total": loss}
-
-    def validate(
-        self, image: torch.Tensor, label: torch.Tensor, steps: Optional[int] = None
-    ) -> Optional[Tuple[Dict[str, float], Prediction]]:
-        """
-        We typically don't validate during training of Growing NCA,
-        because there is only a single sample in the training set.
-        """
-        return None
+        loss_hidden = torch.mean(torch.abs(pred.hidden_channels))
+        loss_growing = F.mse_loss(pred.image_channels, label)
+        loss = loss_growing + self.lambda_hidden * loss_hidden
+        return {"total": loss, "growing": loss_growing, "hidden": loss_hidden}
 
     def make_seed(self, width: int, height: int) -> torch.Tensor:
         x = torch.zeros((1, self.num_channels, width, height)).to(self.device)

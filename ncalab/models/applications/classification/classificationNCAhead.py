@@ -1,17 +1,17 @@
 import torch
 from torch import nn
 
-from ncalab.models.basicNCA.basicNCAhead import BasicNCAHead
+from ncalab.models.basicNCA.abstractNCAhead import AbstractNCAHead
 
 
-class ClassificationNCAHead(BasicNCAHead):
+class ClassificationNCAHead(AbstractNCAHead):
     def __init__(
         self,
         num_hidden_channels: int,
         num_classes: int,
         device: torch.device,
-        avg_pool_size: int = 3,
-        hidden_size: int = 64,
+        avg_pool_size: int,
+        hidden_size: int = 32,
     ):
         super().__init__()
         self.num_hidden_channels = num_hidden_channels
@@ -20,15 +20,16 @@ class ClassificationNCAHead(BasicNCAHead):
         self.avg_pool_size = avg_pool_size
         self.classifier = nn.Sequential(
             nn.AdaptiveAvgPool2d((self.avg_pool_size, self.avg_pool_size)),
-            nn.Flatten(1, 3),
+            nn.Flatten(),
             nn.Linear(
                 num_hidden_channels * avg_pool_size**2,
                 hidden_size,
             ),
             nn.ReLU(),
-            nn.Linear(hidden_size, num_classes, bias=False),
+            nn.Linear(hidden_size, num_classes),
         )
         self.classifier.to(device)
+        # self.optimizer = torch.optim.Adam(self.parameters())
 
     def forward(self, x):
         return self.classifier(x)

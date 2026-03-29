@@ -1,15 +1,15 @@
 from typing import Dict
 
-import segmentation_models_pytorch as smp  # type: ignore[import-untyped]
 import torch  # type: ignore[import-untyped]
+import torchmetrics.segmentation
 
 from ncalab.losses import DiceBCELoss
-from ncalab.models.basicNCA import BasicNCAModel
+from ncalab.models.basicNCA import AbstractNCAModel
 from ncalab.prediction import Prediction
 from ncalab.visualization import VisualBinaryImageSegmentation
 
 
-class SegmentationNCAModel(BasicNCAModel):
+class SegmentationNCAModel(AbstractNCAModel):
     """
     Model used for image segmentation.
 
@@ -58,6 +58,10 @@ class SegmentationNCAModel(BasicNCAModel):
             filter_padding=filter_padding,
             **kwargs,
         )
+        self.metrics = {
+            "Dice": torchmetrics.segmentation.DiceScore(num_classes),
+            "IoU": torchmetrics.segmentation.MeanIoU(num_classes),
+        }
 
     def loss(self, pred: Prediction, label: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
@@ -76,30 +80,3 @@ class SegmentationNCAModel(BasicNCAModel):
 
         loss = loss_segmentation
         return {"total": loss}
-
-    def metrics(self, pred: Prediction, label: torch.Tensor) -> Dict[str, float]:
-        """
-        Return dict of standard evaluation metrics.
-
-        :param pred [torch.Tensor]: Predicted image.
-        :param label [torch.Tensor]: Ground truth label.
-        """
-        tp, fp, fn, tn = smp.metrics.get_stats(
-            pred.output_channels.cpu().float(),
-            label[:, None, :, :].cpu().long(),
-            mode="binary",
-            threshold=0.1,
-        )
-        tp = tp.squeeze().long()
-        fp = fp.squeeze().long()
-        fn = fn.squeeze().long()
-        tn = tn.squeeze().long()
-        iou_score = smp.metrics.iou_score(
-            tp,
-            fp,
-            fn,
-            tn,
-            reduction="macro-imagewise",
-        ).item()
-        Dice = torch.mean(2.0 * (tp + 1.0) / (2.0 * tp + fp + fn + 1.0)).item()
-        return {"IoU": iou_score, "Dice": Dice, "TP": tp, "FP": fp, "FN": fn, "TN": tn}

@@ -65,3 +65,36 @@ class DiceBCELoss(nn.Module):
         BCE = F.binary_cross_entropy(x, y, reduction="mean")
         Dice_BCE = BCE + dice_loss
         return Dice_BCE
+
+
+class FocalLoss(nn.modules.loss._WeightedLoss):
+    def __init__(self, weight=None, gamma=2, device="cpu"):
+        super(FocalLoss, self).__init__(weight)
+        self.gamma = gamma
+        self.weight = weight
+        self.device = device
+        self.ce_loss = nn.CrossEntropyLoss()
+
+    def forward(self, _input, _target):
+        focal_loss = 0
+
+        for i in range(len(_input)):
+            ce_loss = self.ce_loss(
+                _input[i].view(-1, _input[i].size()[-1]), _target[i].view(-1)
+            )
+            pt = torch.exp(-ce_loss)
+
+            if self.weight is not None:
+                cur_focal_loss = (
+                    self.weight[_target[i]] * ((1 - pt) ** self.gamma) * ce_loss
+                )
+            else:
+                cur_focal_loss = ((1 - pt) ** self.gamma) * ce_loss
+
+            focal_loss = focal_loss + cur_focal_loss
+        if self.weight is not None:
+            focal_loss = focal_loss / self.weight.sum()
+            return focal_loss.to(self.device)
+
+        focal_loss = focal_loss / torch.tensor(len(_input))
+        return focal_loss.to(self.device)

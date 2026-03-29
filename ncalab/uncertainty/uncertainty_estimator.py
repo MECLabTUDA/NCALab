@@ -2,15 +2,15 @@ from typing import Tuple, List
 
 import torch
 
-from ..models import BasicNCAModel
+from ..models import AbstractNCAModel
 from ..prediction import Prediction
 
 
 class UncertaintyEstimator:
-    def __init__(self, nca: BasicNCAModel):
+    def __init__(self, nca: AbstractNCAModel):
         """
         :param nca: Trained NCA model
-        :type nca: BasicNCAModel
+        :type nca: AbstractNCAModel
         """
         self.nca = nca
 
@@ -60,7 +60,7 @@ class NQM(UncertaintyEstimator):
     Variance over multiple predictions.
     """
 
-    def __init__(self, nca: BasicNCAModel, N: int = 10, normalize=False):
+    def __init__(self, nca: AbstractNCAModel, N: int = 10, normalize=False):
         super().__init__(nca)
         self.N = N
         self.normalize = normalize
@@ -105,7 +105,7 @@ class MCMC(UncertaintyEstimator):
     Markov-Chain Monte Carlo
     """
 
-    def __init__(self, nca: BasicNCAModel, N_last: int = 10, normalize=False):
+    def __init__(self, nca: AbstractNCAModel, N_last: int = 10, normalize=False):
         super().__init__(nca)
         self.N_last = N_last
         self.normalize = normalize

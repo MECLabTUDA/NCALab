@@ -6,11 +6,11 @@ import torch.nn as nn  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
 
 if TYPE_CHECKING:
-    from . import BasicNCAModel
+    from . import AbstractNCAModel
 
 
 class BasicNCAPerception:
-    def __init__(self, nca: "BasicNCAModel"):
+    def __init__(self, nca: "AbstractNCAModel"):
         super().__init__()
         self.nca = nca
         self._define_filters()

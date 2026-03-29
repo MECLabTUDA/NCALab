@@ -1,10 +1,14 @@
 from pathlib import Path
+from typing import TYPE_CHECKING, Optional
 
 import matplotlib as mpl
 import matplotlib.animation as animation  # type: ignore[import-untyped]
 import matplotlib.pyplot as plt  # type: ignore[import-untyped]
 import numpy as np
 import torch
+
+if TYPE_CHECKING:
+    from ..models import AbstractNCAModel
 
 
 class AnimatorStyle:
@@ -46,9 +50,9 @@ class Animator:
 
     def __init__(
         self,
-        nca,
+        nca: "AbstractNCAModel",
         seed: torch.Tensor,
-        steps: int = 100,
+        steps: Optional[int] = None,
         interval: int = 100,
         repeat: bool = True,
         repeat_delay: int = 10000,
@@ -60,7 +64,7 @@ class Animator:
     ):
         """
         :param nca: NCA model instance
-        :type nca: ncalab.BasicNCAModel
+        :type nca: ncalab.AbstractNCAModel
         :param seed: Input image for the NCA model
         :type seed: torch.Tensor
         :param steps: Number of NCA prediction steps per sample, defaults to 100
@@ -76,7 +80,6 @@ class Animator:
         :param show_timestep: Whether to display timestep in caption, defaults to True
         :type show_timestep: bool, optional
         """
-
         nca.eval()
 
         fig, ax = plt.subplots()
@@ -98,15 +101,9 @@ class Animator:
         first_frame_np = first_frame.permute(1, 2, 0).detach().cpu().numpy()
         first_frame_np = np.clip(first_frame_np, 0, 1)
 
-        #im = ax.imshow(
-        #    first_frame_np,
-        #    animated=True,
-        #)
-        #if show_timestep:
-        #    ax.set_title("TIME STEP 0")
-
         images = []
         predictions = nca.record(seed, steps)
+        steps = len(predictions)
         for batch_index in range(len(seed)):
             for prediction in predictions:
                 output_image = prediction.output_array[batch_index]
@@ -134,9 +131,16 @@ class Animator:
                 ]
                 arr = np.argmax(np.abs(hidden_channels), axis=-1)
                 cmap = mpl.colormaps["Set3"]
+                alpha = np.clip(
+                    np.max(np.abs(hidden_channels), axis=-1)
+                    / np.max(np.abs(hidden_channels)),
+                    0.0,
+                    1.0,
+                )
                 arr = cmap(arr.squeeze() / np.max(arr)).reshape(
                     (arr.shape[0], arr.shape[1], 4)
                 )
+                arr[:, :, 3] = alpha
             elif overlay:
                 color = (
                     np.ones((arr.shape[0], arr.shape[1], 3)) * _style.color_overlay[:3]
@@ -150,7 +154,19 @@ class Animator:
                 )
                 arr = A
             else:
-                arr = arr[:, :, -nca.num_output_channels :]
+                output_channels = arr[:, :, -nca.num_output_channels :]
+                arr = np.argmax(np.abs(output_channels), axis=-1)
+                cmap = mpl.colormaps["Set3"]
+                alpha = np.clip(
+                    np.max(output_channels, axis=-1)
+                    / np.max(output_channels),
+                    0.0,
+                    1.0,
+                )
+                arr = cmap(arr.squeeze() / np.max(arr)).reshape(
+                    (arr.shape[0], arr.shape[1], 4)
+                )
+                arr[:, :, 3] = alpha
 
             # convert to 0.0 .. 1.0 RGBA image
             arr = np.clip(arr, 0, 1)
