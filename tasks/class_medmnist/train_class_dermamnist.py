@@ -2,6 +2,7 @@
 import os
 import sys
 from pathlib import Path
+from pprint import pprint
 
 import click
 import numpy as np
@@ -28,9 +29,9 @@ WEIGHTS_PATH.mkdir(exist_ok=True)
 gradient_clipping = False
 pad_noise = False
 alive_mask = False
-use_temporal_encoding = False
-fire_rate = 0.5
-default_hidden_channels = 8
+use_temporal_encoding = True
+fire_rate = 0.8
+default_hidden_channels = 64
 
 
 def train_class_dermamnist(
@@ -102,10 +103,13 @@ def train_class_dermamnist(
         dataset_val, sampler=sampler_val, batch_size=len(dataset_val)
     )
 
+    dataset_test = DermaMNIST(split="test", download=True, transform=T)
+    loader_test = torch.utils.data.DataLoader(dataset_test, shuffle=False, batch_size=8)
+
     num_classes = len(INFO["dermamnist"]["label"])
     nca = ClassificationNCAModel(
         device,
-        filter_padding="zeros",
+        filter_padding="circular",
         num_image_channels=3,
         num_hidden_channels=hidden_channels,
         num_classes=num_classes,
@@ -114,9 +118,9 @@ def train_class_dermamnist(
         pad_noise=pad_noise,
         use_temporal_encoding=use_temporal_encoding,
         class_names=list(INFO["dermamnist"]["label"].values()),
-        training_timesteps=16,
-        inference_timesteps=16,
-        use_classifier=True
+        training_timesteps=64,
+        inference_timesteps=64,
+        use_classifier=False,
     )
 
     trainer = BasicNCATrainer(
@@ -125,12 +129,16 @@ def train_class_dermamnist(
         batch_repeat=2,
         max_epochs=max_epochs,
         gradient_clipping=gradient_clipping,
+        lr=0.0001
     )
-    trainer.train(
+    history = trainer.train(
         loader_train,
         loader_val,
+        loader_test,
         summary_writer=writer,
     )
+    click.secho("Test set metrics:", fg="blue")
+    pprint(history.metrics)
     if writer is not None:
         writer.close()
 

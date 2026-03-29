@@ -16,7 +16,9 @@ root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 from ncalab import (  # noqa: E402
     BasicNCATrainer,
+    CascadeNCA,
     ClassificationNCAModel,
+    fix_random_seed,
     get_compute_device,
 )
 
@@ -25,11 +27,33 @@ WEIGHTS_PATH = TASK_PATH / "weights"
 WEIGHTS_PATH.mkdir(exist_ok=True)
 
 gradient_clipping = False
-pad_noise = False
+pad_noise = True
 alive_mask = False
 use_temporal_encoding = True
-fire_rate = 0.8
+fire_rate = 0.5
 default_hidden_channels = 24
+
+
+T_train = transforms.Compose(
+    [
+        v2.ToImage(),
+        v2.ToDtype(torch.float, scale=True),
+        v2.ConvertImageDtype(dtype=torch.float32),
+        transforms.ColorJitter(brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1),
+        transforms.RandomPerspective(distortion_scale=0.5, p=0.5),
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomVerticalFlip(),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ]
+)
+T_val = transforms.Compose(
+    [
+        v2.ToImage(),
+        v2.ToDtype(torch.float, scale=True),
+        v2.ConvertImageDtype(dtype=torch.float32),
+        transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
+    ]
+)
 
 
 def train_class_cifar10(
@@ -49,31 +73,8 @@ def train_class_cifar10(
 
     writer = SummaryWriter(comment=comment) if not dry else None
 
+    fix_random_seed()
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
-
-    # Data loading and preprocessing
-    T_train = transforms.Compose(
-        [
-            v2.ToImage(),
-            v2.ToDtype(torch.float, scale=True),
-            v2.ConvertImageDtype(dtype=torch.float32),
-            transforms.ColorJitter(
-                brightness=0.1, contrast=0.1, saturation=0.1, hue=0.1
-            ),
-            transforms.RandomPerspective(distortion_scale=0.5, p=0.5),
-            transforms.RandomHorizontalFlip(),
-            transforms.RandomVerticalFlip(),
-            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-        ]
-    )
-    T_val = transforms.Compose(
-        [
-            v2.ToImage(),
-            v2.ToDtype(torch.float, scale=True),
-            v2.ConvertImageDtype(dtype=torch.float32),
-            transforms.Normalize((0.4914, 0.4822, 0.4465), (0.2023, 0.1994, 0.2010)),
-        ]
-    )
 
     # Split train dataset into train and validation
     train_dataset = torchvision.datasets.CIFAR10(
@@ -129,6 +130,7 @@ def train_class_cifar10(
     # Create NCA model for classification
     nca = ClassificationNCAModel(
         device,
+        filter_padding="circular",
         num_image_channels=3,
         num_hidden_channels=hidden_channels,
         num_classes=num_classes,
@@ -137,12 +139,15 @@ def train_class_cifar10(
         pad_noise=pad_noise,
         use_temporal_encoding=use_temporal_encoding,
         class_names=class_names,
-        training_timesteps=(32, 48),
-        inference_timesteps=42,
+        training_timesteps=48,
+        inference_timesteps=48,
+        use_classifier=True,
+        lambda_hidden=1e-2,
     )
+    cascade = CascadeNCA(nca, [4, 2, 1], [16, 8, 8])
     # Train the NCA model
     trainer = BasicNCATrainer(
-        nca,
+        cascade,
         WEIGHTS_PATH / "classification_cifar10" if not dry else None,
         batch_repeat=2,
         max_epochs=max_epochs,

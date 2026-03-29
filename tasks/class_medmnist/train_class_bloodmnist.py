@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 import click
+import numpy as np
 import torch  # type: ignore[import-untyped]
 from medmnist import INFO, BloodMNIST  # type: ignore[import-untyped]
 from torch.utils.tensorboard import SummaryWriter  # type: ignore[import-untyped]
@@ -15,6 +16,7 @@ sys.path.append(root_dir)
 
 
 from ncalab import (  # noqa: E402
+    fix_random_seed,
     BasicNCATrainer,
     ClassificationNCAModel,
     get_compute_device,
@@ -28,9 +30,29 @@ WEIGHTS_PATH.mkdir(exist_ok=True)
 gradient_clipping = False
 pad_noise = False
 alive_mask = False
-use_temporal_encoding = True
-fire_rate = 0.8
+use_temporal_encoding = False
+fire_rate = 1.0
 default_hidden_channels = 20
+
+
+T_train = transforms.Compose(
+    [
+        v2.ToImage(),
+        v2.ToDtype(torch.float, scale=True),
+        v2.ConvertImageDtype(dtype=torch.float32),
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomVerticalFlip(),
+        transforms.Normalize((0.5,), (0.225,)),
+    ]
+)
+T_val = transforms.Compose(
+    [
+        v2.ToImage(),
+        v2.ToDtype(torch.float, scale=True),
+        v2.ConvertImageDtype(dtype=torch.float32),
+        transforms.Normalize((0.5,), (0.225,)),
+    ]
+)
 
 
 def train_class_bloodmnist(
@@ -41,6 +63,7 @@ def train_class_bloodmnist(
     max_epochs: int,
     dry: bool,
 ):
+    fix_random_seed()
     print_NCALab_banner()
 
     comment = "BloodMNIST"
@@ -54,26 +77,32 @@ def train_class_bloodmnist(
 
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
-    T = transforms.Compose(
+    dataset_train = BloodMNIST(split="train", download=True, transform=T_train)
+    y_train = dataset_train.labels.squeeze()
+    class_sample_count_train = np.array(
         [
-            v2.ToImage(),
-            v2.ToDtype(torch.float, scale=True),
-            v2.ConvertImageDtype(dtype=torch.float32),
-            transforms.RandomHorizontalFlip(),
-            transforms.RandomVerticalFlip(),
-            transforms.Normalize((0.5,), (0.225,)),
+            len(np.where(dataset_train.labels == t)[0])
+            for t in np.sort(np.unique(y_train))
         ]
     )
-
-    dataset_train = BloodMNIST(split="train", download=True, transform=T)
+    weight = 1.0 / class_sample_count_train
+    sample_weight_train = [weight[int(t)].astype(float) for t in y_train]
+    sampler_train = torch.utils.data.WeightedRandomSampler(
+        sample_weight_train,
+        num_samples=len(dataset_train),
+        replacement=True,
+    )
     loader_train = torch.utils.data.DataLoader(
-        dataset_train, shuffle=True, batch_size=batch_size, drop_last=True
+        dataset_train, sampler=sampler_train, batch_size=batch_size
     )
 
-    dataset_val = BloodMNIST(split="val", download=True, transform=T)
+    dataset_val = BloodMNIST(split="val", download=True, transform=T_val)
     loader_val = torch.utils.data.DataLoader(
-        dataset_val, shuffle=True, batch_size=32, drop_last=True
+        dataset_val, shuffle=True, batch_size=8
     )
+
+    dataset_test = BloodMNIST(split="test", download=True, transform=T_val)
+    loader_test = torch.utils.data.DataLoader(dataset_test)
 
     num_classes = len(INFO["bloodmnist"]["label"])
     nca = ClassificationNCAModel(
@@ -88,6 +117,8 @@ def train_class_bloodmnist(
         class_names=list(INFO["bloodmnist"]["label"].values()),
         training_timesteps=32,
         inference_timesteps=32,
+        use_classifier=True,
+        lambda_hidden=1e-2,
     )
     trainer = BasicNCATrainer(
         nca,
@@ -99,6 +130,7 @@ def train_class_bloodmnist(
     trainer.train(
         loader_train,
         loader_val,
+        loader_test,
         summary_writer=writer,
     )
     if writer is not None:
@@ -114,7 +146,7 @@ def train_class_bloodmnist(
 @click.option(
     "--gpu-index", type=int, default=0, help="Index of GPU to use, if --gpu in use."
 )
-@click.option("--max-epochs", "-E", type=int, default=40)
+@click.option("--max-epochs", "-E", type=int, default=50)
 @click.option("--dry", "-D", is_flag=True)
 def main(
     batch_size, hidden_channels, gpu: bool, gpu_index: int, max_epochs: int, dry: bool
