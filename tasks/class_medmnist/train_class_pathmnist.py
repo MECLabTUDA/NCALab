@@ -16,6 +16,7 @@ sys.path.append(root_dir)
 from ncalab import (  # noqa: E402
     BasicNCATrainer,
     ClassificationNCAModel,
+    fix_random_seed,
     get_compute_device,
 )
 
@@ -47,7 +48,7 @@ def train_class_pathmnist(
     comment += f"_TE_{use_temporal_encoding}"
 
     writer = SummaryWriter(comment=comment) if not dry else None
-
+    fix_random_seed()
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
     T = transforms.Compose(
@@ -84,6 +85,7 @@ def train_class_pathmnist(
         class_names=list(INFO["pathmnist"]["label"].values()),
         training_timesteps=32,
         inference_timesteps=32,
+        use_classifier=True,
     )
     trainer = BasicNCATrainer(
         nca,

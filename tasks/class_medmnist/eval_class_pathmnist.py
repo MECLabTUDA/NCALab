@@ -1,15 +1,13 @@
 #!/usr/bin/env python3
 import os
+import pprint
 import sys
 
 import click
 import torch  # type: ignore[import-untyped]
-import torchmetrics
-import torchmetrics.classification
 from medmnist import INFO, PathMNIST  # type: ignore[import-untyped]
 from torchvision import transforms  # type: ignore[import-untyped]
 from torchvision.transforms import v2  # type: ignore[import-untyped]
-from tqdm import tqdm
 from train_class_pathmnist import (
     TASK_PATH,
     WEIGHTS_PATH,
@@ -23,7 +21,12 @@ from train_class_pathmnist import (
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from ncalab import Animator, ClassificationNCAModel, get_compute_device  # noqa: E402
+from ncalab import (  # noqa: E402
+    Animator,
+    ClassificationNCAModel,
+    fix_random_seed,
+    get_compute_device,
+)
 
 FIGURE_PATH = TASK_PATH / "figures"
 FIGURE_PATH.mkdir(exist_ok=True)
@@ -43,11 +46,12 @@ def eval_selfclass_pathmnist(
     gpu,
     gpu_index,
 ):
+    fix_random_seed()
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
     dataset_test = PathMNIST(split="test", download=True, transform=T)
     loader_test = torch.utils.data.DataLoader(
-        dataset_test, shuffle=False, batch_size=32
+        dataset_test, shuffle=False, batch_size=8
     )
 
     num_classes = len(INFO["pathmnist"]["label"])
@@ -63,6 +67,7 @@ def eval_selfclass_pathmnist(
         class_names=list(INFO["pathmnist"]["label"].values()),
         training_timesteps=32,
         inference_timesteps=32,
+        use_classifier=True,
     )
     nca.load_state_dict(
         torch.load(
@@ -70,53 +75,20 @@ def eval_selfclass_pathmnist(
             weights_only=True,
         )
     )
-
     params = nca.num_trainable_parameters()
     print(f"Trainable parameters: {params}")
     print(f"That is {4 * params / 1000} kB")
 
-    nca = nca.to(device)
-    nca.eval()
-
-    macro_acc = torchmetrics.classification.MulticlassAccuracy(
-        average="macro", num_classes=num_classes
-    ).to(device)
-    micro_acc = torchmetrics.classification.MulticlassAccuracy(
-        average="micro", num_classes=num_classes
-    ).to(device)
-    macro_auc = torchmetrics.classification.MulticlassAUROC(
-        average="macro",
-        num_classes=num_classes,
-    ).to(device)
-    micro_f1 = torchmetrics.classification.MulticlassF1Score(
-        average="micro", num_classes=num_classes
-    ).to(device)
-    for sample in tqdm(iter(loader_test)):
-        x, y = sample
-        x = x.float().to(device)
-        y = y.squeeze().to(device)
-        steps = 32
-        y_prob = nca.classify(x, steps=steps, reduce=False)
-
-        macro_acc.update(y_prob, y)
-        micro_acc.update(y_prob, y)
-        macro_auc.update(y_prob, y)
-        micro_f1.update(y_prob, y)
-    macro_acc_ = macro_acc.compute().item()
-    micro_acc_ = micro_acc.compute().item()
-    macro_auc_ = macro_auc.compute().item()
-    micro_f1_ = micro_f1.compute().item()
+    metrics, _ = nca.validate(loader_test)
 
     seed = next(iter(loader_test))[0].to(device)
     out_path = FIGURE_PATH / "classification_pathmnist.gif"
-    animator = Animator(nca, seed, interval=100, steps=32, hidden=True, show_input=True)
+    animator = Animator(nca, seed, interval=100, hidden=True, show_input=True)
     animator.save(out_path)
     print(f"Animation saved to: {out_path}")
 
     print()
-    print(
-        f"ACC macro: {macro_acc_:.3f}  ACC micro: {micro_acc_:.3f}  AUC macro: {macro_auc_:.3f}  F1 micro: {micro_f1_:.3f}"
-    )
+    pprint.pprint(metrics)
 
 
 @click.command()

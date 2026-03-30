@@ -18,6 +18,7 @@ sys.path.append(root_dir)
 from ncalab import (  # noqa: E402
     BasicNCATrainer,
     ClassificationNCAModel,
+    fix_random_seed,
     get_compute_device,
     print_NCALab_banner,
 )
@@ -42,6 +43,7 @@ def train_class_dermamnist(
     max_epochs: int,
     dry: bool,
 ):
+    fix_random_seed()
     print_NCALab_banner()
 
     comment = "DermaMNIST"
@@ -120,7 +122,7 @@ def train_class_dermamnist(
         class_names=list(INFO["dermamnist"]["label"].values()),
         training_timesteps=64,
         inference_timesteps=64,
-        use_classifier=False,
+        use_classifier=True,
     )
 
     trainer = BasicNCATrainer(
@@ -129,7 +131,7 @@ def train_class_dermamnist(
         batch_repeat=2,
         max_epochs=max_epochs,
         gradient_clipping=gradient_clipping,
-        lr=0.0001
+        lr=0.0001,
     )
     history = trainer.train(
         loader_train,

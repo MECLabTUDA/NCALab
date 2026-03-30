@@ -9,13 +9,13 @@ from medmnist import INFO, DermaMNIST  # type: ignore[import-untyped]
 from torchvision import transforms  # type: ignore[import-untyped]
 from torchvision.transforms import v2  # type: ignore[import-untyped]
 from train_class_dermamnist import (
-    print_NCALab_banner,
     TASK_PATH,
     WEIGHTS_PATH,
     alive_mask,
     default_hidden_channels,
     fire_rate,
     pad_noise,
+    print_NCALab_banner,
     use_temporal_encoding,
 )
 
@@ -25,6 +25,7 @@ sys.path.append(root_dir)
 from ncalab import (  # noqa: E402
     Animator,
     ClassificationNCAModel,
+    fix_random_seed,
     get_compute_device,
 )
 
@@ -46,6 +47,7 @@ def eval_selfclass_dermamnist(
     gpu,
     gpu_index,
 ):
+    fix_random_seed()
     print_NCALab_banner()
 
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
@@ -69,7 +71,7 @@ def eval_selfclass_dermamnist(
         class_names=list(INFO["dermamnist"]["label"].values()),
         training_timesteps=64,
         inference_timesteps=64,
-        use_classifier=False,
+        use_classifier=True,
     )
     nca.load_state_dict(
         torch.load(
