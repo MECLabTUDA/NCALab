@@ -10,6 +10,7 @@ For more information on NCAs, check out our curated [Awesome List](https://githu
 ![docs](https://github.com/MECLabTUDA/NCAlab/actions/workflows/docs.yml/badge.svg)
 ![python-package](https://github.com/MECLabTUDA/NCAlab/actions/workflows/python-package.yml/badge.svg)
 ![manuscript](https://github.com/MECLabTUDA/NCAlab/actions/workflows/draft-pdf.yml/badge.svg)
+![status](https://joss.theoj.org/papers/c806c40f0c7735e4a649fbc9f4eb8c8d/status.svg)
 
 ![Animation of a growing lizard emoji](artwork/growing_emoji.gif)
 ![Animation of gastro-intestinal polyp segmentation using NCA](artwork/segmentation_kvasir_seg.gif)
