@@ -293,7 +293,7 @@ class BasicNCATrainer:
                     if self.pool is not None:
                         self.pool.update(prediction.output_image)
                     all_losses.append(losses["total"].item())
-            history.loss.append(np.mean(all_losses))
+            history.loss.append(float(np.mean(all_losses)))
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()
             with torch.no_grad():

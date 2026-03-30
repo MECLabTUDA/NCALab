@@ -6,6 +6,7 @@ from pathlib import Path, PosixPath
 import torch
 
 from ..models.basicNCA.abstractNCA import AbstractNCAModel
+from ..models.basicNCA.mlpNCArule import MLPNCARule
 
 
 def tensor_to_C(tensor: torch.Tensor, name: str, number_type: str = "float"):
@@ -58,6 +59,7 @@ def export_header(
 
     with open(outfile, "w") as f:
         f.write(preamble)
+        assert isinstance(nca.rule, MLPNCARule)
         W_0 = nca.rule.network[0].weight.data
         b_0 = nca.rule.network[0].bias.data
         W_1 = nca.rule.network[1].weight.data

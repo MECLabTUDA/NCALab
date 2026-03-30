@@ -103,7 +103,7 @@ class Animator:
 
         images = []
         predictions = nca.record(seed, steps)
-        steps = len(predictions)
+        _steps = len(predictions)
         for batch_index in range(len(seed)):
             for prediction in predictions:
                 output_image = prediction.output_array[batch_index]
@@ -207,13 +207,13 @@ class Animator:
             im.set_array(arr)
             # draw title
             if show_timestep:
-                ax.set_title(f"TIME STEP {i % steps:3d}", font=fpath, fontsize=16)
+                ax.set_title(f"TIME STEP {i % _steps:3d}", font=fpath, fontsize=16)
             return (im,)
 
         self.animation_fig = animation.FuncAnimation(
             fig,
             update,
-            frames=steps * len(seed),
+            frames=_steps * len(seed),
             interval=interval,
             blit=True,
             repeat=repeat,
