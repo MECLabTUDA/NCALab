@@ -17,6 +17,7 @@ For more information on NCAs, check out our curated [Awesome List](https://githu
 ![Animation of hidden channels of polyp segmentation](artwork/segmentation_kvasir_seg_hidden.gif)
 ![Animation of a prediction on CIFAR-10 in feature space](artwork/classification_cifar10.gif)
 ![Animation of a prediction on DermaMNIST in feature space](artwork/classification_dermamnist.gif)
+![Animation of a prediction on PathMNIST in feature space](artwork/classification_pathmnist.gif)
 
 ## Neural Cellular Automata
 
