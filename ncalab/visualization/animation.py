@@ -158,8 +158,7 @@ class Animator:
                 arr = np.argmax(np.abs(output_channels), axis=-1)
                 cmap = mpl.colormaps["Set3"]
                 alpha = np.clip(
-                    np.max(output_channels, axis=-1)
-                    / np.max(output_channels),
+                    np.max(output_channels, axis=-1) / np.max(output_channels),
                     0.0,
                     1.0,
                 )
@@ -191,7 +190,9 @@ class Animator:
             if _style.progress_h > 0:
                 progress_w = int(
                     np.clip(
-                        np.round(arr.shape[1] * ((i % steps) / steps)), 0, arr.shape[1]
+                        np.round(arr.shape[1] * ((i % _steps) / _steps)),
+                        0,
+                        arr.shape[1],
                     )
                 )
                 progress_h = _style.progress_h
