@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import TYPE_CHECKING, Optional
 
+import cv2
 import matplotlib as mpl
 import matplotlib.animation as animation  # type: ignore[import-untyped]
 import matplotlib.pyplot as plt  # type: ignore[import-untyped]
@@ -36,11 +37,27 @@ class AnimatorStyle:
 
 animator_style_dark = AnimatorStyle(
     (0.1, 0.1, 0.1, 1.0),
-    (0.69, 1.0, 0.69, 1.0),
+    (0.69, 1.0, 0.16, 1.0),
     (0.9, 0.9, 0.9, 1.0),
     (1.0, 0.69, 0.16, 1.0),
 )
 animator_styles = {"dark": animator_style_dark}
+
+
+def draw_segmentation_overlay(image, mask, style):
+    color = np.ones((image.shape[0], image.shape[1], 3)) * style.color_overlay[:3]
+    alpha = 0.5
+    threshold = 0.7
+    mask = cv2.medianBlur(mask, 3)
+    sobelx = cv2.Sobel(mask, cv2.CV_64F, 1, 0, ksize=3)
+    sobely = cv2.Sobel(mask, cv2.CV_64F, 0, 1, ksize=3)
+    gradient_magnitude = cv2.magnitude(sobelx, sobely)
+    gradient_magnitude = cv2.convertScaleAbs(gradient_magnitude)[:, :]
+    image[mask > threshold] = (
+        alpha * color[mask > threshold] + (1 - alpha) * image[mask > threshold]
+    )
+    image[gradient_magnitude > 0] = color[gradient_magnitude > 0]
+    return image
 
 
 class Animator:
@@ -110,19 +127,12 @@ class Animator:
                 output_image = output_image.transpose(1, 2, 0)
                 images.append(output_image)
 
-        ax.set_axis_off()
-        plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
-        plt.margins(0, 0)
-        plt.tight_layout()
-
         im = None
 
         def update(i):
             nonlocal ax, images, nca, im
             arr = images[i].copy()
-            if not nca.immutable_image_channels:
-                arr = arr[:, :, : nca.num_image_channels]
-            elif hidden:
+            if hidden:
                 hidden_channels = arr[
                     :,
                     :,
@@ -142,30 +152,22 @@ class Animator:
                 )
                 arr[:, :, 3] = alpha
             elif overlay:
-                color = (
-                    np.ones((arr.shape[0], arr.shape[1], 3)) * _style.color_overlay[:3]
-                )
-                A = np.clip(arr[:, :, : nca.num_image_channels], 0, 1)
-                mask = np.clip(arr[:, :, -nca.num_output_channels :].squeeze(-1), 0, 1)
-                alpha = 0.5
-                threshold = 0.0
-                A[mask > threshold] = (
-                    alpha * color[mask > threshold] + (1 - alpha) * A[mask > threshold]
-                )
-                arr = A
-            else:
-                output_channels = arr[:, :, -nca.num_output_channels :]
-                arr = np.argmax(np.abs(output_channels), axis=-1)
-                cmap = mpl.colormaps["Set3"]
-                alpha = np.clip(
-                    np.max(output_channels, axis=-1) / np.max(output_channels),
-                    0.0,
-                    1.0,
-                )
-                arr = cmap(arr.squeeze() / np.max(arr)).reshape(
-                    (arr.shape[0], arr.shape[1], 4)
-                )
-                arr[:, :, 3] = alpha
+                A = np.clip(arr[..., : nca.num_image_channels], 0, 1)
+                mask = (arr[..., -nca.num_output_channels :].squeeze(-1)).astype(np.float32)
+                arr = draw_segmentation_overlay(A, mask, _style)
+            # else:
+            #    output_channels = arr[:, :, -nca.num_output_channels :]
+            #    arr = np.argmax(np.abs(output_channels), axis=-1)
+            #    cmap = mpl.colormaps["Set3"]
+            #    alpha = np.clip(
+            #        np.max(output_channels, axis=-1) / np.max(output_channels),
+            #        0.0,
+            #        1.0,
+            #    )
+            #    arr = cmap(arr.squeeze() / np.max(arr)).reshape(
+            #        (arr.shape[0], arr.shape[1], 4)
+            #    )
+            #    arr[:, :, 3] = alpha
 
             # convert to 0.0 .. 1.0 RGBA image
             arr = np.clip(arr, 0, 1)
@@ -175,15 +177,19 @@ class Animator:
                 )
                 arr = np.concatenate((arr, alpha_channel), axis=-1)
 
-            if show_input:
+            if hidden and show_input:
                 rgb_image = images[i][:, :, : nca.num_image_channels]
                 rgb_image -= rgb_image.min()
                 rgb_image /= rgb_image.max()
                 rgb_image = np.clip(rgb_image, 0, 1)
-                alpha_channel = np.ones(
-                    (rgb_image.shape[0], rgb_image.shape[1], 1), dtype=rgb_image.dtype
-                )
-                rgba_image = np.concatenate((rgb_image, alpha_channel), axis=-1)
+                if nca.num_image_channels == 3:
+                    alpha_channel = np.ones(
+                        (rgb_image.shape[0], rgb_image.shape[1], 1),
+                        dtype=rgb_image.dtype,
+                    )
+                    rgba_image = np.concatenate((rgb_image, alpha_channel), axis=-1)
+                else:
+                    rgba_image = rgb_image
                 arr = np.concatenate((rgba_image, arr), axis=1)
 
             # draw progress bar
@@ -196,7 +202,9 @@ class Animator:
                     )
                 )
                 progress_h = _style.progress_h
-                arr[-progress_h:, :progress_w] = _style.color_progress
+                progress_arr = np.zeros((progress_h, arr.shape[1], 4))
+                progress_arr[:, :progress_w] = _style.color_progress
+                arr = np.concatenate((arr, progress_arr), axis=0)
             # draw underline below title
             if _style.underline:
                 arr[0, :] = _style.color_progress
@@ -209,6 +217,10 @@ class Animator:
             # draw title
             if show_timestep:
                 ax.set_title(f"TIME STEP {i % _steps:3d}", font=fpath, fontsize=16)
+            ax.set_axis_off()
+            plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
+            plt.margins(0, 0)
+            plt.tight_layout()
             return (im,)
 
         self.animation_fig = animation.FuncAnimation(
