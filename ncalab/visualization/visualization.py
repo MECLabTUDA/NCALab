@@ -229,7 +229,7 @@ class VisualBinaryImageSegmentation(Visual):
         )
 
         # 3rd row: prediction
-        masks_pred = prediction.output_channels_np
+        masks_pred = prediction.output_channels_np > 0
         show_image_row(
             ax[2], np.clip(masks_pred, 0.0, 1.0), cmap="gray", label="PREDICTION"
         )
