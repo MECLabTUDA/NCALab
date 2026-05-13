@@ -3,10 +3,9 @@ import os
 import sys
 from pathlib import Path
 
-import albumentations as A  # type: ignore[import-untyped]
 import click
 import torch
-from albumentations.pytorch import ToTensorV2  # type: ignore[import-untyped]
+from train_segmentation_kvasir_seg import T_val
 from dataset_kvasir_seg import KvasirSegDataset
 from download_kvasir_seg import KVASIR_SEG_PATH  # type: ignore[import-untyped]
 
@@ -49,18 +48,14 @@ def eval_segmentation_kvasir_seg(hidden_channels: int, gpu: bool, gpu_index: int
         num_hidden_channels=hidden_channels,
         num_classes=1,
         pad_noise=True,
-        fire_rate=0.5,
-        use_temporal_encoding=True,
+        fire_rate=0.8,
+        use_temporal_encoding=False,
+        training_timesteps=(30, 40),
+        inference_timesteps=35,
     )
-    cascade = CascadeNCA(nca, [4, 2, 1], [32, 16, 10])
+    cascade = CascadeNCA(nca, [4, 2, 1], [16, 4, 4])
 
-    T = A.Compose(
-        [
-            A.Resize(256, 256),
-            ToTensorV2(),
-        ]
-    )
-    dataset = KvasirSegDataset(KVASIR_SEG_PATH, transform=T)
+    dataset = KvasirSegDataset(KVASIR_SEG_PATH, transform=T_val)
     loader = torch.utils.data.DataLoader(
         dataset, shuffle=False, batch_size=4, drop_last=True
     )
@@ -79,6 +74,7 @@ def eval_segmentation_kvasir_seg(hidden_channels: int, gpu: bool, gpu_index: int
     out_path = FIGURE_PATH / "segmentation_kvasir_seg.gif"
     animator.save(out_path)
     click.secho(f"Done. You'll find the generated GIF in {out_path} .")
+
     animator = Animator(
         cascade, seed, interval=100, steps=sum(cascade.steps), hidden=True
     )

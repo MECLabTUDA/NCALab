@@ -34,6 +34,21 @@ TASK_PATH = Path(__file__).parent.resolve()
 WEIGHTS_PATH = TASK_PATH / "weights"
 WEIGHTS_PATH.mkdir(exist_ok=True)
 
+T_train = A.Compose(
+    [
+        A.ColorJitter(),
+        A.Resize(256, 256),
+        A.RandomRotate90(),
+        A.HorizontalFlip(),
+        ToTensorV2(),
+    ]
+)
+T_val = A.Compose(
+    [
+        A.Resize(256, 256),
+        ToTensorV2(),
+    ]
+)
 
 def train_segmentation_kvasir_seg(
     batch_size: int,
@@ -53,25 +68,15 @@ def train_segmentation_kvasir_seg(
         num_image_channels=3,
         num_hidden_channels=hidden_channels,
         num_classes=1,
-        pad_noise=True,
-        fire_rate=0.5,
-        use_temporal_encoding=True,
-        filter_padding="circular",
+        pad_noise=False,
+        fire_rate=0.8,
+        use_temporal_encoding=False,
         training_timesteps=(30, 40),
         inference_timesteps=35,
     )
-    cascade = CascadeNCA(nca, [4, 2, 1], [16, 16, 8])
+    cascade = CascadeNCA(nca, [4, 2, 1], [16, 4, 4])
 
-    T = A.Compose(
-        [
-            A.ColorJitter(),
-            A.Resize(256, 256),
-            A.RandomRotate90(),
-            A.HorizontalFlip(),
-            ToTensorV2(),
-        ]
-    )
-    dataset = KvasirSegDataset(KVASIR_SEG_PATH, transform=T)
+    dataset = KvasirSegDataset(KVASIR_SEG_PATH, transform=T_train)
 
     train_indices, val_indices, _, _ = train_test_split(
         range(len(dataset)),
@@ -83,10 +88,10 @@ def train_segmentation_kvasir_seg(
     val_split = Subset(dataset, val_indices)
 
     loader_train = torch.utils.data.DataLoader(
-        train_split, shuffle=True, batch_size=batch_size, drop_last=True
+        train_split, shuffle=True, batch_size=batch_size
     )
     loader_val = torch.utils.data.DataLoader(
-        val_split, shuffle=True, batch_size=batch_size, drop_last=True
+        val_split, shuffle=True, batch_size=batch_size
     )
 
     trainer = BasicNCATrainer(

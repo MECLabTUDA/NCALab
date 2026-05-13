@@ -1,4 +1,3 @@
-
 from pathlib import Path, PosixPath
 from typing import Any
 
@@ -28,7 +27,7 @@ class KvasirSegDataset(Dataset):
         image = image.crop(bbox)
         mask = mask.crop(bbox)
         image_arr = np.asarray(image, dtype=np.float32) / 255.0
-        mask_arr = np.asarray(mask, dtype=np.float32) / 255.0
+        mask_arr = (np.asarray(mask, dtype=np.float32) > 0).astype(np.float32)
         sample = {"image": image_arr, "mask": mask_arr}
         sample = self.transform(**sample)
         return sample["image"], sample["mask"]

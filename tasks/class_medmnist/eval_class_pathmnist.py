@@ -51,7 +51,7 @@ def eval_selfclass_pathmnist(
 
     dataset_test = PathMNIST(split="test", download=True, transform=T)
     loader_test = torch.utils.data.DataLoader(
-        dataset_test, shuffle=False, batch_size=8
+        dataset_test, shuffle=True, batch_size=8
     )
 
     num_classes = len(INFO["pathmnist"]["label"])
@@ -83,7 +83,7 @@ def eval_selfclass_pathmnist(
 
     seed = next(iter(loader_test))[0].to(device)
     out_path = FIGURE_PATH / "classification_pathmnist.gif"
-    animator = Animator(nca, seed, interval=100, hidden=True, show_input=True)
+    animator = Animator(nca, seed, interval=100, show_input=True)
     animator.save(out_path)
     print(f"Animation saved to: {out_path}")
 

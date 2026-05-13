@@ -53,7 +53,7 @@ def eval_growing_emoji(gpu: bool, gpu_index: int):
     )
 
     seed = nca.make_seed(48, 48)
-    animator = Animator(nca, seed)
+    animator = Animator(nca, seed, show_input=True, hidden=True)
 
     out_path = FIGURE_PATH / "growing_emoji.gif"
     animator.save(out_path)
