@@ -3,7 +3,7 @@ from typing import Dict
 import torch  # type: ignore[import-untyped]
 import torchmetrics.segmentation
 
-from ncalab.losses import DiceBCELoss
+from ncalab.losses import DiceLoss
 from ncalab.models.basicNCA import AbstractNCAModel
 from ncalab.prediction import Prediction
 from ncalab.visualization import VisualBinaryImageSegmentation
@@ -28,6 +28,7 @@ class SegmentationNCAModel(AbstractNCAModel):
         num_learned_filters: int = 2,
         pad_noise: bool = True,
         filter_padding: str = "reflect",
+        lambda_hidden: float = 1e-2,
         **kwargs,
     ):
         """
@@ -59,24 +60,50 @@ class SegmentationNCAModel(AbstractNCAModel):
             **kwargs,
         )
         self.metrics = {
-            "Dice": torchmetrics.segmentation.DiceScore(num_classes),
-            "IoU": torchmetrics.segmentation.MeanIoU(num_classes),
+            # FIXME: set number of classes according to parameter
+            "Dice": torchmetrics.segmentation.DiceScore(num_classes=2).to(self.device),
         }
+        self.lambda_hidden = lambda_hidden
+        self.bce_loss = torch.nn.BCEWithLogitsLoss(reduction="mean")
+        self.dice_loss = DiceLoss()
 
     def loss(self, pred: Prediction, label: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
-        Compute Dice + BCE loss.
+        Compute Dice loss.
 
         :param pred: Prediction.
         :param label: Ground truth.
 
         :returns: Dictionary of identifiers mapped to computed losses.
         """
-        loss_segmentation_function = DiceBCELoss()
-        loss_segmentation = loss_segmentation_function(
-            pred.output_channels,
+        y = pred.output_channels
+        loss_dice = self.dice_loss(
+            y,
             label,
         )
+        loss_bce = self.bce_loss(y.flatten(), label.flatten())
+        loss_hidden = torch.mean(torch.abs(pred.hidden_channels))
 
-        loss = loss_segmentation
-        return {"total": loss}
+        loss = loss_dice + 0.1 * loss_bce + self.lambda_hidden * loss_hidden
+        return {
+            "total": loss,
+            "dice": loss_dice,
+            "bce": loss_bce,
+            "hidden": loss_hidden,
+        }
+
+    def _post_forward_step(self, x: torch.Tensor) -> torch.Tensor:
+        x[:, -self.num_output_channels :, :, :] = torch.sigmoid(
+            x[:, -self.num_output_channels :, :, :]
+        )
+        return x
+
+    def post_prediction(self, prediction: Prediction) -> Prediction:
+        logits = (prediction.logits > 0.5).long().squeeze(1)
+        return Prediction(
+            prediction.model,
+            prediction.steps,
+            prediction.output_image,
+            logits,
+            prediction.head_prediction,
+        )

@@ -34,6 +34,18 @@ class DiceScore(nn.Module):
         return dice_score
 
 
+class DiceLoss(nn.Module):
+    def __init__(self):
+        super(DiceLoss, self).__init__()
+        self.dicescore = DiceScore()
+
+    def forward(
+        self, x: torch.Tensor, y: torch.Tensor, smooth: float = 1.0
+    ) -> torch.Tensor:
+        dice_loss = 1 - self.dicescore(x, y, smooth)
+        return dice_loss
+
+
 class DiceBCELoss(nn.Module):
     """
     Combination of Dice and BCE Loss between two images.
@@ -57,11 +69,12 @@ class DiceBCELoss(nn.Module):
         :returns: Dice score
         :rtype: torch.Tensor
         """
+        dice_loss = 1 - self.dicescore(x, y, smooth)
+
         x = torch.sigmoid(x)
         x = torch.flatten(x)
         y = torch.flatten(y)
 
-        dice_loss = 1 - self.dicescore(x, y, smooth)
         BCE = F.binary_cross_entropy(x, y, reduction="mean")
         Dice_BCE = BCE + dice_loss
         return Dice_BCE

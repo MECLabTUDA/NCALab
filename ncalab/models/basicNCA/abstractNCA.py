@@ -191,6 +191,7 @@ class AbstractNCAModel(nn.Module, abc.ABC):
         assert x.shape[1] == self.num_channels
         for step in range(steps):
             x = self._forward_step(x, step)
+        self._post_forward_step(x)
 
         head_prediction = None
         logits = x[:, -self.num_output_channels :, :, :]
@@ -205,6 +206,9 @@ class AbstractNCAModel(nn.Module, abc.ABC):
             head_prediction = self.head(hidden)
             logits = head_prediction
         return self.post_prediction(Prediction(self, steps, x, logits, head_prediction))
+
+    def _post_forward_step(self, x: torch.Tensor) -> torch.Tensor:
+        return x
 
     def loss(self, pred: Prediction, label: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
@@ -313,13 +317,15 @@ class AbstractNCAModel(nn.Module, abc.ABC):
             predictions: List[Prediction] = []
             for _, metric in self.metrics.items():
                 metric.reset()
+                metric.to(self.device)
             for image, label in dataloader:
+                # classification
                 if len(label.shape) == 2:
                     label = label.squeeze(1)
                 prediction = self.predict(image.clone().to(self.device), steps=steps)
                 predictions.append(prediction)
                 for _, metric in self.metrics.items():
-                    metric.update(prediction.logits, label.to(self.device))
+                    metric.update(prediction.logits, label.to(self.device).long())
             metrics = {k: m.compute().item() for k, m in self.metrics.items()}
         return metrics, predictions
 
