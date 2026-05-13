@@ -14,7 +14,7 @@ dependencies = [
     "albucore==0.0.24",
     "albumentations==2.0.8",
     "annotated-types==0.7.0",
-    "asttokens==3.0.0",
+    "asttokens==3.0.1",
     "astunparse==1.6.3",
     "certifi==2025.4.26",
     "charset-normalizer==3.4.2",
@@ -183,6 +183,7 @@ dependencies = [
     "black>=26.3.1",
     "cryptography==46.0.7",
     "pip==26.1",
+    "astroid==4.1.2",
 ]
 
 
