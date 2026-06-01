@@ -1,6 +1,5 @@
 from __future__ import annotations
 
-import logging
 from copy import copy
 from pathlib import Path, PosixPath  # for type hint
 from typing import Dict, Optional, Tuple
@@ -188,8 +187,6 @@ class BasicNCATrainer:
 
         :returns [TrainingHistory]: TrainingHistory object.
         """
-        logging.basicConfig(encoding="utf-8", level=logging.INFO)
-
         history = TrainingHistory(self.model_path, {}, 0, self.nca)
 
         if save_every is None:
@@ -228,19 +225,7 @@ class BasicNCATrainer:
                 betas=self.adam_betas,
             )
 
-        # self.lr_scheduler = torch.optim.lr_scheduler.SequentialLR(
-        #    optimizer,
-        #    schedulers=[
-        #        torch.optim.lr_scheduler.ConstantLR(
-        #            optimizer, factor=1.0, total_iters=self.max_epochs // 4
-        #        ),
-        #        torch.optim.lr_scheduler.CosineAnnealingLR(
-        #            optimizer,
-        #            self.max_epochs,
-        #        ),
-        #    ],
-        #    milestones=[self.max_epochs // 4],
-        # )
+        self.lr_scheduler = None
         head_optimizer = None
         if self.nca.head is not None:
             if self.nca.head.optimizer is not None:
