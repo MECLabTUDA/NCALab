@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import abc
 import os
-from typing import Any, Dict, List, Optional, Tuple
+from typing import Any, Dict, List, Literal, Optional, Tuple
 
 import numpy as np
 import torch  # type: ignore[import-untyped]
@@ -41,7 +41,7 @@ class AbstractNCAModel(nn.Module, abc.ABC):
         use_alive_mask: bool = False,
         immutable_image_channels: bool = True,
         num_learned_filters: int = 0,
-        filter_padding: str = "reflect",
+        filter_padding: Literal["zero", "reflect", "replicate", "circular"] = "reflect",
         use_laplace: bool = False,
         kernel_size: int = 3,
         pad_noise: bool = False,
@@ -56,6 +56,7 @@ class AbstractNCAModel(nn.Module, abc.ABC):
         :param num_image_channels: Number of channels reserved for input image.
         :param num_hidden_channels: Number of hidden channels (communication channels).
         :param num_output_channels: Number of output channels.
+        :param validation_metric:
         :param fire_rate: Fire rate for stochastic weight update. Defaults to 0.5.
         :param hidden_size: Number of neurons in hidden layer. Defaults to 128.
         :param use_alive_mask: Whether to use alive masking (channel 3) during training. Defaults to False.
@@ -65,6 +66,11 @@ class AbstractNCAModel(nn.Module, abc.ABC):
         :param use_laplace: Whether to use Laplace filter (only if num_learned_filters == 0)
         :param kernel_size: Filter kernel size (only for learned filters)
         :param pad_noise: Whether to pad input image tensor with noise in hidden / output channels
+        :param use_temporal_encoding:
+        :param rule_type:
+        :param rule_args:
+        :param training_timesteps:
+        :param inference_timesteps:
         """
         super(AbstractNCAModel, self).__init__()
 
@@ -330,12 +336,31 @@ class AbstractNCAModel(nn.Module, abc.ABC):
         return metrics, predictions
 
     def _to_dict(self) -> Dict[str, Any]:
-        return {}  # return NotImplemented
+        return {}
 
     def to_dict(self) -> Dict[str, Any]:
-        d = {}
+        d = dict(
+            num_image_channels=self.num_image_channels,
+            num_hidden_channels=self.num_hidden_channels,
+            num_output_channels=self.num_output_channels,
+            fire_rate=self.fire_rate,
+            hidden_size=self.hidden_size,
+            use_alive_mask=self.use_alive_mask,
+            num_learned_filters=self.num_learned_filters,
+            use_laplace=self.use_laplace,
+            kernel_size=self.kernel_size,
+            filter_padding=self.filter_padding,
+            pad_noise=self.pad_noise,
+            use_temporal_encoding=self.use_temporal_encoding,
+            training_timesteps=self.training_timesteps,
+            inference_timesteps=self.inference_timesteps,
+        )
         d.update(self._to_dict())
         return d
+
+    @classmethod
+    def from_dict(cls, d: Dict[str, Any]):
+        return cls(**d)
 
     def num_trainable_parameters(self) -> int:
         """

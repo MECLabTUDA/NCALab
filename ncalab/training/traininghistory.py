@@ -1,11 +1,11 @@
 import copy
-from datetime import datetime
 import enum
-from pathlib import Path, PosixPath
 import json
-import logging
-from typing import Dict, Optional, List
+from datetime import datetime
+from pathlib import Path, PosixPath
+from typing import Dict, List, Optional
 
+import click
 import numpy as np
 import torch
 
@@ -98,10 +98,11 @@ class TrainingHistory:
         self.current_accuracy = accuracy
         if accuracy > self.best_accuracy or overwrite:
             if self.verbose and not overwrite:
-                logging.info(
+                click.secho(
                     f"Accuracy improvement ({model.validation_metric}):\n"
                     + f"  {self.best_accuracy:.5f} --> {accuracy:.5f}"
-                    + f"  in epoch {epoch}"
+                    + f"  in epoch {epoch}",
+                    fg="green",
                 )
             self.best_epoch = epoch
             self.best_accuracy = accuracy

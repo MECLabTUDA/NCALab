@@ -91,7 +91,7 @@ class BasicNCATrainer:
         else:
             self.lr = lr
         self.pool = pool
-        self.lr_scheduler = None
+        self.lr_scheduler = lr_scheduler
 
     def info(self) -> str:
         """
@@ -312,6 +312,28 @@ class BasicNCATrainer:
                         if earlystopping is not None:
                             earlystopping.step(val_acc)
                     history.update(iteration, self.nca, val_acc)
+
+                    # Visualize validation batch
+                    if (
+                        plot_function
+                        and summary_writer
+                        and (iteration + 1) % save_every == 0
+                    ):
+                        x, y = next(iter(dataloader_val))
+                        x_in = x.clone().to(self.nca.device)
+                        x_in = pad_input(x_in, self.nca, noise=self.nca.pad_noise)
+                        prediction = self.nca(
+                            x_in,
+                            steps=intepret_range_parameter(self.nca.training_timesteps),
+                        )
+                        figure = plot_function.show(
+                            self.nca,
+                            x.detach().cpu().numpy(),
+                            prediction,
+                            y.detach().cpu().numpy(),
+                        )
+                        summary_writer.add_figure("Validation Batch", figure, iteration)
+
                 else:
                     history.update(iteration, self.nca, 0, overwrite=True)
                 if (iteration + 1) % save_every == 0:

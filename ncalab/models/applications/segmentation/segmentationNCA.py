@@ -1,4 +1,4 @@
-from typing import Dict
+from typing import Dict, Literal
 
 import torch  # type: ignore[import-untyped]
 import torchmetrics.segmentation
@@ -26,9 +26,11 @@ class SegmentationNCAModel(AbstractNCAModel):
         fire_rate: float = 0.8,
         hidden_size: int = 128,
         num_learned_filters: int = 2,
-        pad_noise: bool = True,
-        filter_padding: str = "reflect",
-        lambda_hidden: float = 1e-2,
+        pad_noise: bool = False,
+        filter_padding: Literal[
+            "zero", "reflect", "replicate", "circular"
+        ] = "circular",
+        lambda_hidden: float = 1e-3,
         **kwargs,
     ):
         """

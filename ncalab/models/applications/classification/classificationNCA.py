@@ -1,4 +1,4 @@
-from typing import Dict, List, Optional
+from typing import Dict, List, Literal, Optional
 
 import torch  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
@@ -28,7 +28,7 @@ class ClassificationNCAModel(AbstractNCAModel):
         use_alive_mask: bool = False,
         pixel_wise_loss: bool = False,
         num_learned_filters: int = 2,
-        filter_padding: str = "reflect",
+        filter_padding: Literal["zero", "reflect", "replicate", "circular"] = "reflect",
         use_laplace: bool = False,
         kernel_size: int = 3,
         pad_noise: bool = False,

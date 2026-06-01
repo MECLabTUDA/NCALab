@@ -2,10 +2,12 @@ from typing import Optional
 
 
 class TrainingParameters:
+    """
+    """
+
     def __init__(
         self,
         gradient_clipping: bool = False,
-        steps_range: tuple = (90, 110),
         lr: Optional[float] = None,
         lr_gamma: float = 0.9999,
         adam_betas: tuple = (0.9, 0.99),
@@ -14,7 +16,6 @@ class TrainingParameters:
         optimizer_method: str = "adamw",
     ):
         assert batch_repeat >= 1
-        assert steps_range[0] < steps_range[1]
         assert max_epochs > 0
         assert optimizer_method.lower() in (
             "adam",
@@ -25,7 +26,6 @@ class TrainingParameters:
             "sgd",
         )
         self._gradient_clipping = gradient_clipping
-        self._steps_range = steps_range
         if lr is None:
             if optimizer_method.lower() == "sgd":
                 self._lr = 1e-2
@@ -63,3 +63,6 @@ class TrainingParameters:
             attribute_f = attribute.title().replace("_", " ")
             s += f"**{attribute_f}:** {getattr(self, attribute)}\n"
         return s
+
+    def save(self, path):
+        return NotImplemented
