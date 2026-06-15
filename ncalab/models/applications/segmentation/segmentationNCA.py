@@ -30,7 +30,9 @@ class SegmentationNCAModel(AbstractNCAModel):
         filter_padding: Literal[
             "zero", "reflect", "replicate", "circular"
         ] = "circular",
-        lambda_hidden: float = 1e-3,
+        lambda_hidden: float = 1e-4,
+        lambda_bce: float = 0.2,
+        lambda_dice: float = 0.8,
         **kwargs,
     ):
         """
@@ -68,6 +70,8 @@ class SegmentationNCAModel(AbstractNCAModel):
         self.lambda_hidden = lambda_hidden
         self.bce_loss = torch.nn.BCEWithLogitsLoss(reduction="mean")
         self.dice_loss = DiceLoss()
+        self.lambda_bce = lambda_bce
+        self.lambda_dice = lambda_dice
 
     def loss(self, pred: Prediction, label: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
@@ -86,7 +90,11 @@ class SegmentationNCAModel(AbstractNCAModel):
         loss_bce = self.bce_loss(y.flatten(), label.flatten())
         loss_hidden = torch.mean(torch.abs(pred.hidden_channels))
 
-        loss = loss_dice + 0.1 * loss_bce + self.lambda_hidden * loss_hidden
+        loss = (
+            self.lambda_dice * loss_dice
+            + self.lambda_bce * loss_bce
+            + self.lambda_hidden * loss_hidden
+        )
         return {
             "total": loss,
             "dice": loss_dice,
