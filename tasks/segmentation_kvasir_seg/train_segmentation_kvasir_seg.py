@@ -22,8 +22,9 @@ sys.path.append(root_dir)
 
 from ncalab import (  # noqa: E402
     BasicNCATrainer,
-    CascadeNCA,
     BinarySegmentationNCAModel,
+    CascadeNCA,
+    EarlyStopping,
     fix_random_seed,
     get_compute_device,
     print_mascot,
@@ -49,6 +50,7 @@ T_val = A.Compose(
         ToTensorV2(),
     ]
 )
+
 
 def train_segmentation_kvasir_seg(
     batch_size: int,
@@ -103,6 +105,7 @@ def train_segmentation_kvasir_seg(
         loader_val,
         summary_writer=writer,
         save_every=1,
+        earlystopping=EarlyStopping(20),
     )
     if writer is not None:
         writer.close()
