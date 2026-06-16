@@ -23,7 +23,7 @@ sys.path.append(root_dir)
 from ncalab import (  # noqa: E402
     BasicNCATrainer,
     CascadeNCA,
-    SegmentationNCAModel,
+    BinarySegmentationNCAModel,
     fix_random_seed,
     get_compute_device,
     print_mascot,
@@ -36,8 +36,8 @@ WEIGHTS_PATH.mkdir(exist_ok=True)
 
 T_train = A.Compose(
     [
-        A.ColorJitter(),
-        A.Resize(256, 256),
+        A.ColorJitter(p=0.2),
+        A.RandomCrop(256, 256),
         A.RandomRotate90(),
         A.HorizontalFlip(),
         ToTensorV2(),
@@ -63,18 +63,15 @@ def train_segmentation_kvasir_seg(
     fix_random_seed()
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
-    nca = SegmentationNCAModel(
+    nca = BinarySegmentationNCAModel(
         device,
         num_image_channels=3,
         num_hidden_channels=hidden_channels,
-        num_classes=1,
-        pad_noise=False,
+        pad_noise=True,
         fire_rate=0.8,
-        use_temporal_encoding=False,
-        training_timesteps=(30, 40),
-        inference_timesteps=35,
+        use_temporal_encoding=True,
     )
-    cascade = CascadeNCA(nca, [4, 2, 1], [16, 4, 4])
+    cascade = CascadeNCA(nca, [4, 2, 1], [16, 8, 8])
 
     dataset = KvasirSegDataset(KVASIR_SEG_PATH, transform=T_train)
 
@@ -86,6 +83,8 @@ def train_segmentation_kvasir_seg(
 
     train_split = Subset(dataset, train_indices)
     val_split = Subset(dataset, val_indices)
+    assert isinstance(val_split.dataset, KvasirSegDataset)
+    val_split.dataset.transform = T_val
 
     loader_train = torch.utils.data.DataLoader(
         train_split, shuffle=True, batch_size=batch_size
@@ -111,7 +110,7 @@ def train_segmentation_kvasir_seg(
 
 @click.command()
 @click.option("--batch-size", "-b", default=8, type=int)
-@click.option("--hidden-channels", "-H", default=18, type=int)
+@click.option("--hidden-channels", "-H", default=32, type=int)
 @click.option(
     "--gpu/--no-gpu", is_flag=True, default=True, help="Try using the GPU if available."
 )

@@ -15,7 +15,7 @@ sys.path.append(root_dir)
 from ncalab import (  # noqa: E402
     Animator,
     CascadeNCA,
-    SegmentationNCAModel,
+    BinarySegmentationNCAModel,
     fix_random_seed,
     get_compute_device,
     print_NCALab_banner,
@@ -29,7 +29,7 @@ WEIGHTS_PATH.mkdir(exist_ok=True)
 
 
 @click.command()
-@click.option("--hidden-channels", "-H", default=18, type=int)
+@click.option("--hidden-channels", "-H", default=32, type=int)
 @click.option(
     "--gpu/--no-gpu", is_flag=True, default=True, help="Try using the GPU if available."
 )
@@ -42,18 +42,15 @@ def eval_segmentation_kvasir_seg(hidden_channels: int, gpu: bool, gpu_index: int
 
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
-    nca = SegmentationNCAModel(
+    nca = BinarySegmentationNCAModel(
         device,
         num_image_channels=3,
         num_hidden_channels=hidden_channels,
-        num_classes=1,
         pad_noise=True,
         fire_rate=0.8,
-        use_temporal_encoding=False,
-        training_timesteps=(30, 40),
-        inference_timesteps=35,
+        use_temporal_encoding=True,
     )
-    cascade = CascadeNCA(nca, [4, 2, 1], [16, 4, 4])
+    cascade = CascadeNCA(nca, [4, 2, 1], [32, 16, 16])
 
     dataset = KvasirSegDataset(KVASIR_SEG_PATH, transform=T_val)
     loader = torch.utils.data.DataLoader(
