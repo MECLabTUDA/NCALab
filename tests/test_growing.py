@@ -21,7 +21,6 @@ def test_growing_training():
 
     nca = GrowingNCAModel(
         device,
-        num_image_channels=4,
         num_hidden_channels=5,
         use_alive_mask=False,
     )
