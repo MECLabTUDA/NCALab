@@ -12,6 +12,9 @@ For more information on NCAs, check out our curated [Awesome List](https://githu
 ![manuscript](https://github.com/MECLabTUDA/NCAlab/actions/workflows/draft-pdf.yml/badge.svg)
 ![status](https://joss.theoj.org/papers/c806c40f0c7735e4a649fbc9f4eb8c8d/status.svg)
 
+
+## Examples Gallery
+
 ![Animation of a growing lizard emoji](artwork/growing_emoji.gif)
 ![Animation of gastro-intestinal polyp segmentation using NCA](artwork/segmentation_kvasir_seg.gif)
 ![Animation of hidden channels of polyp segmentation](artwork/segmentation_kvasir_seg_hidden.gif)
@@ -84,7 +87,7 @@ So far, the following example tasks are implemented in NCALab:
     * Self-classifying MNIST digits
     * MedMNIST image classification (PathMNIST, BloodMNIST, DermaMNIST)
   * Image Segmentation:
-    * Endoscopic polyp segmentation (Kvasir-SEG, public)
+    * Endoscopic polyp binary segmentation (Kvasir-SEG, public)
 
 
 You can find those example tasks inside the `tasks/` directory and its subfolders.
@@ -114,7 +117,7 @@ Run
 pip install ncalab
 ```
 
-to install the latest release or
+to install the latest release through pip or
 
 ```bash
 pip install git+https://github.com/MECLabTUDA/NCALab
@@ -138,13 +141,46 @@ Once it is running, it should show you the URL the tensorboard server is running
 Alternatively, you may use the tensorboard integration of your IDE.
 
 
-# For Developers
+## For Developers
 
-Type checking:
+The NCALab project comes with scripts and workflows to maintain software quality.
+
+### Dry Training
+
+To dry-train all example task models, run:
+
+```bash
+./scripts/dry_train_examples.sh
+```
+
+This script will run the training script of all models, but only for two epochs each.
+Checkpoints will not be saved.
+
+
+### Distribution
+
+```bash
+./scripts/train_examples.sh
+```
+
+```bash
+uv run ./scripts/pack_example_weights.py
+```
+
+```bash
+./scripts/save_animations.sh
+```
+
+### Type Safety
+
+
+To inspect the code base for type errors, run:
 
 ```bash
 uv run mypy ncalab
 ```
+
+### Unit Tests and Code Analysis
 
 Static code analysis:
 
@@ -158,7 +194,15 @@ Testing:
 uv run pytest
 ```
 
+Check for outdated dependencies:
 
-# How to Cite
+```bash
+uv tree --outdated
+```
 
+
+## How to Cite
+
+```bibtex
 Coming soon.
+```
