@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import TYPE_CHECKING, Optional
+from typing import TYPE_CHECKING, List, Optional
 
 import cv2
 import matplotlib as mpl
@@ -8,20 +8,40 @@ import matplotlib.pyplot as plt  # type: ignore[import-untyped]
 import numpy as np
 import torch
 
+from .color import Color
+
 if TYPE_CHECKING:
     from ..models import AbstractNCAModel
+from ..paths import ROOT_PATH
+from ..prediction import Prediction
 
 
 class AnimatorStyle:
+    """ """
+
     def __init__(
         self,
-        color_background,
-        color_overlay,
-        color_title,
-        color_progress,
+        color_background: Color,
+        color_overlay: Color,
+        color_title: Color,
+        color_progress: Color,
         underline: bool = True,
         progress_h: int = 3,
     ):
+        """
+        :param color_background: _description_
+        :type color_background: Color
+        :param color_overlay: Color of segmentation overlay.
+        :type color_overlay: Color
+        :param color_title: _description_
+        :type color_title: Color
+        :param color_progress: _description_
+        :type color_progress: Color
+        :param underline: _description_, defaults to True
+        :type underline: bool, optional
+        :param progress_h: _description_, defaults to 3
+        :type progress_h: int, optional
+        """
         self.color_background = color_background
         self.color_overlay = color_overlay
         self.color_title = color_title
@@ -30,34 +50,73 @@ class AnimatorStyle:
         self.progress_h = progress_h
 
     def apply(self, fig, ax):
-        plt.rcParams["axes.titlecolor"] = self.color_title
+        plt.rcParams["axes.titlecolor"] = self.color_title.rgba4f
         plt.rcParams["text.antialiased"] = False
-        fig.patch.set_facecolor(self.color_background)
+        fig.patch.set_facecolor(self.color_background.rgba4f)
 
 
 animator_style_dark = AnimatorStyle(
-    (0.1, 0.1, 0.1, 1.0),
-    (0.69, 1.0, 0.16, 1.0),
-    (0.9, 0.9, 0.9, 1.0),
-    (1.0, 0.69, 0.16, 1.0),
+    Color(0.1, 0.1, 0.1, 1.0),
+    Color(0.69, 1.0, 0.16, 1.0),
+    Color(0.9, 0.9, 0.9, 1.0),
+    Color(1.0, 0.69, 0.16, 1.0),
 )
 animator_styles = {"dark": animator_style_dark}
 
 
-def draw_segmentation_overlay(image, mask, style):
-    color = np.ones((image.shape[0], image.shape[1], 3)) * style.color_overlay[:3]
-    alpha = 0.5
-    threshold = 0.7
-    mask = cv2.medianBlur(mask, 3)
-    sobelx = cv2.Sobel(mask, cv2.CV_64F, 1, 0, ksize=3)
-    sobely = cv2.Sobel(mask, cv2.CV_64F, 0, 1, ksize=3)
-    gradient_magnitude = cv2.magnitude(sobelx, sobely)
-    gradient_magnitude = cv2.convertScaleAbs(gradient_magnitude)[:, :]
-    image[mask > threshold] = (
-        alpha * color[mask > threshold] + (1 - alpha) * image[mask > threshold]
-    )
-    image[gradient_magnitude > 0] = color[gradient_magnitude > 0]
+def draw_segmentation_overlay(
+    image: np.ndarray,
+    mask: np.ndarray,
+    style: AnimatorStyle,
+    alpha: float = 0.5,
+    contour: bool = True,
+    median_denoise_kernel_size: int = 5,
+) -> np.ndarray:
+    """
+    Helper function to draw a semi-transparent segmentation mask onto an image.
+
+    :param image: _description_
+    :type image: np.ndarray
+    :param mask: _description_
+    :type mask: np.ndarray
+    :param style: _description_
+    :type style: AnimatorStyle
+    :param alpha: _description_, defaults to 0.5
+    :type alpha: float, optional
+    :param threshold: _description_, defaults to 0.7
+    :type threshold: float, optional
+    :param contour: Whether to draw a contour around the segmentation mask, defaults to True
+    :type contour: bool, optional
+    :param median_denoise_kernel_size: Median filter kernel size, defaults to 5
+    :type median_denoise_kernel_size: int, optional
+    :return: _description_
+    :rtype: np.ndarray
+    """
+    assert median_denoise_kernel_size == 0 or median_denoise_kernel_size % 2 != 0
+    color = np.ones((image.shape[0], image.shape[1], 3)) * style.color_overlay.rgb3f
+
+    if median_denoise_kernel_size > 0:
+        mask = cv2.medianBlur(mask, median_denoise_kernel_size)
+
+    # blend alpha
+    image[mask > 0] = alpha * color[mask > 0] + (1 - alpha) * image[mask > 0]
+
+    # draw contour around segmentation mask
+    if contour:
+        sobelx = cv2.Sobel(mask, cv2.CV_64F, 1, 0, ksize=3)
+        sobely = cv2.Sobel(mask, cv2.CV_64F, 0, 1, ksize=3)
+        gradient_magnitude = cv2.magnitude(sobelx, sobely)
+        gradient_magnitude = cv2.convertScaleAbs(gradient_magnitude)[:, :]
+        image[gradient_magnitude > 0] = color[gradient_magnitude > 0]
     return image
+
+
+class AnimatorView:
+    def __init__(self):
+        pass
+
+    def render_frame(self):
+        pass
 
 
 class Animator:
@@ -82,7 +141,7 @@ class Animator:
         """
         :param nca: NCA model instance
         :type nca: ncalab.AbstractNCAModel
-        :param seed: Input image for the NCA model
+        :param seed: Input image for the NCA model, BCWH. Images in every batch are processed and their animations are concatenated.
         :type seed: torch.Tensor
         :param steps: Number of NCA prediction steps per sample, defaults to 100
         :type steps: int, optional
@@ -106,39 +165,27 @@ class Animator:
         _style = style if isinstance(style, AnimatorStyle) else animator_styles[style]
         _style.apply(fig, ax)
 
-        fpath = (
-            Path(__file__) / ".." / ".." / ".." / "fonts" / "PixelOperatorMono-Bold.ttf"
-        )
+        fpath = ROOT_PATH / "fonts" / "PixelOperatorMono-Bold.ttf"
 
-        # first frame is input image
-        if nca.immutable_image_channels and not overlay:
-            first_frame = seed[0, -nca.num_output_channels :]
-        else:
-            first_frame = seed[0, : nca.num_image_channels]
-        first_frame_np = first_frame.permute(1, 2, 0).detach().cpu().numpy()
-        first_frame_np = np.clip(first_frame_np, 0, 1)
-
-        images = []
-        predictions = nca.record(seed, steps)
-        _steps = len(predictions)
-        for batch_index in range(len(seed)):
-            for prediction in predictions:
-                output_image = prediction.output_array[batch_index]
-                output_image = output_image.transpose(1, 2, 0)
-                images.append(output_image)
+        recorded_predictions: List[Prediction] = nca.record(seed, steps)
+        predictions = Prediction.flatten_recorded_predictions(recorded_predictions)
 
         im = None
 
         def update(i):
-            nonlocal ax, images, nca, im
-            arr = images[i].copy()
+            nonlocal ax, nca, im, predictions
+            image = np.transpose(predictions[i].image_channels_np[0], (1, 2, 0))
+            hidden_channels = np.transpose(
+                predictions[i].hidden_channels_np[0], (1, 2, 0)
+            )
+            if predictions[i].mask is not None:
+                mask = predictions[i].mask_np[0, 0]
+            else:
+                mask = None
+
+            arr = image
+
             if hidden:
-                hidden_channels = arr[
-                    :,
-                    :,
-                    nca.num_image_channels : nca.num_image_channels
-                    + nca.num_hidden_channels,
-                ]
                 arr = np.argmax(np.abs(hidden_channels), axis=-1)
                 cmap = mpl.colormaps["Set3"]
                 alpha = np.clip(
@@ -151,23 +198,11 @@ class Animator:
                     (arr.shape[0], arr.shape[1], 4)
                 )
                 arr[:, :, 3] = alpha
-            elif overlay:
-                A = np.clip(arr[..., : nca.num_image_channels], 0, 1)
-                mask = (arr[..., -nca.num_output_channels :].squeeze(-1)).astype(np.float32)
-                arr = draw_segmentation_overlay(A, mask, _style)
-            # else:
-            #    output_channels = arr[:, :, -nca.num_output_channels :]
-            #    arr = np.argmax(np.abs(output_channels), axis=-1)
-            #    cmap = mpl.colormaps["Set3"]
-            #    alpha = np.clip(
-            #        np.max(output_channels, axis=-1) / np.max(output_channels),
-            #        0.0,
-            #        1.0,
-            #    )
-            #    arr = cmap(arr.squeeze() / np.max(arr)).reshape(
-            #        (arr.shape[0], arr.shape[1], 4)
-            #    )
-            #    arr[:, :, 3] = alpha
+            elif overlay and mask is not None:
+                background = np.clip(image, 0, 1)
+                arr = draw_segmentation_overlay(
+                    background, mask.astype(np.float32), _style
+                )
 
             # convert to 0.0 .. 1.0 RGBA image
             arr = np.clip(arr, 0, 1)
@@ -178,7 +213,7 @@ class Animator:
                 arr = np.concatenate((arr, alpha_channel), axis=-1)
 
             if hidden and show_input:
-                rgb_image = images[i][:, :, : nca.num_image_channels]
+                rgb_image = image
                 rgb_image -= rgb_image.min()
                 rgb_image /= rgb_image.max()
                 rgb_image = np.clip(rgb_image, 0, 1)
@@ -196,18 +231,19 @@ class Animator:
             if _style.progress_h > 0:
                 progress_w = int(
                     np.clip(
-                        np.round(arr.shape[1] * ((i % _steps) / _steps)),
+                        np.round(arr.shape[1] * ((i % steps) / steps)),
                         0,
                         arr.shape[1],
                     )
                 )
                 progress_h = _style.progress_h
                 progress_arr = np.zeros((progress_h, arr.shape[1], 4))
-                progress_arr[:, :progress_w] = _style.color_progress
+                progress_arr[:, :progress_w] = _style.color_progress.rgba4f
                 arr = np.concatenate((arr, progress_arr), axis=0)
+
             # draw underline below title
             if _style.underline:
-                arr[0, :] = _style.color_progress
+                arr[0, :] = _style.color_progress.rgba4f
             if im is None:
                 im = ax.imshow(
                     arr,
@@ -216,7 +252,7 @@ class Animator:
             im.set_array(arr)
             # draw title
             if show_timestep:
-                ax.set_title(f"TIME STEP {i % _steps:3d}", font=fpath, fontsize=16)
+                ax.set_title(f"TIME STEP {i % steps:3d}", font=fpath, fontsize=16)
             ax.set_axis_off()
             plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
             plt.margins(0, 0)
@@ -226,7 +262,7 @@ class Animator:
         self.animation_fig = animation.FuncAnimation(
             fig,
             update,
-            frames=_steps * len(seed),
+            frames=len(predictions),
             interval=interval,
             blit=True,
             repeat=repeat,
