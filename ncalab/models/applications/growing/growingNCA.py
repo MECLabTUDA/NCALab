@@ -21,7 +21,6 @@ class GrowingNCAModel(AbstractNCAModel):
     def __init__(
         self,
         device: torch.device,
-        num_image_channels: int = 4,
         num_hidden_channels: int = 16,
         fire_rate: float = 0.5,
         hidden_size: int = 128,
@@ -31,7 +30,6 @@ class GrowingNCAModel(AbstractNCAModel):
     ):
         """
         :param device [torch.device]: Pytorch device descriptor.
-        :param num_image_channels [int]: Number of channels reserved for input image. Defaults to 4.
         :param num_hidden_channels [int]: Number of hidden channels (communication channels). Defaults to 16.
         :param fire_rate [float]: Stochastic weight update. Defaults to 0.5.
         :param hidden_size [int]: Default number of nodes in hidden layer. Defaults to 128.
@@ -39,8 +37,8 @@ class GrowingNCAModel(AbstractNCAModel):
         """
         super(GrowingNCAModel, self).__init__(
             device,
-            num_image_channels,
-            num_hidden_channels,
+            num_image_channels=4,
+            num_hidden_channels=num_hidden_channels,
             plot_function=VisualGrowing(),
             num_output_channels=0,
             fire_rate=fire_rate,
@@ -65,12 +63,16 @@ class GrowingNCAModel(AbstractNCAModel):
         loss_hidden = torch.mean(torch.abs(pred.hidden_channels))
         loss_growing = F.mse_loss(pred.image_channels, label)
         loss = loss_growing + self.lambda_hidden * loss_hidden
-        return {"total": loss, "growing": loss_growing, "hidden": loss_hidden}
+        return {
+            "total": loss,
+            "growing": loss_growing.detach(),
+            "hidden": loss_hidden.detach(),
+        }
 
     def make_seed(self, width: int, height: int) -> torch.Tensor:
         x = torch.zeros((1, self.num_channels, width, height)).to(self.device)
         # set seed in center
-        x[:, 3:, width // 2, height // 2] = 1.0
+        x[:, self.num_image_channels - 1 :, width // 2, height // 2] = 1.0
         return x
 
     def grow(self, seed: torch.Tensor, steps: int = 100) -> List[np.ndarray]:

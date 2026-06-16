@@ -27,5 +27,4 @@ class AbstractNCAHead(nn.Module, abc.ABC):
         :type freeze_last: bool, optional
         :returns: NotImplemented, subclasses are required to implement this method.
         """
-        # FIXME: properly annotate this method, see https://github.com/python/mypy/issues/363
-        return NotImplemented  # type: ignore
+        raise NotImplementedError

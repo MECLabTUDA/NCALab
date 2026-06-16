@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import abc
 import os
-from typing import Any, Dict, List, Literal, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Tuple
 
 import numpy as np
 import torch  # type: ignore[import-untyped]
@@ -15,9 +15,11 @@ from ...prediction import Prediction
 from ...utils import intepret_range_parameter, pad_input
 from ...visualization import Visual
 from .abstractNCAhead import AbstractNCAHead
-from .abstractNCArule import AbstractNCARule
 from .basicNCAperception import BasicNCAPerception
 from .mlpNCArule import MLPNCARule
+
+if TYPE_CHECKING:
+    from .abstractNCArule import AbstractNCARule
 
 
 class AbstractNCAModel(nn.Module, abc.ABC):
@@ -47,7 +49,7 @@ class AbstractNCAModel(nn.Module, abc.ABC):
         pad_noise: bool = False,
         use_temporal_encoding: bool = False,
         rule_type: type[AbstractNCARule] = MLPNCARule,
-        rule_args=None,
+        rule_args: dict[str, Any] | None = None,
         training_timesteps: int | Tuple[int, int] = 100,
         inference_timesteps: int | Tuple[int, int] = 100,
     ):
@@ -73,9 +75,7 @@ class AbstractNCAModel(nn.Module, abc.ABC):
         :param inference_timesteps:
         """
         super(AbstractNCAModel, self).__init__()
-
         self.device = device
-        self.to(device)
 
         self.num_image_channels = num_image_channels
         self.num_hidden_channels = num_hidden_channels
@@ -112,10 +112,15 @@ class AbstractNCAModel(nn.Module, abc.ABC):
         self.head: AbstractNCAHead | None = None
 
         self.metrics: Dict[str, Metric] = {}
+        self.to(device)
 
     def _define_rule(self) -> AbstractNCARule:
         return self.rule_type(
-            self.device, self.input_vector_size, self.hidden_size, self.num_channels
+            self.device,
+            self.input_vector_size,
+            self.hidden_size,
+            self.num_channels,
+            **(self.rule_args or {}),
         )
 
     def prepare_input(self, x: torch.Tensor) -> torch.Tensor:
@@ -170,18 +175,31 @@ class AbstractNCAModel(nn.Module, abc.ABC):
             dx[:, : self.num_image_channels, :, :] *= 0
         return dx
 
-    def _forward_step(self, x: torch.Tensor, step: int):
+    def _forward_step(self, x: torch.Tensor, step: int) -> torch.Tensor:
         dx = self._update(x, step)
         x = x + dx
 
         # Alive masking
         if self.use_alive_mask:
             life_mask = self._alive(x)
-            life_mask = life_mask
-            x = x.permute(1, 0, 2, 3)  # B C W H --> C B W H
-            x = x * life_mask.float()
-            x = x.permute(1, 0, 2, 3)  # C B W H --> B C W H
+            life_mask = life_mask[:, None, :, :]
+            x *= life_mask.float()
         return x
+
+    def _post_forward_step(self, x: torch.Tensor) -> torch.Tensor:
+        return x
+
+    def _predict_head(self, x: torch.Tensor):
+        if self.head is not None:
+            hidden = x[
+                :,
+                self.num_image_channels : self.num_image_channels
+                + self.num_hidden_channels,
+                :,
+                :,
+            ]
+            return self.head(hidden)
+        return None
 
     def forward(
         self,
@@ -197,25 +215,20 @@ class AbstractNCAModel(nn.Module, abc.ABC):
         assert x.shape[1] == self.num_channels
         for step in range(steps):
             x = self._forward_step(x, step)
-        self._post_forward_step(x)
+        x = self._post_forward_step(x)
 
         head_prediction = None
-        logits = x[:, -self.num_output_channels :, :, :]
-        if self.head is not None:
-            hidden = x[
-                :,
-                self.num_image_channels : self.num_image_channels
-                + self.num_hidden_channels,
-                :,
-                :,
-            ]
-            head_prediction = self.head(hidden)
+        head_prediction = self._predict_head(x)
+        if head_prediction is not None:
             logits = head_prediction
-        return self.post_prediction(Prediction(self, steps, x, logits, head_prediction))
+        else:
+            logits = x[:, -self.num_output_channels :, :, :]
+        prediction = self.post_prediction(
+            Prediction(self, steps, x, logits, head_prediction)
+        )
+        return prediction
 
-    def _post_forward_step(self, x: torch.Tensor) -> torch.Tensor:
-        return x
-
+    @abc.abstractmethod
     def loss(self, pred: Prediction, label: torch.Tensor) -> Dict[str, torch.Tensor]:
         """
         Compute loss. Needs to be overloaded by any subclass.
@@ -229,7 +242,7 @@ class AbstractNCAModel(nn.Module, abc.ABC):
 
         :returns: Dictionary of identifiers mapped to computed losses.
         """
-        return NotImplemented
+        raise NotImplementedError
 
     def finetune(self, freeze_head: bool = False):
         """
@@ -325,13 +338,21 @@ class AbstractNCAModel(nn.Module, abc.ABC):
                 metric.reset()
                 metric.to(self.device)
             for image, label in dataloader:
+                prediction = self.predict(image.clone().to(self.device), steps=steps)
+                predictions.append(prediction)
+
                 # classification
                 if len(label.shape) == 2:
                     label = label.squeeze(1)
-                prediction = self.predict(image.clone().to(self.device), steps=steps)
-                predictions.append(prediction)
                 for _, metric in self.metrics.items():
-                    metric.update(prediction.logits, label.to(self.device).long())
+                    # treat segmentation as a special case
+                    if prediction.mask is not None:
+                        # FIXME handle binary segmentation with squeeze, multi-class without squeeze
+                        metric.update(
+                            prediction.mask.squeeze(1), label.to(self.device).long()
+                        )
+                    else:
+                        metric.update(prediction.logits, label.to(self.device).long())
             metrics = {k: m.compute().item() for k, m in self.metrics.items()}
         return metrics, predictions
 

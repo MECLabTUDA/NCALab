@@ -1,1 +1,1 @@
-from .segmentationNCA import SegmentationNCAModel  # noqa: F401
+from .binarysegmentationNCA import BinarySegmentationNCAModel  # noqa: F401

@@ -120,11 +120,6 @@ class ClassificationNCAModel(AbstractNCAModel):
     def num_classes(self) -> int:
         return self._num_classes
 
-    @num_classes.setter
-    def num_classes(self, x: int):
-        self._num_classes = x
-        self.num_output_channels = 0 if self.use_classifier else x
-
     def classify(
         self, image: torch.Tensor, steps: int = 100, reduce: bool = False
     ) -> torch.Tensor:
@@ -146,10 +141,8 @@ class ClassificationNCAModel(AbstractNCAModel):
         # if binary classification (e.g. self classifying MNIST),
         # mask away pixels with the binary image used as a mask
         if self.num_image_channels == 1:
-            for i in range(image.shape[0]):
-                mask = image[i, 0, :, :]
-                for c in range(self.num_output_channels):
-                    class_channels[i, c, :, :] *= mask
+            mask = image[:, 0:1, :, :]
+            class_channels *= mask
 
         y_pred = F.softmax(class_channels, dim=1)
         if not self.use_classifier:
@@ -158,7 +151,7 @@ class ClassificationNCAModel(AbstractNCAModel):
         # If reduce enabled, reduce to a single scalar.
         # Otherwise, return logits of all channels as a vector.
         if reduce:
-            y_pred = torch.argmax(y_pred, dim=0)
+            y_pred = torch.argmax(y_pred, dim=1)
             return y_pred
         return y_pred
 
@@ -175,16 +168,17 @@ class ClassificationNCAModel(AbstractNCAModel):
         # active in the respective classification channel.
         if self.pixel_wise_loss:
             image = pred.image_channels
-            y = torch.ones((image.shape[0], image.shape[2], image.shape[3])).to(
-                self.device
+
+            y = label[:, None, None].expand(
+                -1,
+                image.shape[2],
+                image.shape[3],
             )
             # if binary images are classified: mask with first image channel
             if self.num_image_channels == 1:
                 mask = image[:, 0, :, :] > 0
             else:
                 mask = image[:, 3, :, :] > 0
-            for i in range(y.shape[0]):
-                y[i] *= label[i]
             loss_ce = (
                 F.cross_entropy(
                     pred.output_channels,
@@ -197,7 +191,7 @@ class ClassificationNCAModel(AbstractNCAModel):
         else:
             loss_ce = self.focal_loss(
                 pred.logits,
-                label.squeeze(),
+                label.view(-1),
             )
             loss_classification = loss_ce
         loss_hidden = torch.mean(torch.abs(pred.hidden_channels))
@@ -205,18 +199,13 @@ class ClassificationNCAModel(AbstractNCAModel):
         loss = loss_classification + self.lambda_hidden * loss_hidden
         return {
             "total": loss,
-            "classification": loss_classification,
-            "hidden": loss_hidden,
+            "classification": loss_classification.detach(),
+            "hidden": loss_hidden.detach(),
         }
 
     def post_prediction(self, prediction: Prediction) -> Prediction:
         logits = prediction.logits
         if not self.use_classifier:
-            logits = torch.mean(torch.abs(logits), dim=(2, 3))
-        return Prediction(
-            prediction.model,
-            prediction.steps,
-            prediction.output_image,
-            logits,
-            prediction.head_prediction,
-        )
+            logits = torch.mean(logits, dim=(2, 3))
+        prediction.logits = logits
+        return prediction

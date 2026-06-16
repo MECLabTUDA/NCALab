@@ -1,5 +1,5 @@
 import copy
-from typing import List, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import torch  # type: ignore[import-untyped]
@@ -102,7 +102,7 @@ class CascadeNCA(AbstractNCAModel):
         self.prepare_input = wrapped.prepare_input  # type: ignore[method-assign]
         self.head = wrapped.head
 
-        # TODO automatically copy attributes
+        # TODO automatically copy attributes using dict conversion methods
         if hasattr(wrapped, "num_classes"):
             self.num_classes = wrapped.num_classes
         if hasattr(wrapped, "avg_pool_size"):
@@ -152,7 +152,7 @@ class CascadeNCA(AbstractNCAModel):
             if steps <= 0:
                 steps = 1
 
-            for s in range(steps):
+            for _ in range(steps):
                 x_scaled = model._forward_step(x_scaled, step=total_steps)
                 total_steps += 1
 
@@ -219,3 +219,6 @@ class CascadeNCA(AbstractNCAModel):
                     self.scales[i + 1],
                 )
         return sequence
+
+    def loss(self, pred: Prediction, label: torch.Tensor) -> Dict[str, torch.Tensor]:
+        return self.wrapped.loss(pred, label)
