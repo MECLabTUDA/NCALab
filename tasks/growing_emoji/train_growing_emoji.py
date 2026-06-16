@@ -55,7 +55,6 @@ def train_growing_emoji(
     # Create NCA model definition
     nca = GrowingNCAModel(
         device,
-        num_image_channels=4,
         num_hidden_channels=hidden_channels,
         use_alive_mask=True,
         lambda_hidden=1e-2,

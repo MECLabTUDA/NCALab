@@ -39,7 +39,6 @@ def eval_growing_emoji(gpu: bool, gpu_index: int):
 
     nca = GrowingNCAModel(
         device,
-        num_image_channels=4,
         num_hidden_channels=12,
         use_alive_mask=True,
         lambda_hidden=1e-2,
