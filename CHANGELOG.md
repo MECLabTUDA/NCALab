@@ -1,6 +1,12 @@
-# v0.4.1
+# v0.5.0
 * Significantly improve Animator API
 * Fix temporal encoding being unused
+* Prediction API: Separate attribute for segmentation masks
+* Prediction API: Convenience functions for unwrapping over batch / time
+* Fix several issues in binary segmentation models
+* Bump dependency versions, reduce total number of dependencies
+* Bump action versions in github workflows
+* Include other stable Python versions in github workflows
 
 # v0.4.0
 * Parameterize average pooling size in classification with MLP head
