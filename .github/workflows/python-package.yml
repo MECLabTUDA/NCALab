@@ -30,12 +30,15 @@ jobs:
         python-version: ${{ matrix.python-version }}
     - name: Lint with ruff
       run: |
+        uv sync --group dev
         uv run ruff check ncalab
         uv run ruff check tests
     - name: Test with pytest
       run: |
+        uv sync --group dev
         uv run pytest tests
     - name: Type checking with mypy
       run: |
+        uv sync --group dev
         uv run mypy ncalab
         uv run mypy tests
