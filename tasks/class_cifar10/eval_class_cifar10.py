@@ -78,6 +78,7 @@ def eval_class_cifar10(
         use_classifier=True,
     )
     cascade = CascadeNCA(nca, [4, 2, 1], [16, 8, 8])
+    cascade = torch.compile(cascade)
     cascade.load_state_dict(
         torch.load(
             WEIGHTS_PATH / "classification_cifar10" / "best_model.pth",

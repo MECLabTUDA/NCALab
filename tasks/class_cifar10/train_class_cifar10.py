@@ -20,6 +20,7 @@ from ncalab import (  # noqa: E402
     ClassificationNCAModel,
     fix_random_seed,
     get_compute_device,
+    print_NCALab_banner,
 )
 
 TASK_PATH = Path(__file__).parent.resolve()
@@ -72,7 +73,7 @@ def train_class_cifar10(
     comment += f"_TE_{use_temporal_encoding}"
 
     writer = SummaryWriter(comment=comment) if not dry else None
-
+    print_NCALab_banner()
     fix_random_seed()
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
@@ -101,14 +102,14 @@ def train_class_cifar10(
     loader_train = torch.utils.data.DataLoader(
         train_dataset,
         batch_size=batch_size,
-        num_workers=2,
+        num_workers=8,
         sampler=train_sampler,
         pin_memory=True,
     )
     loader_val = torch.utils.data.DataLoader(
         val_dataset,
-        batch_size=len(val_idx),
-        num_workers=2,
+        batch_size=batch_size,
+        num_workers=8,
         sampler=val_sampler,
         pin_memory=True,
     )
@@ -145,6 +146,7 @@ def train_class_cifar10(
         lambda_hidden=1e-2,
     )
     cascade = CascadeNCA(nca, [4, 2, 1], [16, 8, 8])
+    cascade = torch.compile(cascade)
     # Train the NCA model
     trainer = BasicNCATrainer(
         cascade,
