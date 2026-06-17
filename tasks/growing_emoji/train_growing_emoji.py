@@ -5,9 +5,12 @@ from pathlib import Path
 
 import click
 import numpy as np
-from growing_utils import get_emoji_image
+
+import torch
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
+
+from growing_utils import get_emoji_image
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
@@ -59,6 +62,7 @@ def train_growing_emoji(
         use_alive_mask=True,
         lambda_hidden=1e-2,
     )
+    nca = torch.compile(nca)
 
     # Create dataset containing a single growing emoji
     image = np.asarray(get_emoji_image())

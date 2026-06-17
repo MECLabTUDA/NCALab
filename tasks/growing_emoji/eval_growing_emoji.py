@@ -25,13 +25,14 @@ WEIGHTS_PATH.mkdir(exist_ok=True)
 
 
 @click.command()
+@click.option("--hidden-channels", "-H", default=12, type=int)
 @click.option(
     "--gpu/--no-gpu", is_flag=True, default=True, help="Try using the GPU if available."
 )
 @click.option(
     "--gpu-index", type=int, default=0, help="Index of GPU to use, if --gpu in use."
 )
-def eval_growing_emoji(gpu: bool, gpu_index: int):
+def eval_growing_emoji(hidden_channels: int, gpu: bool, gpu_index: int):
     print_NCALab_banner()
     fix_random_seed()
 
@@ -39,11 +40,11 @@ def eval_growing_emoji(gpu: bool, gpu_index: int):
 
     nca = GrowingNCAModel(
         device,
-        num_hidden_channels=12,
+        num_hidden_channels=hidden_channels,
         use_alive_mask=True,
         lambda_hidden=1e-2,
     )
-
+    nca = torch.compile(nca)
     nca.load_state_dict(
         torch.load(
             WEIGHTS_PATH / "ncalab_growing_emoji" / "last_model.pth",
