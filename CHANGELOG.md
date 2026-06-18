@@ -5,8 +5,10 @@
 * Prediction API: Convenience functions for unwrapping over batch / time
 * Fix several issues in binary segmentation models
 * Bump dependency versions, reduce total number of dependencies
+* Group dependencies into dev and docs
 * Bump action versions in github workflows
 * Include other stable Python versions in github workflows
+* Fix models not being saved / loaded properly (missing perception module)
 
 # v0.4.0
 * Parameterize average pooling size in classification with MLP head
