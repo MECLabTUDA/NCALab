@@ -16,7 +16,6 @@ class TrainingStatus(enum.Enum):
     """
     Encodes last status of the training.
     """
-
     STATUS_NONE = 0
     STATUS_RUNNING = 1
     STATUS_DONE = 2
@@ -70,6 +69,7 @@ class TrainingHistory:
         self.created_timestamp = datetime.now()
         self.modified_timestamp = datetime.now()
         self.loss: List[float] = []
+        self.status: TrainingStatus = TrainingStatus.STATUS_NONE
 
     def update(
         self,
@@ -99,14 +99,21 @@ class TrainingHistory:
         if accuracy > self.best_accuracy or overwrite:
             if self.verbose and not overwrite:
                 click.secho(
-                    f"Accuracy improvement ({model.validation_metric}):\n"
-                    + f"  {self.best_accuracy:.5f} --> {accuracy:.5f}"
-                    + f"  in epoch {epoch}",
+                    "\n"
+                    + "-" * 30
+                    + f"\nAccuracy improvement ({model.validation_metric}):\n"
+                    + f"  {self.best_accuracy:.5f} --> {accuracy:.5f}\n"
+                    + f"  in epoch {epoch:5d}\n"
+                    + "-" * 30,
                     fg="green",
                 )
             self.best_epoch = epoch
             self.best_accuracy = accuracy
             self.best_model = copy.deepcopy(model)
+        self.status = TrainingStatus.STATUS_RUNNING
+
+    def finalize(self):
+        self.status = TrainingStatus.STATUS_DONE
 
     def save(self):
         """
@@ -123,6 +130,10 @@ class TrainingHistory:
         torch.save(self.current_model.state_dict(), last_model_path)
         if self.best_model is not None:
             torch.save(self.best_model.state_dict(), best_model_path)
+
+    @staticmethod
+    def load(path):
+        raise NotImplementedError
 
     def to_dict(self) -> Dict:
         """
@@ -142,7 +153,12 @@ class TrainingHistory:
             modified_timestamp=self.modified_timestamp.isoformat(),
             **self.metrics,
             current_model=self.current_model.to_dict(),
+            # TODO save training status as string
         )
         if self.best_model is not None:
             d["best_model"] = self.best_model.to_dict()
         return d
+
+    @staticmethod
+    def from_dict(d):
+        raise NotImplementedError

@@ -12,6 +12,7 @@ classifiers = [
 dependencies = [
     "albumentations>=2.0.8",
     "click>=8.4.1",
+    "cuda-toolkit>=13.2.1",
     "matplotlib>=3.11.0",
     "medmnist>=3.0.2",
     "numpy>=2.4.6",

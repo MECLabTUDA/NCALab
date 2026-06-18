@@ -15,7 +15,7 @@ sys.path.append(root_dir)
 
 from ncalab import (  # noqa: E402
     BasicNCATrainer,
-    ClassificationNCAModel,
+    SelfClassificationNCAModel,
     fix_random_seed,
     get_compute_device,
     print_mascot,
@@ -73,13 +73,10 @@ def train_selfclass_mnist(
 
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
-    nca = ClassificationNCAModel(
+    nca = SelfClassificationNCAModel(
         device,
-        num_image_channels=1,
         num_hidden_channels=hidden_channels,
         num_classes=10,
-        pixel_wise_loss=True,
-        use_classifier=False,
         training_timesteps=(40, 60),
         inference_timesteps=50,
     )
@@ -100,14 +97,14 @@ def train_selfclass_mnist(
 
 @click.command()
 @click.option("--batch-size", "-b", default=8, type=int)
-@click.option("--hidden-channels", "-H", default=9, type=int)
+@click.option("--hidden-channels", "-H", default=12, type=int)
 @click.option(
     "--gpu/--no-gpu", is_flag=True, default=True, help="Try using the GPU if available."
 )
 @click.option(
     "--gpu-index", type=int, default=0, help="Index of GPU to use, if --gpu in use."
 )
-@click.option("--max-epochs", "-E", type=int, default=5)
+@click.option("--max-epochs", "-E", type=int, default=2)
 @click.option("--dry", "-D", is_flag=True)
 def main(batch_size, hidden_channels, gpu, gpu_index, max_epochs: int, dry: bool):
     train_selfclass_mnist(

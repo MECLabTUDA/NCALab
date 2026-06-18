@@ -26,7 +26,6 @@ class ClassificationNCAModel(AbstractNCAModel):
         fire_rate: float = 0.8,
         hidden_size: int = 128,
         use_alive_mask: bool = False,
-        pixel_wise_loss: bool = False,
         num_learned_filters: int = 2,
         filter_padding: Literal["zero", "reflect", "replicate", "circular"] = "reflect",
         use_laplace: bool = False,
@@ -41,13 +40,12 @@ class ClassificationNCAModel(AbstractNCAModel):
     ):
         """
         :param device: Pytorch device descriptor.
-        :param num_image_channels: _description_
-        :param num_hidden_channels: _description_
-        :param num_classes: _description_
+        :param num_image_channels: Number of input image channels
+        :param num_hidden_channels: Number of latent channels
+        :param num_classes: Number of output classes
         :param fire_rate: Fire rate for stochastic weight update. Defaults to 0.8.
         :param hidden_size: Number of neurons in hidden layer. Defaults to 128.
         :param use_alive_mask: Whether to use alive masking (channel 3) during training. Defaults to False.
-        :param pixel_wise_loss: Whether a prediction per pixel is desired, like in self-classifying MNIST. Defaults to False.
         :param num_learned_filters: Number of learned filters. If zero, use two sobel filters instead. Defaults to 2.
         :param filter_padding: Padding type to use. Might affect reliance on spatial cues. Defaults to "circular".
         :param pad_noise: Whether to pad input image tensor with noise in hidden / output channels
@@ -72,7 +70,6 @@ class ClassificationNCAModel(AbstractNCAModel):
             **kwargs,
         )
         self._num_classes = num_classes
-        self.pixel_wise_loss = pixel_wise_loss
         self.use_classifier = use_classifier
         assert avg_pool_size >= 1
         self.avg_pool_size = avg_pool_size
@@ -138,7 +135,7 @@ class ClassificationNCAModel(AbstractNCAModel):
         else:
             class_channels = prediction.output_channels
 
-        # if binary classification (e.g. self classifying MNIST),
+        # if binary classification,
         # mask away pixels with the binary image used as a mask
         if self.num_image_channels == 1:
             mask = image[:, 0:1, :, :]
@@ -164,36 +161,11 @@ class ClassificationNCAModel(AbstractNCAModel):
 
         :returns: Dictionary of identifiers mapped to computed losses.
         """
-        # Create one-hot ground truth tensor, where all pixels of the predicted class are
-        # active in the respective classification channel.
-        if self.pixel_wise_loss:
-            image = pred.image_channels
-
-            y = label[:, None, None].expand(
-                -1,
-                image.shape[2],
-                image.shape[3],
-            )
-            # if binary images are classified: mask with first image channel
-            if self.num_image_channels == 1:
-                mask = image[:, 0, :, :] > 0
-            else:
-                mask = image[:, 3, :, :] > 0
-            loss_ce = (
-                F.cross_entropy(
-                    pred.output_channels,
-                    y.long(),
-                    reduction="none",
-                )
-                * mask
-            ).mean()
-            loss_classification = loss_ce
-        else:
-            loss_ce = self.focal_loss(
-                pred.logits,
-                label.view(-1),
-            )
-            loss_classification = loss_ce
+        loss_focal = self.focal_loss(
+            pred.logits,
+            label.view(-1),
+        )
+        loss_classification = loss_focal
         loss_hidden = torch.mean(torch.abs(pred.hidden_channels))
 
         loss = loss_classification + self.lambda_hidden * loss_hidden

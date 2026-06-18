@@ -11,14 +11,22 @@ from torchvision.datasets import MNIST  # type: ignore[import-untyped]
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from ncalab import ClassificationNCAModel, get_compute_device, pad_input  # noqa: E402
+from ncalab import (  # noqa: E402
+    SelfClassificationNCAModel,
+    VisualBinaryImageClassification,
+    fix_random_seed,
+    get_compute_device,
+    release_random_seed,
+)
 
 TASK_PATH = Path(__file__).parent.resolve()
+FIGURES_PATH = TASK_PATH / "figures"
+FIGURES_PATH.mkdir(exist_ok=True)
 WEIGHTS_PATH = TASK_PATH / "weights"
 WEIGHTS_PATH.mkdir(exist_ok=True)
 
 
-def print_MNIST_digit(image, prediction, downscale: int = 2):
+def print_MNIST_digit(mask: np.ndarray, prediction: np.ndarray, downscale: int = 2):
     assert downscale >= 1
     assert downscale <= 28
 
@@ -40,37 +48,49 @@ def print_MNIST_digit(image, prediction, downscale: int = 2):
         7: "black",
     }
 
-    for y in range(28 // downscale):
-        for x in range(28 // downscale):
-            if image[y * downscale, x * downscale] < 0.3:
-                click.secho("  ", nl=False, fg="black", bg="black")
-                continue
-            n = prediction[y * downscale, x * downscale]
-            n = int(np.argmax(n))
-            click.secho(f" {n}", nl=False, fg=FG.get(n, "black"), bg=BG.get(n, "white"))
-        click.secho()
+    for i in range(len(mask)):
+        for y in range(28 // downscale):
+            for x in range(28 // downscale):
+                if mask[i, 0, y * downscale, x * downscale] == 0:
+                    click.secho("  ", nl=False, fg="black", bg="black")
+                    continue
+                n = prediction[i, y * downscale, x * downscale]
+                click.secho(
+                    f" {n}", nl=False, fg=FG.get(n, "black"), bg=BG.get(n, "white")
+                )
+            click.secho()
+        click.secho("-" * 28)
 
 
 def eval_selfclass_mnist(
-    hidden_channels: int, gpu: bool, gpu_index: int, num_digits: int = 3
+    hidden_channels: int, gpu: bool, gpu_index: int, num_digits: int = 8
 ):
+    fix_random_seed()
     mnist_test = MNIST(
         "mnist",
         download=True,
         train=False,
         transform=transforms.Compose([transforms.ToTensor()]),
     )
+    loader_test = torch.utils.data.DataLoader(
+        mnist_test, shuffle=True, batch_size=num_digits
+    )
+    # Randomize seed again. We only rely on the fixed random seed to ensure separation of train/val/test split.
+    release_random_seed()
 
-    loader_test = torch.utils.data.DataLoader(mnist_test, shuffle=True, batch_size=1)
 
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
-    nca = ClassificationNCAModel(
+    image, label = next(iter(loader_test))
+    x = image.to(device)
+
+    nca = SelfClassificationNCAModel(
         device,
-        num_image_channels=1,
         num_hidden_channels=hidden_channels,
+        fire_rate=0.8,
         num_classes=10,
-        pixel_wise_loss=True,
+        training_timesteps=(40, 60),
+        inference_timesteps=50,
     )
     nca.load_state_dict(
         torch.load(
@@ -79,21 +99,18 @@ def eval_selfclass_mnist(
     )
     nca.eval()
 
-    i = num_digits
-    for image, _ in loader_test:
-        if i == 0:
-            break
-        x = image.clone()
-        x = pad_input(x, nca, noise=False)
-        x = x.to(device)
+    prediction = nca.predict(x)
 
-        prediction = nca(x, steps=50)
-        out = prediction.output_channels_np[0].transpose(1, 2, 0)
-        print_MNIST_digit(image[0, 0], out)
+    vis = VisualBinaryImageClassification()
+    fig = vis.show(
+        nca, prediction.image_channels_np, prediction, label.detach().cpu().numpy()
+    )
+    fig.savefig(FIGURES_PATH / "selfclass_mnist_predictions.png", dpi=600)
 
-        if i != 1:
-            click.secho("-" * 28)
-        i -= 1
+    class_channels = prediction.output_channels_np
+    out_hwc = np.argmax(class_channels, axis=1)
+    mask = prediction.image_channels_np > 0.1
+    print_MNIST_digit(mask, out_hwc)
 
     click.secho()
     click.secho(
@@ -105,7 +122,7 @@ def eval_selfclass_mnist(
 
 
 @click.command()
-@click.option("--hidden-channels", "-H", default=9, type=int)
+@click.option("--hidden-channels", "-H", default=12, type=int)
 @click.option(
     "--gpu/--no-gpu", is_flag=True, default=True, help="Try using the GPU if available."
 )

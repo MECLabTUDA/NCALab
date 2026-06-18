@@ -1,15 +1,13 @@
 from __future__ import annotations
+
 import os
 import random
-from typing import Any, Tuple
+from datetime import datetime
+from typing import TYPE_CHECKING, Any, Tuple
 
 import numpy as np
-
 import torch  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
-
-
-from typing import TYPE_CHECKING
 
 if TYPE_CHECKING:
     from .models import AbstractNCAModel
@@ -141,6 +139,24 @@ def fix_random_seed(seed: int = DEFAULT_RANDOM_SEED):
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
+
+
+def release_random_seed() -> int:
+    """
+    Randomizes the random seed for all pseudo-random number generators,
+    including Python-native, Numpy and Pytorch.
+
+    :returns: Random seed, initialized by system time stamp.
+    """
+    seed = int(datetime.now().timestamp())
+    random.seed(seed)
+    os.environ["PYTHONHASHSEED"] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
+    return seed
 
 
 def unwrap(x: Any):

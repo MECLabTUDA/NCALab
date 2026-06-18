@@ -233,6 +233,9 @@ class BasicNCATrainer:
 
         # MAIN LOOP
         total_batch_iterations = 0
+        train_prediction = None
+        x = None
+        y = None
         for iteration in tqdm(range(self.max_epochs), desc="Epochs"):
             if earlystopping is not None:
                 if earlystopping.done():
@@ -264,7 +267,7 @@ class BasicNCATrainer:
                     x = torch.cat(self.batch_repeat * [x])
                     y = torch.cat(self.batch_repeat * [y])
 
-                prediction, losses = self._train_iteration(
+                train_prediction, losses = self._train_iteration(
                     x,
                     y,
                     optimizer,
@@ -276,7 +279,7 @@ class BasicNCATrainer:
                 with torch.no_grad():
                     total_batch_iterations += 1
                     if self.pool is not None:
-                        self.pool.update(prediction.output_image)
+                        self.pool.update(train_prediction.output_image)
                     all_losses.append(losses["total"].item())
             history.loss.append(float(np.mean(all_losses)))
             if self.lr_scheduler is not None:
@@ -289,11 +292,14 @@ class BasicNCATrainer:
                     plot_function
                     and summary_writer
                     and (iteration + 1) % save_every == 0
+                    and train_prediction is not None
+                    and x is not None
+                    and y is not None
                 ):
                     figure = plot_function.show(
                         self.nca,
                         x.detach().cpu().numpy(),
-                        prediction,
+                        train_prediction,
                         y.detach().cpu().numpy(),
                     )
                     summary_writer.add_figure("Training Batch", figure, iteration)
@@ -320,16 +326,11 @@ class BasicNCATrainer:
                         and (iteration + 1) % save_every == 0
                     ):
                         x, y = next(iter(dataloader_val))
-                        x_in = x.clone().to(self.nca.device)
-                        x_in = pad_input(x_in, self.nca, noise=self.nca.pad_noise)
-                        prediction = self.nca(
-                            x_in,
-                            steps=intepret_range_parameter(self.nca.training_timesteps),
-                        )
+                        val_prediction = self.nca.predict(x.to(self.nca.device))
                         figure = plot_function.show(
                             self.nca,
                             x.detach().cpu().numpy(),
-                            prediction,
+                            val_prediction,
                             y.detach().cpu().numpy(),
                         )
                         summary_writer.add_figure("Validation Batch", figure, iteration)

@@ -1,2 +1,3 @@
 from .classificationNCA import ClassificationNCAModel  # noqa: F401
 from .classificationNCAhead import ClassificationNCAHead  # noqa: F401
+from .selfclassificationNCA import SelfClassificationNCAModel  # noqa: F401

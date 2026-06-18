@@ -100,7 +100,15 @@ class AbstractNCAModel(nn.Module, abc.ABC):
 
         # define model structure
         # perception stage
-        self.perception = BasicNCAPerception(self)
+        self.perception = BasicNCAPerception(
+            self.device,
+            self.num_channels,
+            self.num_learned_filters,
+            self.filter_padding,
+            self.use_temporal_encoding,
+            self.training_timesteps,
+            self.kernel_size,
+        )
         self.input_vector_size = self.num_channels * (self.perception.num_filters + 1)
         if self.use_temporal_encoding:
             self.input_vector_size += 1

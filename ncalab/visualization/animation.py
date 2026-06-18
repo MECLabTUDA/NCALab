@@ -75,21 +75,19 @@ def draw_segmentation_overlay(
     """
     Helper function to draw a semi-transparent segmentation mask onto an image.
 
-    :param image: _description_
+    :param image: Background image
     :type image: np.ndarray
-    :param mask: _description_
+    :param mask: Segmentation mask
     :type mask: np.ndarray
-    :param style: _description_
+    :param style: AnimatorStyle object containing style hints
     :type style: AnimatorStyle
-    :param alpha: _description_, defaults to 0.5
+    :param alpha: Transparency, defaults to 0.5
     :type alpha: float, optional
-    :param threshold: _description_, defaults to 0.7
-    :type threshold: float, optional
     :param contour: Whether to draw a contour around the segmentation mask, defaults to True
     :type contour: bool, optional
     :param median_denoise_kernel_size: Median filter kernel size, defaults to 5
     :type median_denoise_kernel_size: int, optional
-    :return: _description_
+    :return: Image with segmentation overlay blended over background
     :rtype: np.ndarray
     """
     assert median_denoise_kernel_size == 0 or median_denoise_kernel_size % 2 != 0
@@ -183,6 +181,12 @@ class Animator:
             else:
                 mask = None
 
+            if overlay and mask is not None:
+                background = np.clip(image, 0, 1)
+                image = draw_segmentation_overlay(
+                    background, mask.astype(np.float32), _style
+                )
+
             arr = image
 
             if hidden:
@@ -198,11 +202,6 @@ class Animator:
                     (arr.shape[0], arr.shape[1], 4)
                 )
                 arr[:, :, 3] = alpha
-            elif overlay and mask is not None:
-                background = np.clip(image, 0, 1)
-                arr = draw_segmentation_overlay(
-                    background, mask.astype(np.float32), _style
-                )
 
             # convert to 0.0 .. 1.0 RGBA image
             arr = np.clip(arr, 0, 1)
@@ -229,6 +228,7 @@ class Animator:
 
             # draw progress bar
             if _style.progress_h > 0:
+                steps = len(recorded_predictions)
                 progress_w = int(
                     np.clip(
                         np.round(arr.shape[1] * ((i % steps) / steps)),

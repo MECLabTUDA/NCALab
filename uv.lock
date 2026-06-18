@@ -1091,6 +1091,7 @@ source = { virtual = "." }
 dependencies = [
     { name = "albumentations" },
     { name = "click" },
+    { name = "cuda-toolkit" },
     { name = "matplotlib" },
     { name = "medmnist" },
     { name = "numpy" },
@@ -1125,6 +1126,7 @@ docs = [
 requires-dist = [
     { name = "albumentations", specifier = ">=2.0.8" },
     { name = "click", specifier = ">=8.4.1" },
+    { name = "cuda-toolkit", specifier = ">=13.2.1" },
     { name = "matplotlib", specifier = ">=3.11.0" },
     { name = "medmnist", specifier = ">=3.0.2" },
     { name = "numpy", specifier = ">=2.4.6" },
