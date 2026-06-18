@@ -14,6 +14,7 @@ class BasicNCAPerception(nn.Module):
         num_learned_filters: int,
         filter_padding: Literal["zero", "reflect", "replicate", "circular"],
         use_temporal_encoding: bool,
+        use_laplace: bool,
         training_timesteps: int | Tuple[int, int] = 100,
         kernel_size: int = 3,
     ):
@@ -23,6 +24,7 @@ class BasicNCAPerception(nn.Module):
         self.num_learned_filters = num_learned_filters
         self.filter_padding = filter_padding
         self.use_temporal_encoding = use_temporal_encoding
+        self.use_laplace = use_laplace
         self.training_timesteps = training_timesteps
         self.kernel_size = kernel_size
         self._define_filters()

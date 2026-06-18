@@ -106,6 +106,7 @@ class AbstractNCAModel(nn.Module, abc.ABC):
             self.num_learned_filters,
             self.filter_padding,
             self.use_temporal_encoding,
+            self.use_laplace,
             self.training_timesteps,
             self.kernel_size,
         )
