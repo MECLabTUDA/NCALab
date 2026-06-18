@@ -17,7 +17,6 @@ For more information on NCAs, check out our curated [Awesome List](https://githu
 
 ![Animation of a growing lizard emoji](artwork/growing_emoji.gif)
 ![Animation of gastro-intestinal polyp segmentation using NCA](artwork/segmentation_kvasir_seg.gif)
-![Animation of hidden channels of polyp segmentation](artwork/segmentation_kvasir_seg_hidden.gif)
 ![Animation of a prediction on CIFAR-10 in feature space](artwork/classification_cifar10.gif)
 ![Animation of a prediction on DermaMNIST in feature space](artwork/classification_bloodmnist.gif)
 ![Animation of a prediction on DermaMNIST in feature space](artwork/classification_dermamnist.gif)
@@ -145,6 +144,11 @@ Alternatively, you may use the tensorboard integration of your IDE.
 
 The NCALab project comes with scripts and workflows to maintain software quality.
 
+```bash
+uv sync --group dev --group docs
+```
+
+
 ### Dry Training
 
 To dry-train all example task models, run:
@@ -193,6 +197,14 @@ Testing:
 ```bash
 uv run pytest
 ```
+
+View test coverage:
+
+```bash
+uv run coverage run -m pytest
+coverage report
+```
+
 
 Check for outdated dependencies:
 
