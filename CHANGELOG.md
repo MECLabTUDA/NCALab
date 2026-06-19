@@ -9,6 +9,7 @@
 * Bump action versions in github workflows
 * Include other stable Python versions in github workflows
 * Fix models not being saved / loaded properly (missing perception module)
+* Several small fixes and improvements in scripts, code base and example tasks
 
 # v0.4.0
 * Parameterize average pooling size in classification with MLP head
