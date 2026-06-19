@@ -1,4 +1,10 @@
 #!/bin/bash
+
+#################################################################################
+# Evaluate all example models and copy resulting animations to static directory #
+# (gallery shown in README.md)                                                  #
+#################################################################################
+
 set -e
 
 uv run tasks/class_cifar10/eval_class_cifar10.py --no-gpu

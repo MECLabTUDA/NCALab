@@ -1,4 +1,9 @@
 #!/bin/bash
+
+#############################
+# Train all example models. #
+#############################
+
 set -e
 
 uv run tasks/class_cifar10/train_class_cifar10.py

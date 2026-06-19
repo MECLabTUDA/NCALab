@@ -1,3 +1,4 @@
+#!/usr/bin/env python3
 import zipfile
 from pathlib import Path
 
@@ -9,8 +10,13 @@ def zip_pth_files(zip_filename):
         for pth_file in Path("tasks").rglob("*.pth"):
             zipf.write(pth_file, pth_file.relative_to(Path(".")))
 
-if __name__ == "__main__":
-    zip_filename = "pretrained_weights.zip"
+
+@click.command
+@click.option(
+    "--output", "-o", help="Output *.zip filename", default="pretrained_weights.zip"
+)
+def main(output):
+    zip_filename = output
     zip_path = (Path(__file__) / ".." / ".." / zip_filename).resolve()
     zip_pth_files(zip_path)
-    click.secho(f"Done. You'll find all pretrained weights in {zip_path}.")
+    click.secho(f"Done. You'll find all pretrained weights in {zip_path}.", fg="green")

@@ -1,4 +1,10 @@
 #!/bin/bash
+
+#############################################################
+# Train all models for two epochs, but do not save results. #
+# Will terminate on the first model that fails.             #
+#############################################################
+
 set -e
 
 uv run tasks/class_cifar10/train_class_cifar10.py --dry --max-epochs 2
