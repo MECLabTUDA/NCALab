@@ -36,7 +36,11 @@ jobs:
     - name: Test with pytest
       run: |
         uv sync --group dev
-        uv run pytest tests
+        uv run coverage run --source ncalab -m pytest tests
+        uv run coverage xml
+    - name: Create coverage badge
+      run: |
+        uv run python -m scripts/coveragebadge.py
     - name: Type checking with mypy
       run: |
         uv sync --group dev
