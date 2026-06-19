@@ -15,7 +15,9 @@ def zip_pth_files(zip_filename):
             zipf.write(pth_file, pth_file.relative_to(Path(".")))
 
 
-@click.command
+@click.command(
+    help="Pack all weights (*.pth files) in subfolders of tasks/ into a single zip file."
+)
 @click.option(
     "--output", "-o", help="Output *.zip filename", default="pretrained_weights.zip"
 )

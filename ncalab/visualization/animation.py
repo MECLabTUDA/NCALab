@@ -109,11 +109,20 @@ def draw_segmentation_overlay(
     return image
 
 
+# TODO implement "input image", "hidden" and "ground truth" views that can be mixed and matched in animator.
 class AnimatorView:
-    def __init__(self):
+    def __init__(self, overlay: bool = False):
+        self.overlay = overlay
+
+    def render_frame(self, prediction: Prediction):
         pass
 
-    def render_frame(self):
+
+class AnimatorViewInput(AnimatorView):
+    def __init__(self, overlay: bool = False):
+        super().__init__(overlay)
+
+    def render_frame(self, prediction: Prediction):
         pass
 
 

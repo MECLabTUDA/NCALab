@@ -6,7 +6,7 @@ from .color import Color
 
 def string_ellipsis(label: str, max_len: int = 8, ellipsis: str = "…"):
     """
-    _summary_
+    Abbreviate a space-separated string or shorten it to a specified length.
 
     :param label: _description_
     :type label: str

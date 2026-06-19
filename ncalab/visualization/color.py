@@ -2,6 +2,13 @@ from typing import Tuple
 
 
 class Color:
+    """
+    Abstraction for RGBA color.
+
+    4-float RGBA is used as an internal representation, but objects can be
+    instantiated from different color formats.
+    """
+
     def __init__(
         self,
         rgba4f: Tuple[float, float, float, float] | float,
@@ -44,3 +51,13 @@ class Color:
     @property
     def rgb3f(self) -> Tuple[float, float, float]:
         return self.rgba4f[:3]
+
+    @staticmethod
+    def from_hsva4f(h: float, s: float, v: float, a: float = 1.0):
+        # TODO: implement
+        raise NotImplementedError
+
+    @property
+    def hsva4f(self) -> Tuple[float, float, float, float]:
+        # TODO: implement
+        raise NotImplementedError
