@@ -11,7 +11,7 @@ For more information on NCAs, check out our curated [Awesome List](https://githu
 ![python-package](https://github.com/MECLabTUDA/NCAlab/actions/workflows/python-package.yml/badge.svg)
 ![manuscript](https://github.com/MECLabTUDA/NCAlab/actions/workflows/draft-pdf.yml/badge.svg)
 ![status](https://joss.theoj.org/papers/c806c40f0c7735e4a649fbc9f4eb8c8d/status.svg)
-
+![coverage](artwork/coverage.svg)
 
 ## Examples Gallery
 
@@ -201,8 +201,8 @@ uv run pytest
 View test coverage:
 
 ```bash
-uv run coverage run -m pytest
-coverage report
+uv run coverage run --source ncalab -m pytest
+uv run coverage report
 ```
 
 

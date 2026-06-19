@@ -1,0 +1,173 @@
+<?xml version="1.0" encoding="UTF-8" standalone="no"?>
+<svg
+   width="114.3"
+   height="20"
+   viewBox="0 0 1143 200"
+   role="img"
+   aria-label="coverage: xx.xx%"
+   version="1.1"
+   id="svg8"
+   sodipodi:docname="coverage.svg"
+   inkscape:version="1.4.4 (1:1.4.4+202605061436+dcaf3e7d9e)"
+   xmlns:inkscape="http://www.inkscape.org/namespaces/inkscape"
+   xmlns:sodipodi="http://sodipodi.sourceforge.net/DTD/sodipodi-0.dtd"
+   xmlns="http://www.w3.org/2000/svg"
+   xmlns:svg="http://www.w3.org/2000/svg">
+  <defs
+     id="defs8">
+    <mask
+       maskUnits="userSpaceOnUse"
+       id="mask14">
+      <g
+         id="g15">
+        <rect
+           width="1143"
+           height="200"
+           rx="30"
+           fill="#ffffff"
+           id="rect14"
+           x="0"
+           y="0" />
+      </g>
+    </mask>
+    <mask
+       maskUnits="userSpaceOnUse"
+       id="mask15">
+      <g
+         id="g16">
+        <rect
+           width="1143"
+           height="200"
+           rx="30"
+           fill="#ffffff"
+           id="rect15"
+           x="0"
+           y="0" />
+      </g>
+    </mask>
+    <mask
+       maskUnits="userSpaceOnUse"
+       id="mask16">
+      <g
+         id="g17">
+        <rect
+           width="1143"
+           height="200"
+           rx="30"
+           fill="#ffffff"
+           id="rect16"
+           x="0"
+           y="0" />
+      </g>
+    </mask>
+  </defs>
+  <sodipodi:namedview
+     id="namedview8"
+     pagecolor="#ffffff"
+     bordercolor="#000000"
+     borderopacity="0.25"
+     inkscape:showpageshadow="2"
+     inkscape:pageopacity="0.0"
+     inkscape:pagecheckerboard="0"
+     inkscape:deskcolor="#d1d1d1"
+     inkscape:zoom="13.46163"
+     inkscape:cx="66.819545"
+     inkscape:cy="21.951279"
+     inkscape:window-width="2256"
+     inkscape:window-height="1432"
+     inkscape:window-x="0"
+     inkscape:window-y="0"
+     inkscape:window-maximized="1"
+     inkscape:current-layer="svg8" />
+  <title
+     id="title1">coverage: 64.35%</title>
+  <linearGradient
+     id="FFCZT"
+     x2="0"
+     y2="478.12132"
+     gradientTransform="scale(2.3906066,0.41830387)"
+     x1="0"
+     y1="0"
+     gradientUnits="userSpaceOnUse">
+    <stop
+       offset="0"
+       stop-opacity=".1"
+       stop-color="#EEE"
+       id="stop1" />
+    <stop
+       offset="1"
+       stop-opacity=".1"
+       id="stop2" />
+  </linearGradient>
+  <rect
+     width="603"
+     height="200"
+     fill="#555555"
+     id="rect3"
+     x="0"
+     y="0"
+     mask="url(#mask16)" />
+  <rect
+     width="540"
+     height="200"
+     fill="#cba317"
+     x="603"
+     id="rect4"
+     y="0"
+     mask="url(#mask15)" />
+  <rect
+     width="1143"
+     height="200"
+     fill="url(#FFCZT)"
+     id="rect5"
+     style="fill:url(#FFCZT)"
+     x="0"
+     y="0"
+     mask="url(#mask14)" />
+  <g
+     aria-hidden="true"
+     fill="#fff"
+     text-anchor="start"
+     font-family="Verdana,DejaVu Sans,sans-serif"
+     font-size="110"
+     id="g8">
+    <text
+       x="60"
+       y="148"
+       textLength="503"
+       fill="#000000"
+       opacity="0.25"
+       id="text5"
+       lengthAdjust="spacing"
+       transform="translate(-3.9968758,-3.999923)"><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Arial;-inkscape-font-specification:Arial"
+         id="tspan9">coverage</tspan></text>
+    <text
+       x="50"
+       y="138"
+       textLength="503"
+       id="text6"
+       lengthAdjust="spacing"><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Arial;-inkscape-font-specification:Arial"
+         id="tspan8">coverage</tspan></text>
+    <text
+       x="658"
+       y="148"
+       textLength="440"
+       fill="#000000"
+       opacity="0.25"
+       id="text7"
+       lengthAdjust="spacing"
+       transform="translate(-3.995751,-3.996993)"><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Arial;-inkscape-font-specification:Arial"
+         id="tspan11">xx.xx%</tspan></text>
+    <text
+       x="648"
+       y="138"
+       textLength="440"
+       id="text8"
+       lengthAdjust="spacing"><tspan
+         style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Arial;-inkscape-font-specification:Arial"
+         id="tspan10">xx.xx%</tspan></text>
+  </g>
+</svg>
