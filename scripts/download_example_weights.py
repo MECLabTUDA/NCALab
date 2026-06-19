@@ -2,6 +2,7 @@ import requests  # type: ignore[import-untyped]
 import zipfile
 import hashlib
 from pathlib import Path
+import tomllib
 
 
 def download_zip(url, download_path):
@@ -32,7 +33,10 @@ def verify_sha256(file_path, expected_sha256):
 
 
 if __name__ == "__main__":
-    zip_url = "https://github.com/MECLabTUDA/NCALab/releases/download/v0.3.2/pretrained_weights.zip"
+    with open("pyproject.toml", "rb") as f:
+        release_version = tomllib.load(f)["project"]["version"]
+
+    zip_url = f"https://github.com/MECLabTUDA/NCALab/releases/download/v{release_version}/pretrained_weights.zip"
     root_path = Path(__file__).parent / ".."
     download_path = (root_path / "pretrained_weights.zip").resolve()
     extract_to = root_path
