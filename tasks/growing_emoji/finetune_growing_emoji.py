@@ -6,10 +6,10 @@ from pathlib import Path
 
 import click
 import numpy as np
-import torch
-from growing_utils import get_emoji_image
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
+
+from growing_utils import get_emoji_image
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
@@ -44,7 +44,6 @@ def finetune_growing_emoji(
 
     nca = GrowingNCAModel(
         device,
-        num_image_channels=4,
         num_hidden_channels=hidden_channels,
         use_alive_mask=True,
         num_learned_filters=0,
@@ -70,13 +69,6 @@ def finetune_growing_emoji(
     # So far so good.
     # Now we will freeze the first layer, and only train the linear layer! :)
 
-    # Idea: shuffle first layer's weights. They'll still follow the same distribution.
-    with torch.no_grad():
-        W = nca.network[0].weight.data.clone()
-        W = W.view(-1)
-        np.random.shuffle(W.cpu().numpy())
-        nca.network[0].weight.data.copy_(W.view(nca.network[0].weight.data.size()))
-
     # Create emoji dataset for finetuning
     image_dna = np.asarray(get_emoji_image("\N{RAT}"))
     dataset_dna = GrowingNCADataset(image_dna, nca.num_channels, batch_size=batch_size)
@@ -85,7 +77,7 @@ def finetune_growing_emoji(
     # Re-train with frozen final layer
     nca.finetune()
     writer = SummaryWriter(comment="Growing Emoji: Finetuning")
-    trainer.max_epochs = 5000  # we don't need as many iterations now
+    trainer.max_epochs = 2500  # we don't need as many iterations now
     trainer.train(loader_dna, summary_writer=writer, save_every=100)
     writer.close()
 
