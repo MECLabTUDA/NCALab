@@ -109,7 +109,7 @@ def train_class_cifar10(
     loader_val = torch.utils.data.DataLoader(
         val_dataset,
         batch_size=batch_size,
-        num_workers=8,
+        num_workers=4,
         sampler=val_sampler,
         pin_memory=True,
     )
