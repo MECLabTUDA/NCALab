@@ -42,6 +42,11 @@ def eval_segmentation_kvasir_seg(hidden_channels: int, gpu: bool, gpu_index: int
 
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
+    dataset = KvasirSegDataset(KVASIR_SEG_PATH, transform=T_val)
+    loader = torch.utils.data.DataLoader(
+        dataset, shuffle=False, batch_size=4, drop_last=True
+    )
+
     nca = BinarySegmentationNCAModel(
         device,
         num_image_channels=3,
@@ -50,13 +55,8 @@ def eval_segmentation_kvasir_seg(hidden_channels: int, gpu: bool, gpu_index: int
         fire_rate=0.8,
         use_temporal_encoding=True,
     )
-    cascade = CascadeNCA(nca, [4, 2, 1], [32, 16, 16])
-
-    dataset = KvasirSegDataset(KVASIR_SEG_PATH, transform=T_val)
-    loader = torch.utils.data.DataLoader(
-        dataset, shuffle=False, batch_size=4, drop_last=True
-    )
-
+    cascade = CascadeNCA(nca, [4, 2, 1], [32, 16, 8])
+    cascade = torch.compile(cascade)
     cascade.load_state_dict(
         torch.load(
             WEIGHTS_PATH / "segmentation_kvasir_seg" / "best_model.pth",
@@ -66,7 +66,13 @@ def eval_segmentation_kvasir_seg(hidden_channels: int, gpu: bool, gpu_index: int
 
     seed = next(iter(loader))[0].to(device)
     animator = Animator(
-        cascade, seed, overlay=True, interval=100, steps=sum(cascade.steps)
+        cascade,
+        seed,
+        overlay=True,
+        interval=100,
+        steps=sum(cascade.steps),
+        hidden=True,
+        show_input=True
     )
     out_path = FIGURE_PATH / "segmentation_kvasir_seg.gif"
     animator.save(out_path)

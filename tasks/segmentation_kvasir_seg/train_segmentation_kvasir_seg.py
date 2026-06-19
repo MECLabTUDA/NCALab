@@ -74,6 +74,7 @@ def train_segmentation_kvasir_seg(
         use_temporal_encoding=True,
     )
     cascade = CascadeNCA(nca, [4, 2, 1], [16, 8, 8])
+    cascade = torch.compile(cascade)
 
     dataset = KvasirSegDataset(KVASIR_SEG_PATH, transform=T_train)
 
@@ -105,7 +106,7 @@ def train_segmentation_kvasir_seg(
         loader_val,
         summary_writer=writer,
         save_every=1,
-        earlystopping=EarlyStopping(20),
+        earlystopping=EarlyStopping(50),
     )
     if writer is not None:
         writer.close()
