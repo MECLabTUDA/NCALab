@@ -195,13 +195,13 @@ uv run ruff check ncalab
 Testing:
 
 ```bash
-uv run pytest
+uv run pytest tests
 ```
 
 View test coverage:
 
 ```bash
-uv run coverage run --source ncalab -m pytest
+uv run coverage run --source ncalab -m pytest tests
 uv run coverage report
 ```
 

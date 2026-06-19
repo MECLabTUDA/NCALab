@@ -4,7 +4,7 @@
    height="20"
    viewBox="0 0 1143 200"
    role="img"
-   aria-label="coverage: 52.37%"
+   aria-label="coverage: 54.77%"
    version="1.1"
    id="svg8"
    sodipodi:docname="coverage.svg"
@@ -160,7 +160,7 @@
        lengthAdjust="spacing"
        transform="translate(-3.995751,-3.996993)"><tspan
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Arial;-inkscape-font-specification:Arial"
-         id="tspan11">52.37%</tspan></text>
+         id="tspan11">54.77%</tspan></text>
     <text
        x="648"
        y="138"
@@ -168,6 +168,6 @@
        id="text8"
        lengthAdjust="spacing"><tspan
          style="font-style:normal;font-variant:normal;font-weight:normal;font-stretch:normal;font-family:Arial;-inkscape-font-specification:Arial"
-         id="tspan10">52.37%</tspan></text>
+         id="tspan10">54.77%</tspan></text>
   </g>
 </svg>
