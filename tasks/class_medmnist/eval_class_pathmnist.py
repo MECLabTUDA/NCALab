@@ -6,8 +6,6 @@ import sys
 import click
 import torch  # type: ignore[import-untyped]
 from medmnist import INFO, PathMNIST  # type: ignore[import-untyped]
-from torchvision import transforms  # type: ignore[import-untyped]
-from torchvision.transforms import v2  # type: ignore[import-untyped]
 from train_class_pathmnist import (
     TASK_PATH,
     WEIGHTS_PATH,
@@ -16,6 +14,7 @@ from train_class_pathmnist import (
     fire_rate,
     pad_noise,
     use_temporal_encoding,
+    T_eval,
 )
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
@@ -31,15 +30,6 @@ from ncalab import (  # noqa: E402
 FIGURE_PATH = TASK_PATH / "figures"
 FIGURE_PATH.mkdir(exist_ok=True)
 
-T = transforms.Compose(
-    [
-        v2.ToImage(),
-        v2.ToDtype(torch.float, scale=True),
-        v2.ConvertImageDtype(dtype=torch.float32),
-        transforms.Normalize((0.5,), (0.225,)),
-    ]
-)
-
 
 def eval_selfclass_pathmnist(
     hidden_channels: int,
@@ -49,10 +39,8 @@ def eval_selfclass_pathmnist(
     fix_random_seed()
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
-    dataset_test = PathMNIST(split="test", download=True, transform=T)
-    loader_test = torch.utils.data.DataLoader(
-        dataset_test, shuffle=True, batch_size=8
-    )
+    dataset_test = PathMNIST(split="test", download=True, transform=T_eval)
+    loader_test = torch.utils.data.DataLoader(dataset_test, shuffle=True, batch_size=8)
 
     num_classes = len(INFO["pathmnist"]["label"])
     nca = ClassificationNCAModel(
@@ -83,7 +71,7 @@ def eval_selfclass_pathmnist(
 
     seed = next(iter(loader_test))[0].to(device)
     out_path = FIGURE_PATH / "classification_pathmnist.gif"
-    animator = Animator(nca, seed, interval=100, show_input=True)
+    animator = Animator(nca, seed, interval=100, show_input=True, hidden=True)
     animator.save(out_path)
     print(f"Animation saved to: {out_path}")
 

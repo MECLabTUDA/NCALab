@@ -3,29 +3,33 @@ import os
 import sys
 
 import click
+import pandas as pd
 import torch  # type: ignore[import-untyped]
 from medmnist import INFO, BloodMNIST  # type: ignore[import-untyped]
 from train_class_bloodmnist import (
+    TASK_PATH,
     WEIGHTS_PATH,
+    T_val,
     alive_mask,
     default_hidden_channels,
     fire_rate,
     pad_noise,
     use_temporal_encoding,
-    TASK_PATH,
-    T_val
 )
-import pprint
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
 
-from ncalab import fix_random_seed, Animator, ClassificationNCAModel, get_compute_device  # noqa: E402
+from ncalab import (  # noqa: E402
+    Animator,
+    ClassificationNCAModel,
+    fix_random_seed,
+    get_compute_device,
+)
 
 FIGURE_PATH = TASK_PATH / "figures"
 FIGURE_PATH.mkdir(exist_ok=True)
-
 
 
 def eval_selfclass_bloodmnist(
@@ -38,9 +42,7 @@ def eval_selfclass_bloodmnist(
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
     dataset_test = BloodMNIST(split="test", download=True, transform=T_val)
-    loader_test = torch.utils.data.DataLoader(
-        dataset_test, shuffle=True, batch_size=8
-    )
+    loader_test = torch.utils.data.DataLoader(dataset_test, shuffle=True, batch_size=8)
 
     num_classes = len(INFO["bloodmnist"]["label"])
     nca = ClassificationNCAModel(
@@ -78,7 +80,8 @@ def eval_selfclass_bloodmnist(
     print(f"Animation saved to: {out_path}")
 
     print()
-    pprint.pprint(metrics)
+    ser = pd.Series(metrics)
+    print(ser)
 
 
 @click.command()

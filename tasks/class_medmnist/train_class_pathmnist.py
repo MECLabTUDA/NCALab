@@ -31,6 +31,26 @@ use_temporal_encoding = True
 fire_rate = 0.8
 default_hidden_channels = 20
 
+T_train = transforms.Compose(
+    [
+        v2.ToImage(),
+        v2.ToDtype(torch.float, scale=True),
+        v2.ConvertImageDtype(dtype=torch.float32),
+        transforms.RandomHorizontalFlip(),
+        transforms.RandomVerticalFlip(),
+        transforms.Normalize((0.5,), (0.225,)),
+    ]
+)
+
+T_eval = transforms.Compose(
+    [
+        v2.ToImage(),
+        v2.ToDtype(torch.float, scale=True),
+        v2.ConvertImageDtype(dtype=torch.float32),
+        transforms.Normalize((0.5,), (0.225,)),
+    ]
+)
+
 
 def train_class_pathmnist(
     batch_size: int,
@@ -51,23 +71,12 @@ def train_class_pathmnist(
     fix_random_seed()
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
-    T = transforms.Compose(
-        [
-            v2.ToImage(),
-            v2.ToDtype(torch.float, scale=True),
-            v2.ConvertImageDtype(dtype=torch.float32),
-            transforms.RandomHorizontalFlip(),
-            transforms.RandomVerticalFlip(),
-            transforms.Normalize((0.5,), (0.225,)),
-        ]
-    )
-
-    dataset_train = PathMNIST(split="train", download=True, transform=T)
+    dataset_train = PathMNIST(split="train", download=True, transform=T_train)
     loader_train = torch.utils.data.DataLoader(
         dataset_train, shuffle=True, batch_size=batch_size, drop_last=True
     )
 
-    dataset_val = PathMNIST(split="val", download=True, transform=T)
+    dataset_val = PathMNIST(split="val", download=True, transform=T_eval)
     loader_val = torch.utils.data.DataLoader(
         dataset_val, shuffle=True, batch_size=32, drop_last=True
     )
