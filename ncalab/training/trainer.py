@@ -13,7 +13,7 @@ from tqdm import tqdm  # type: ignore[import-untyped]
 
 from ..models.basicNCA import AbstractNCAModel  # for type hint
 from ..prediction import Prediction
-from ..utils import intepret_range_parameter, pad_input
+from ..utils import interpret_range_parameter, pad_input
 from ..visualization import Visual
 from .earlystopping import EarlyStopping
 from .pool import Pool
@@ -148,7 +148,7 @@ class BasicNCATrainer:
         x_in = x.clone().to(self.nca.device)
         x_in = pad_input(x_in, self.nca, noise=self.nca.pad_noise)
         prediction = self.nca(
-            x_in, steps=intepret_range_parameter(self.nca.training_timesteps)
+            x_in, steps=interpret_range_parameter(self.nca.training_timesteps)
         )
         losses = self.nca.loss(prediction, y.to(device))
         losses["total"].backward()

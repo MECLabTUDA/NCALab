@@ -1,6 +1,14 @@
 import torch
-
-from ncalab import get_compute_device, pad_input, GrowingNCAModel, fix_random_seed
+import pytest
+from ncalab import (
+    interpret_range_parameter,
+    get_compute_device,
+    pad_input,
+    GrowingNCAModel,
+    fix_random_seed,
+    release_random_seed,
+    unwrap,
+)
 
 
 def test_pad_input():
@@ -34,3 +42,34 @@ def test_fix_random_seed():
     fix_random_seed()
     x_torch_after = torch.rand(10)
     assert torch.all(x_torch_before == x_torch_after)
+
+
+def test_release_random_seed():
+    fix_random_seed(42)
+    x_torch_before = torch.rand(1000)
+    seed = release_random_seed()
+    x_torch_after = torch.rand(1000)
+    if seed != 42:  # very unlikely
+        assert not torch.all(x_torch_before == x_torch_after)
+    else:
+        assert torch.all(x_torch_before == x_torch_after)
+
+
+def test_unwrap():
+    x = 1
+    assert unwrap(x) == x
+    y = object()
+    assert unwrap(y) is y
+    z = None
+    with pytest.raises(RuntimeError):
+        z = unwrap(z)
+
+
+def test_interpret_range_parameter():
+    x = 1
+    assert interpret_range_parameter(x) == 1
+    y = (1, 5)
+    assert 1 <= interpret_range_parameter(y) <= 5
+    with pytest.raises(TypeError):
+        z = (1, 2, 3)
+        interpret_range_parameter(z)

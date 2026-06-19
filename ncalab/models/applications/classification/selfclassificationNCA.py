@@ -35,9 +35,8 @@ class SelfClassificationNCAModel(AbstractNCAModel):
     ):
         """
         :param device: Pytorch device descriptor.
-        :param num_image_channels: _description_
-        :param num_hidden_channels: _description_
-        :param num_classes: _description_
+        :param num_hidden_channels: Number of hidden channels
+        :param num_classes: Number of output classes
         :param fire_rate: Fire rate for stochastic weight update. Defaults to 0.8.
         :param hidden_size: Number of neurons in hidden layer. Defaults to 128.
         :param use_alive_mask: Whether to use alive masking (channel 3) during training. Defaults to False.
@@ -132,6 +131,10 @@ class SelfClassificationNCAModel(AbstractNCAModel):
         }
 
     def post_prediction(self, prediction: Prediction) -> Prediction:
+        """
+        :param prediction: Prediction object to manipulate.
+        :type prediction: Prediction
+        """
         logits = prediction.logits
         mask = prediction.image_channels[:, 0:1, :, :]
         mask = (mask.repeat(1, self.num_classes, 1, 1) > 0.1).float()

@@ -12,7 +12,7 @@ from safetensors.torch import load_model, save_model
 from torchmetrics import Metric
 
 from ...prediction import Prediction
-from ...utils import intepret_range_parameter, pad_input
+from ...utils import interpret_range_parameter, pad_input
 from ...visualization import Visual
 from .abstractNCAhead import AbstractNCAHead
 from .basicNCAperception import BasicNCAPerception
@@ -282,9 +282,9 @@ class AbstractNCAModel(nn.Module, abc.ABC):
         :rtype: Prediction
         """
         if steps is None:
-            steps = intepret_range_parameter(self.inference_timesteps)
+            steps = interpret_range_parameter(self.inference_timesteps)
         else:
-            steps = intepret_range_parameter(steps)
+            steps = interpret_range_parameter(steps)
         assert steps >= 1
         assert image.shape[1] <= self.num_channels
         self.eval()
@@ -310,9 +310,9 @@ class AbstractNCAModel(nn.Module, abc.ABC):
         """
         assert image.shape[1] <= self.num_channels
         if steps is None:
-            steps = intepret_range_parameter(self.inference_timesteps)
+            steps = interpret_range_parameter(self.inference_timesteps)
         else:
-            steps = intepret_range_parameter(steps)
+            steps = interpret_range_parameter(steps)
         assert steps >= 1
         self.eval()
         sequence = []

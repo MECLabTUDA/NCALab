@@ -176,7 +176,7 @@ def unwrap(x: Any):
     return x
 
 
-def intepret_range_parameter(x: int | Tuple[int, int]) -> int:
+def interpret_range_parameter(x: int | Tuple[int, int]) -> int:
     """
     Interpret a range parameter that is passed for NCA timesteps.
 
@@ -192,7 +192,7 @@ def intepret_range_parameter(x: int | Tuple[int, int]) -> int:
     """
     if type(x) is int:
         return x
-    elif type(x) is tuple:
+    elif type(x) is tuple and len(x) == 2:
         return np.random.randint(x[0], x[1])
     else:
         raise TypeError("Invalid type for time steps argument.")
