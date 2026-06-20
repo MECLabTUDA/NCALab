@@ -1,3 +1,5 @@
+# v0.5.1
+
 # v0.5.0
 * Significantly improve Animator API
 * Fix temporal encoding being unused
