@@ -1,4 +1,5 @@
-from typing import Tuple, List
+import abc
+from typing import List, Literal, Tuple
 
 import torch
 
@@ -6,7 +7,7 @@ from ..models import AbstractNCAModel
 from ..prediction import Prediction
 
 
-class UncertaintyEstimator:
+class UncertaintyEstimator(abc.ABC):
     def __init__(self, nca: AbstractNCAModel):
         """
         :param nca: Trained NCA model
@@ -14,6 +15,7 @@ class UncertaintyEstimator:
         """
         self.nca = nca
 
+    @abc.abstractmethod
     def _estimate(self, image: torch.Tensor) -> Tuple[torch.Tensor, List[Prediction]]:
         """
         Internal uncertainty estimation method.
@@ -24,10 +26,10 @@ class UncertaintyEstimator:
         :return: Float tensor of uncertainty heatmap (BCWH), predictions, reduced uncertainty score
         :rtype: Tuple[torch.Tensor, List[Prediction], float]
         """
-        return NotImplemented
+        raise NotImplementedError
 
     def estimate(
-        self, image: torch.Tensor, reduce: str = "mean"
+        self, image: torch.Tensor, reduce: Literal["min", "max", "mean"] = "mean"
     ) -> Tuple[torch.Tensor, List[Prediction], torch.Tensor]:
         """
         Estimate predictive uncertainty.
@@ -42,9 +44,10 @@ class UncertaintyEstimator:
         """
         assert reduce in ("mean",)
         heatmap, predictions = self._estimate(image)
-        # TODO average predictions
         if reduce == "mean":
             score = torch.mean(heatmap, dim=(2, 3))
+        elif reduce == "min":
+            score, _ = torch.min(torch.min(image, dim=2)[0], dim=2)
         elif reduce == "max":
             score, _ = torch.max(torch.max(image, dim=2)[0], dim=2)
         else:
