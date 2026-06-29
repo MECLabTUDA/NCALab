@@ -2,15 +2,14 @@ from PIL import Image, ImageDraw, ImageFont
 
 
 def get_emoji_image(emoji: str = "🦎", padding: int = 8, size: int = 24):
-    """_summary_
-
-    Args:
-        emoji (str, optional): String containing a single emoji character. Defaults to "🦎".
-        padding (int, optional): Number of pixels to pad to the sides. Defaults to 2.
-        size (int, optional): Total image size without padding. Defaults to 24.
-
-    Returns:
-        Image: Output PIL.Image containing an emoji on transparent background.
+    """
+    :param emoji: String containing a single emoji character. Defaults to "🦎".
+    :type emoji: str
+    :param padding: Number of pixels to pad to the sides. Defaults to 2.
+    :type padding: int
+    :param size: Total image size without padding. Defaults to 24.
+    :type size: int
+    :returns: Output PIL.Image containing an emoji on transparent background.
     """
     scale = size / 109
     dims = (int(padding * 2 * scale + 128), int(padding * 2 * scale + 128))
