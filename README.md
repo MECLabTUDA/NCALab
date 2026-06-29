@@ -13,6 +13,13 @@ For more information on NCAs, check out our curated [Awesome List](https://githu
 ![status](https://joss.theoj.org/papers/c806c40f0c7735e4a649fbc9f4eb8c8d/status.svg)
 ![coverage](artwork/coverage.svg)
 
+[![Python 3.10](https://img.shields.io/badge/python-3.10-blue.svg)](https://www.python.org/downloads/release/python-3100/)
+[![Python 3.11](https://img.shields.io/badge/python-3.11-blue.svg)](https://www.python.org/downloads/release/python-3110/)
+[![Python 3.12](https://img.shields.io/badge/python-3.12-blue.svg)](https://www.python.org/downloads/release/python-3120/)
+[![Python 3.13](https://img.shields.io/badge/python-3.13-blue.svg)](https://www.python.org/downloads/release/python-3130/)
+[![Python 3.14](https://img.shields.io/badge/python-3.14-blue.svg)](https://www.python.org/downloads/release/python-3140/)
+
+
 ## Examples Gallery
 
 ![Animation of a growing lizard emoji](artwork/growing_emoji.gif)
