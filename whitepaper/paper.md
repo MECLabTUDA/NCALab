@@ -54,15 +54,16 @@ For more information, we want to point the reader to the comprehensive original 
 
 # State of the Field
 
-
 NCAs are recently gaining attention especially in medical imaging, where they are deployed for various modalities in different downstream tasks, including 3D prostate segmentation on MRI [@kalkhof2023mednca] [@kalkhof2023m3dncaa], image registration [@ranem2024ncamorph] or image synthesis [@kalkhof2024frequencytime], [@kalkhof2025parameterefficient].
 In most cases, they outperform other Convolutional Neural Network or Vision Transformer architectures in terms of _model size_ and robustness [@kalkhof2023mednca], while yielding similarly accurate predictions.
 Especially in constrained settings, such as radiology departments without access to GPU hardware, state-of-the art medical image segmentation is hardly possible with contemporary architectures based on Convolutional Neural Networks or Vision Transformers.
 NCAs, on the other hand, are a promising approach to enable AI support even in constrained settings.
 
+
 # Statement of Need
 
 Research of NCA models and training has just started a few years ago, and there is no _unified_ framework or reference implementation for training, evaluation and systematic experimentation with NCAs.
+Most NCA implementations live in custom codebases dedicated to the downstream task at hand, with little or now quality control or unit tests.
 Further, there is currently no set of best practices for designing NCA models with respect to their hyperparameters, such as the number of neurons, hidden channels or fire rate.
 
 A systematic analysis of different NCA hyperparameters and architectural variations is difficult, as the research code of NCA contributions is typically organized in individual repositories with different frameworks and coding styles for each downstream task under investigation.
@@ -72,9 +73,11 @@ Since there is currently no unified framework, deployment of NCA models in pract
 
 `NCALab` provides a uniform and easy-to-use code base for various downstream tasks with NCAs as a packaged Python module.
 Within minutes, researchers and practitioners will be able to create prototypes for their ideas, inspired by the example tasks provided in this code repository.
+Code quality is maintained through automated type checking, unit testing (current code coverage: 66\%) and linting.
 
 We further provide weights for example tasks to enable post-hoc analyses on pre-trained NCA models.
-To our knowledge, post-hoc tasks like transfer learning or uncertainty estimation were not evaluated for NCAs yet.
+To our knowledge, post-hoc tasks like transfer learning or uncertainty estimation were not systematically evaluated for NCAs yet.
+`NCALab` enables such analyses, allowing to design uncertainty estimators tailored to NCA models and to evaluate them on multiple downstream tasks with little implementation overhead.
 
 
 # Research Impact Statement
@@ -114,10 +117,20 @@ Until now, NCALab provides the following key features:
 # Dependencies and Tooling
 
 `NCALab` mostly builds on pytorch [@paszke2019pytorch], numpy [@harris2020array] and matplotlib [@hunter2007matplotlib].
-Code quality is ensured by unit tests ([pytest](https://pytest.org)) and automated static code analysis through [mypy](https://mypy-lang.org/) and [ruff](https://docs.astral.sh/ruff/).
+Code quality is backed by unit tests ([pytest](https://pytest.org), [coverage](https://coverage.readthedocs.io)) and automated static code analysis through [mypy](https://mypy-lang.org/) and [ruff](https://docs.astral.sh/ruff/).
 The project uses [uv](https://astral.sh/blog/uv) for fast and simplified dependency management.
 Code documentation is generated through [Sphinx](https://www.sphinx-doc.org/en/master/index.html) and is automatically uploaded to [readthedocs](https://ncalab.readthedocs.io/en/latest/).
 Releases of `NCALab` can be downloaded from the Python Package Index ([pip](https://pypi.org/project/ncalab/)).
+
+
+
+# Software Design
+
+`NCALab` follows an object-oriented design, where specialized NCA models build on top of the abstract class `AbstractNCAModel`.
+For a bare-minimum implementation, subclasses should implement the `loss()` method, returning a `dict` of loss terms that can be visualized (the item with key `total` is backpropagated).
+Additionally, different hooks exist for modifying the inference process, e.g. for adjusting the prediction after unrolling all NCA steps in `post_prediction()`.
+Central to the inference process is the `Prediction` class, which stores the tensors processed by NCA models and allows to retrieve channel sections individually, e.g. through the `hidden_channels` property accessing the hidden channels.
+
 
 
 # Acknowledgements
