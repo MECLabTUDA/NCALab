@@ -26,13 +26,15 @@ class Pool:
     def update(self, batch: torch.Tensor):
         """
         :param batch: BCWH
+        :type batch: Tensor
         """
         self.batch = torch.clone(batch)
 
     def sample(self, seed: torch.Tensor) -> torch.Tensor:
         """
-        :param seed: BCWH
-        :return: BCWH
+        :param seed: BCWH image
+        :type: Tensor
+        :return: BCWH image
         """
         if self.n_seed >= len(seed):
             return seed
@@ -40,6 +42,7 @@ class Pool:
             return seed
         batch = torch.clone(seed)
         batch[self.n_seed :] = self.batch[: len(seed) - self.n_seed]
+        # TODO handle this in a separate class
         if self.damage and np.random.random() < self.p_damage:
             # delete random rectangle
             w, h = batch.shape[2], batch.shape[3]
