@@ -1,11 +1,14 @@
-import torch
 import pytest
+import torch
+
 from ncalab import (
-    interpret_range_parameter,
-    get_compute_device,
-    pad_input,
     GrowingNCAModel,
     fix_random_seed,
+    get_compute_device,
+    interpret_range_parameter,
+    pad_input,
+    print_mascot,
+    print_NCALab_banner,
     release_random_seed,
     unwrap,
 )
@@ -34,6 +37,17 @@ def test_pad_input():
         ).float()
         != 0
     )
+
+
+def test_print_functions():
+    try:
+        print_mascot("hello world")
+    except Exception as e:
+        pytest.fail(str(e))
+    try:
+        print_NCALab_banner()
+    except Exception as e:
+        pytest.fail(str(e))
 
 
 def test_fix_random_seed():
