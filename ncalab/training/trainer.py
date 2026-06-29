@@ -30,14 +30,12 @@ class BasicNCATrainer:
         nca: AbstractNCAModel,
         model_path: Optional[Path | PosixPath],
         gradient_clipping: bool = False,
-        lr: Optional[float] = None,
-        lr_gamma: float = 0.99,
-        adam_betas=(0.9, 0.95),
+        optimizer: Optional[optim.Optimizer] = None,
+        lr: float = 1e-3,
+        lr_scheduler: Optional[optim.lr_scheduler.LRScheduler] = None,
         batch_repeat: int = 2,
         max_epochs: int = 200,
-        optimizer_method: str = "adam",
         pool: Optional[Pool] = None,
-        lr_scheduler: Optional[optim.lr_scheduler.LRScheduler] = None,
     ):
         """
         :param nca: NCA model instance to train.
@@ -48,48 +46,25 @@ class BasicNCATrainer:
         :type gradient_clipping: bool, optional
         :param lr: Initial learning rate, defaults to 16e-4.
         :type lr: float, optional
-        :param lr_gamma: Exponential learning rate decay, defaults to 0.9999.
-        :type lr_gamma: float, optional
-        :param adam_betas: Beta values for Adam optimizer, defaults to (0.9, 0.95).
-        :type adam_betas: tuple, optional
         :param batch_repeat: How often each batch will be duplicated, dfaults to 2.
         :param max_epochs: Maximum number of epochs in training, defaults to 200.
-        :param optimizer_method: Optimization method, defaults to 'adam'.
-        :type optimizer_method: str, optional
         :param pool: Sample pool object.
         :type pool: ncalab.Pool
         """
         assert batch_repeat >= 1
         assert max_epochs > 0
-        assert optimizer_method.lower() in (
-            "adam",
-            "adamw",
-            "adagrad",
-            "adafactor",
-            "rmsprop",
-            "sgd",
-        )
+
         self.nca = nca
         self.model_path = model_path
         self.gradient_clipping = gradient_clipping
-        self.lr_gamma = lr_gamma
-        self.adam_betas = adam_betas
         self.batch_repeat = batch_repeat
         self.max_epochs = max_epochs
-        self.optimizer_method = optimizer_method
-        if lr is None:
-            if optimizer_method.lower() == "sgd":
-                self.lr = 1e-2
-            elif optimizer_method.lower() in ("adam", "adamw"):
-                self.lr = 1e-3
-            elif optimizer_method.lower() == "rmsprop":
-                self.lr = 1e-2
-            elif optimizer_method.lower() == "adagrad":
-                self.lr = 1e-2
-            else:
-                self.lr = 1e-2
-        else:
-            self.lr = lr
+        self.lr = lr
+        self.optimizer = (
+            optim.Adam(self.nca.parameters(), self.lr, betas=(0.9, 0.95))
+            if optimizer is None
+            else optimizer
+        )
         self.pool = pool
         self.lr_scheduler = lr_scheduler
 
@@ -98,19 +73,16 @@ class BasicNCATrainer:
         Shows a markdown-formatted info string with training parameters.
         Useful for showing info on tensorboard to keep track of parameter changes.
 
-        :returns [str]: Markdown-formatted info string.
+        :return: Markdown-formatted info string.
+        :rtype: str
         """
         s = "BasicNCATrainer Info\n"
         s += "-------------------\n"
         for attribute in (
             "model_path",
-            "lr",
-            "lr_gamma",
             "gradient_clipping",
-            "adam_betas",
             "batch_repeat",
             "max_epochs",
-            "optimizer_method",
         ):
             attribute_f = attribute.title().replace("_", " ")
             s += f"**{attribute_f}:** {getattr(self, attribute)}\n"
@@ -120,7 +92,6 @@ class BasicNCATrainer:
         self,
         x: torch.Tensor,
         y: torch.Tensor,
-        optimizer: torch.optim.Optimizer,
         head_optimizer: torch.optim.Optimizer | None,
         total_batch_iterations: int,
         summary_writer: Optional[SummaryWriter] = None,
@@ -142,7 +113,7 @@ class BasicNCATrainer:
         """
         device = self.nca.device
         self.nca.train()
-        optimizer.zero_grad()
+        self.optimizer.zero_grad()
         if head_optimizer is not None:
             head_optimizer.zero_grad()
         x_in = x.clone().to(self.nca.device)
@@ -155,7 +126,7 @@ class BasicNCATrainer:
 
         if self.gradient_clipping:
             torch.nn.utils.clip_grad_norm_(self.nca.parameters(), 1.0)
-        optimizer.step()
+        self.optimizer.step()
         if head_optimizer is not None:
             head_optimizer.step()
         if summary_writer:
@@ -178,14 +149,22 @@ class BasicNCATrainer:
         """
         Execute basic NCA training loop with a single function call.
 
-        :param dataloader_train [DataLoader]: Training DataLoader
-        :param dataloader_val [DataLoader]: Validation DataLoader
-        :param save_every [int]: How often to save model state (in epochs). Useful for very small datasets, like growing lizard.
-        :param summary_writer [SummaryWriter] Tensorboard SummaryWriter. Defaults to None.
-        :param plot_function: Plot function override. If None, use model's default. Defaults to None.
-        :param earlystopping (EarlyStopping, optional): EarlyStopping object. Defaults to None.
-
-        :returns [TrainingHistory]: TrainingHistory object.
+        :param dataloader_train: Training DataLoader
+        :type dataloader_train: DataLoader
+        :param dataloader_val: Validation DataLoader, defaults to None
+        :type dataloader_val: Optional[DataLoader], optional
+        :param dataloader_test: Test DataLoader for final evaluation after successful training, defaults to None
+        :type dataloader_test: Optional[DataLoader], optional
+        :param save_every: How often to save model state (in epochs). Setting > 1 is useful for very small datasets, like growing lizard., defaults to None
+        :type save_every: Optional[int], optional
+        :param summary_writer: Tensorboard SummaryWriter, defaults to None
+        :type summary_writer: Optional[SummaryWriter], optional
+        :param plot_function: Plot function override. If None, use model's default, defaults to None
+        :type plot_function: Optional[Visual], optional
+        :param earlystopping: EarlyStopping object, defaults to None
+        :type earlystopping: Optional[EarlyStopping], optional
+        :return: TrainingHistory object, populated with best and final model checkpoints etc.
+        :rtype: TrainingHistory
         """
         history = TrainingHistory(self.model_path, {}, 0, self.nca)
 
@@ -201,31 +180,7 @@ class BasicNCATrainer:
         if summary_writer is not None:
             summary_writer.add_text("Training Info", self.info())
 
-        optimizer: None | optim.Optimizer = None
-        if self.optimizer_method.lower() == "adamw":
-            optimizer = optim.AdamW(
-                self.nca.parameters(),
-                lr=self.lr,
-                betas=self.adam_betas,
-            )
-        elif self.optimizer_method.lower() == "sgd":
-            optimizer = optim.SGD(
-                self.nca.parameters(), lr=self.lr, momentum=0.9, nesterov=True
-            )
-        elif self.optimizer_method.lower() == "rmsprop":
-            optimizer = optim.RMSprop(self.nca.parameters(), lr=self.lr)
-        elif self.optimizer_method.lower() == "adagrad":
-            optimizer = optim.Adagrad(self.nca.parameters(), lr=self.lr)
-        elif self.optimizer_method.lower() == "adafactor":
-            optimizer = optim.Adafactor(self.nca.parameters(), lr=self.lr)
-        else:
-            optimizer = optim.Adam(
-                self.nca.parameters(),
-                lr=self.lr,
-                betas=self.adam_betas,
-            )
-
-        self.lr_scheduler = None
+        self.lr_scheduler = optim.lr_scheduler.ExponentialLR(self.optimizer, 0.9)
         head_optimizer = None
         if self.nca.head is not None:
             if self.nca.head.optimizer is not None:
@@ -270,7 +225,6 @@ class BasicNCATrainer:
                 train_prediction, losses = self._train_iteration(
                     x,
                     y,
-                    optimizer,
                     head_optimizer,
                     total_batch_iterations,
                     summary_writer,
@@ -287,7 +241,6 @@ class BasicNCATrainer:
             with torch.no_grad():
                 self.nca.eval()
                 # VISUALIZATION
-                # TODO visualize samples in training and validation batches
                 if (
                     plot_function
                     and summary_writer
@@ -334,7 +287,6 @@ class BasicNCATrainer:
                             y.detach().cpu().numpy(),
                         )
                         summary_writer.add_figure("Validation Batch", figure, iteration)
-
                 else:
                     history.update(iteration, self.nca, 0, overwrite=True)
                 if (iteration + 1) % save_every == 0:
