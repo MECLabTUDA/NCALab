@@ -135,6 +135,8 @@ Central to the inference process is the `Prediction` class, which stores the ten
 
 # Acknowledgements
 
+We would like to thank our students at TU Darmstadt, namely Niklas Ihm, Dennis Grotz and Jonathan Dewenter for their valuable feedback on our code base from a user's perspective, and for testing our code on different software platforms.
+
 This work is partially supported by Norwegian Research Council project number 322600 (Capsnetwork).
 
 
