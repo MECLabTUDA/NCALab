@@ -1,4 +1,6 @@
 # v0.5.1
+* MedMNIST tasks: Adjust default settings
+* Small fixes in loss implementations
 
 # v0.5.0
 * Significantly improve Animator API
