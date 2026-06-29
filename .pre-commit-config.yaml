@@ -21,9 +21,3 @@ repos:
     -   id: ruff-check
         entry: ruff check ncalab
         args: [--ignore=E402]
--   repo: local
-    hooks:
-    -   id: coveragebadge
-        name: Generate coverage badge for README.md
-        entry: uv run scripts/coveragebadge.py
-        language: system
