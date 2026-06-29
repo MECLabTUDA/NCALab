@@ -86,28 +86,19 @@ class FocalLoss(nn.modules.loss._WeightedLoss):
         self.gamma = gamma
         self.weight = weight
         self.device = device
-        self.ce_loss = nn.CrossEntropyLoss()
+        self.ce_loss = nn.CrossEntropyLoss(weight=weight)
 
     def forward(self, _input, _target):
         focal_loss = 0
-
         for i in range(len(_input)):
             ce_loss = self.ce_loss(
                 _input[i].view(-1, _input[i].size()[-1]), _target[i].view(-1)
             )
             pt = torch.exp(-ce_loss)
-
-            if self.weight is not None:
-                cur_focal_loss = (
-                    self.weight[_target[i]] * ((1 - pt) ** self.gamma) * ce_loss
-                )
-            else:
-                cur_focal_loss = ((1 - pt) ** self.gamma) * ce_loss
-
+            cur_focal_loss = ((1 - pt) ** self.gamma) * ce_loss
             focal_loss = focal_loss + cur_focal_loss
         if self.weight is not None:
             focal_loss = focal_loss / self.weight.sum()
             return focal_loss.to(self.device)
-
         focal_loss = focal_loss / torch.tensor(len(_input))
         return focal_loss.to(self.device)
