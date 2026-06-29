@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
+import subprocess
 import xml.etree.ElementTree as ET
 from pathlib import Path
-
 
 COVERAGE_XML = "coverage.xml"
 INPUT_SVG = "artwork/_coverage_template.svg"
@@ -32,6 +32,9 @@ def get_badge_color(percent):
 
 
 def main():
+    subprocess.run("uv run coverage run --source ncalab -m pytest tests".split(" "))
+    subprocess.run("uv run coverage xml".split(" "))
+
     percent, coverage_text = get_coverage()
     color = get_badge_color(percent)
 
