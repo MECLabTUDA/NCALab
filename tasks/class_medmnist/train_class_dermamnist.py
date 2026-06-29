@@ -120,8 +120,8 @@ def train_class_dermamnist(
         pad_noise=pad_noise,
         use_temporal_encoding=use_temporal_encoding,
         class_names=list(INFO["dermamnist"]["label"].values()),
-        training_timesteps=64,
-        inference_timesteps=64,
+        training_timesteps=32,
+        inference_timesteps=32,
         use_classifier=True,
     )
 

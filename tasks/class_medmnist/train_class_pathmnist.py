@@ -4,6 +4,7 @@ import sys
 from pathlib import Path
 
 import click
+import numpy as np
 import torch  # type: ignore[import-untyped]
 from medmnist import INFO, PathMNIST  # type: ignore[import-untyped]
 from torch.utils.tensorboard import SummaryWriter  # type: ignore[import-untyped]
@@ -36,9 +37,10 @@ T_train = transforms.Compose(
         v2.ToImage(),
         v2.ToDtype(torch.float, scale=True),
         v2.ConvertImageDtype(dtype=torch.float32),
-        transforms.RandomHorizontalFlip(),
-        transforms.RandomVerticalFlip(),
-        transforms.Normalize((0.5,), (0.225,)),
+        v2.RandomHorizontalFlip(),
+        v2.RandomVerticalFlip(),
+        v2.ColorJitter(),
+        v2.Normalize((0.5,), (0.225,)),
     ]
 )
 
@@ -47,7 +49,7 @@ T_eval = transforms.Compose(
         v2.ToImage(),
         v2.ToDtype(torch.float, scale=True),
         v2.ConvertImageDtype(dtype=torch.float32),
-        transforms.Normalize((0.5,), (0.225,)),
+        v2.Normalize((0.5,), (0.225,)),
     ]
 )
 
@@ -60,26 +62,39 @@ def train_class_pathmnist(
     max_epochs: int,
     dry: bool,
 ):
-    comment = "PathMNIST"
-    comment += f"_hidden_{hidden_channels}"
-    comment += f"_gc_{gradient_clipping}"
-    comment += f"_noise_{pad_noise}"
-    comment += f"_AM_{alive_mask}"
-    comment += f"_TE_{use_temporal_encoding}"
+    comment = (
+        f"PathMNIST_hidden_{hidden_channels}"
+        "_gc_{gradient_clipping}"
+        "_noise_{pad_noise}"
+        "_AM_{alive_mask}"
+        "_TE_{use_temporal_encoding}"
+    )
 
     writer = SummaryWriter(comment=comment) if not dry else None
     fix_random_seed()
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
     dataset_train = PathMNIST(split="train", download=True, transform=T_train)
+    y_train = dataset_train.labels.squeeze()
+    class_sample_count_train = np.array(
+        [
+            len(np.where(dataset_train.labels == t)[0])
+            for t in np.sort(np.unique(y_train))
+        ]
+    )
+    weight = 1.0 / class_sample_count_train
+    sample_weight_train = [weight[int(t)].astype(float) for t in y_train]
+    sampler_train = torch.utils.data.WeightedRandomSampler(
+        sample_weight_train,
+        num_samples=len(dataset_train),
+        replacement=True,
+    )
     loader_train = torch.utils.data.DataLoader(
-        dataset_train, shuffle=True, batch_size=batch_size, drop_last=True
+        dataset_train, sampler=sampler_train, batch_size=batch_size, drop_last=False
     )
 
     dataset_val = PathMNIST(split="val", download=True, transform=T_eval)
-    loader_val = torch.utils.data.DataLoader(
-        dataset_val, shuffle=True, batch_size=32, drop_last=True
-    )
+    loader_val = torch.utils.data.DataLoader(dataset_val, shuffle=False, batch_size=32)
 
     num_classes = len(INFO["pathmnist"]["label"])
     nca = ClassificationNCAModel(
@@ -92,8 +107,8 @@ def train_class_pathmnist(
         pad_noise=pad_noise,
         use_temporal_encoding=use_temporal_encoding,
         class_names=list(INFO["pathmnist"]["label"].values()),
-        training_timesteps=32,
-        inference_timesteps=32,
+        training_timesteps=(16, 24),
+        inference_timesteps=16,
         use_classifier=True,
     )
     trainer = BasicNCATrainer(
@@ -121,7 +136,7 @@ def train_class_pathmnist(
 @click.option(
     "--gpu-index", type=int, default=0, help="Index of GPU to use, if --gpu in use."
 )
-@click.option("--max-epochs", "-E", type=int, default=10)
+@click.option("--max-epochs", "-E", type=int, default=100)
 @click.option("--dry", "-D", is_flag=True)
 def main(
     batch_size, hidden_channels, gpu: bool, gpu_index: int, max_epochs: int, dry: bool

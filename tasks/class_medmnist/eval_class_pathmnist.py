@@ -53,8 +53,8 @@ def eval_selfclass_pathmnist(
         pad_noise=pad_noise,
         use_temporal_encoding=use_temporal_encoding,
         class_names=list(INFO["pathmnist"]["label"].values()),
-        training_timesteps=32,
-        inference_timesteps=32,
+        training_timesteps=(16, 24),
+        inference_timesteps=16,
         use_classifier=True,
     )
     nca.load_state_dict(
