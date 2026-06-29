@@ -27,27 +27,19 @@ class AnimatorStyle:
         color_progress: Color,
         underline: bool = True,
         progress_h: int = 3,
+        caption_format: str = "Timestep: {current_timestep:3d}",
+        caption_size: int = 16,
+        cmap_hidden: str = "Set3",
     ):
-        """
-        :param color_background: _description_
-        :type color_background: Color
-        :param color_overlay: Color of segmentation overlay.
-        :type color_overlay: Color
-        :param color_title: _description_
-        :type color_title: Color
-        :param color_progress: _description_
-        :type color_progress: Color
-        :param underline: _description_, defaults to True
-        :type underline: bool, optional
-        :param progress_h: _description_, defaults to 3
-        :type progress_h: int, optional
-        """
         self.color_background = color_background
         self.color_overlay = color_overlay
         self.color_title = color_title
         self.color_progress = color_progress
         self.underline = underline
         self.progress_h = progress_h
+        self.caption_format = caption_format
+        self.caption_size = caption_size
+        self.cmap_hidden = cmap_hidden
 
     def apply(self, fig, ax):
         plt.rcParams["axes.titlecolor"] = self.color_title.rgba4f
@@ -56,12 +48,21 @@ class AnimatorStyle:
 
 
 animator_style_dark = AnimatorStyle(
-    Color(0.1, 0.1, 0.1, 1.0),
-    Color(0.69, 1.0, 0.16, 1.0),
-    Color(0.9, 0.9, 0.9, 1.0),
-    Color(1.0, 0.69, 0.16, 1.0),
+    color_background=Color(0.1, 0.1, 0.1, 1.0),
+    color_overlay=Color(0.69, 1.0, 0.16, 1.0),
+    color_title=Color(0.9, 0.9, 0.9, 1.0),
+    color_progress=Color(1.0, 0.69, 0.16, 1.0),
+    caption_format="TIMESTEP: {current_timestep:3d}",
 )
-animator_styles = {"dark": animator_style_dark}
+animator_style_plain = AnimatorStyle(
+    color_background=Color(0.9, 0.9, 0.9, 1.0),
+    color_overlay=Color(0.69, 1.0, 0.16, 1.0),
+    color_title=Color(0.1, 0.1, 0.1, 1.0),
+    color_progress=Color(0.1, 0.1, 0.1, 1.0),
+    underline=False,
+    progress_h=0,
+)
+animator_styles = {"dark": animator_style_dark, "plain": animator_style_plain}
 
 
 def draw_segmentation_overlay(
@@ -111,16 +112,17 @@ def draw_segmentation_overlay(
 
 # TODO implement "input image", "hidden" and "ground truth" views that can be mixed and matched in animator.
 class AnimatorView:
-    def __init__(self, overlay: bool = False):
+    def __init__(self, overlay: bool = False, progress: bool = False):
         self.overlay = overlay
+        self.progress = progress
 
     def render_frame(self, prediction: Prediction):
-        pass
+        raise NotImplementedError
 
 
 class AnimatorViewInput(AnimatorView):
-    def __init__(self, overlay: bool = False):
-        super().__init__(overlay)
+    def __init__(self, overlay: bool = False, progress: bool = False):
+        super().__init__(overlay, progress)
 
     def render_frame(self, prediction: Prediction):
         pass
@@ -175,12 +177,14 @@ class Animator:
         fpath = ROOT_PATH / "fonts" / "PixelOperatorMono-Bold.ttf"
 
         recorded_predictions: List[Prediction] = nca.record(seed, steps)
+        inference_timesteps = len(recorded_predictions)
         predictions = Prediction.flatten_recorded_predictions(recorded_predictions)
 
         im = None
 
         def update(i):
-            nonlocal ax, nca, im, predictions
+            nonlocal ax, nca, im, predictions, inference_timesteps
+            current_timestep = i % inference_timesteps
             image = np.transpose(predictions[i].image_channels_np[0], (1, 2, 0))
             hidden_channels = np.transpose(
                 predictions[i].hidden_channels_np[0], (1, 2, 0)
@@ -200,7 +204,7 @@ class Animator:
 
             if hidden:
                 arr = np.argmax(np.abs(hidden_channels), axis=-1)
-                cmap = mpl.colormaps["Set3"]
+                cmap = mpl.colormaps[_style.cmap_hidden]
                 alpha = np.clip(
                     np.max(np.abs(hidden_channels), axis=-1)
                     / np.max(np.abs(hidden_channels)),
@@ -237,10 +241,11 @@ class Animator:
 
             # draw progress bar
             if _style.progress_h > 0:
-                steps = len(recorded_predictions)
                 progress_w = int(
                     np.clip(
-                        np.round(arr.shape[1] * ((i % steps) / steps)),
+                        np.round(
+                            arr.shape[1] * (current_timestep / inference_timesteps)
+                        ),
                         0,
                         arr.shape[1],
                     )
@@ -261,7 +266,11 @@ class Animator:
             im.set_array(arr)
             # draw title
             if show_timestep:
-                ax.set_title(f"TIME STEP {i % steps:3d}", font=fpath, fontsize=16)
+                ax.set_title(
+                    _style.caption_format.format(current_timestep=current_timestep),
+                    font=fpath,
+                    fontsize=_style.caption_size,
+                )
             ax.set_axis_off()
             plt.subplots_adjust(top=1, bottom=0, right=1, left=0, hspace=0, wspace=0)
             plt.margins(0, 0)
