@@ -41,7 +41,7 @@ if __name__ == "__main__":
     download_path = (root_path / "pretrained_weights.zip").resolve()
     extract_to = root_path
 
-    expected_sha256 = "c66fce525a97870babf94725d34bcd2a8619f42567180461755408d4b9fef3b5"
+    expected_sha256 = "96068efc44cf3a12a44ae36f8e4609e78a7d2bba4c6d1cd7b846abcdfd4ab6b1"
 
     download_zip(zip_url, download_path)
     verify_sha256(download_path, expected_sha256)
