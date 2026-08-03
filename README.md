@@ -213,6 +213,8 @@ uv run coverage report
 ```
 
 
+### Dependency Management
+
 Check for outdated dependencies:
 
 ```bash
