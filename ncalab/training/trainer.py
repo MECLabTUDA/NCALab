@@ -2,7 +2,7 @@ from __future__ import annotations
 
 from copy import copy
 from pathlib import Path, PosixPath  # for type hint
-from typing import Dict, Optional, Tuple
+from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import torch  # type: ignore[import-untyped]
@@ -15,8 +15,8 @@ from ..models.basicNCA import AbstractNCAModel  # for type hint
 from ..prediction import Prediction
 from ..utils import interpret_range_parameter, pad_input
 from ..visualization import Visual
-from .earlystopping import EarlyStopping
 from .pool import Pool
+from .trainerhook import TrainerHook
 from .traininghistory import TrainingHistory
 
 
@@ -36,6 +36,7 @@ class BasicNCATrainer:
         batch_repeat: int = 2,
         max_epochs: int = 200,
         pool: Optional[Pool] = None,
+        hooks: Optional[List[TrainerHook]] = None,
     ):
         """
         :param nca: NCA model instance to train.
@@ -60,13 +61,14 @@ class BasicNCATrainer:
         self.batch_repeat = batch_repeat
         self.max_epochs = max_epochs
         self.lr = lr
+        self.lr_scheduler = lr_scheduler
         self.optimizer = (
             optim.Adam(self.nca.parameters(), self.lr, betas=(0.9, 0.95))
             if optimizer is None
             else optimizer
         )
         self.pool = pool
-        self.lr_scheduler = lr_scheduler
+        self.hooks = [] if hooks is None else hooks
 
     def info(self) -> str:
         """
@@ -144,7 +146,6 @@ class BasicNCATrainer:
         save_every: Optional[int] = None,
         summary_writer: Optional[SummaryWriter] = None,
         plot_function: Optional[Visual] = None,
-        earlystopping: Optional[EarlyStopping] = None,
     ) -> TrainingHistory:
         """
         Execute basic NCA training loop with a single function call.
@@ -161,8 +162,6 @@ class BasicNCATrainer:
         :type summary_writer: Optional[SummaryWriter], optional
         :param plot_function: Plot function override. If None, use model's default, defaults to None
         :type plot_function: Optional[Visual], optional
-        :param earlystopping: EarlyStopping object, defaults to None
-        :type earlystopping: Optional[EarlyStopping], optional
         :return: TrainingHistory object, populated with best and final model checkpoints etc.
         :rtype: TrainingHistory
         """
@@ -192,9 +191,12 @@ class BasicNCATrainer:
         x = None
         y = None
         for iteration in tqdm(range(self.max_epochs), desc="Epochs"):
-            if earlystopping is not None:
-                if earlystopping.done():
-                    break
+            training_halted = False
+            for hook in self.hooks:
+                if hook.halt_training():
+                    training_halted = True
+            if training_halted:
+                break
 
             # disable tqdm progress bar if dataset has only one sample, e.g. in the growing task
             gen = iter(dataloader_train)
@@ -229,6 +231,7 @@ class BasicNCATrainer:
                     total_batch_iterations,
                     summary_writer,
                 )
+                # TODO use dedicated class (LossInstance) to model composite losses
                 assert "total" in losses, "Model: Loss dict must contain 'total' item."
                 with torch.no_grad():
                     total_batch_iterations += 1
@@ -268,8 +271,8 @@ class BasicNCATrainer:
                     val_acc = 0.0
                     if self.nca.validation_metric in metrics:
                         val_acc = metrics.get(self.nca.validation_metric, 0.0)
-                        if earlystopping is not None:
-                            earlystopping.step(val_acc)
+                        for hook in self.hooks:
+                            hook.on_validate(val_acc)
                     history.update(iteration, self.nca, val_acc)
 
                     # Visualize validation batch

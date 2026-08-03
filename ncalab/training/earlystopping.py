@@ -1,4 +1,7 @@
-class EarlyStopping:
+from .trainerhook import TrainerHook
+
+
+class EarlyStopping(TrainerHook):
     """
     Early stopping helper class.
     Helps to stop the training if no change in validation metrics is observed.
@@ -16,18 +19,10 @@ class EarlyStopping:
         self.best_accuracy = 0.0
         self.counter = 0
 
-    def done(self) -> bool:
-        """
-        Checks whether the training can be stopped.
-
-        Needs to be queried in training loop, once per epoch.
-
-        :returns: Whether to stop the training or not.
-        :rtype: bool
-        """
+    def halt_training(self) -> bool:
         return self.counter >= self.patience
 
-    def step(self, accuracy: float):
+    def _step(self, accuracy: float):
         """
         Increases internal counter if accuracy doesn't improve, otherwise
         resets the counter.
@@ -41,3 +36,6 @@ class EarlyStopping:
         if accuracy >= self.best_accuracy + self.min_delta:
             self.best_accuracy = accuracy
             self.counter = 0
+
+    def on_validate(self, validation_accuracy):
+        self._step(validation_accuracy)

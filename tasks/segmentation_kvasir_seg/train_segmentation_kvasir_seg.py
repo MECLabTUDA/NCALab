@@ -78,9 +78,8 @@ def train_segmentation_kvasir_seg(
 
     dataset = KvasirSegDataset(KVASIR_SEG_PATH, transform=T_train)
 
-    train_indices, val_indices, _, _ = train_test_split(
+    train_indices, val_indices = train_test_split(
         range(len(dataset)),
-        dataset.image_filenames,
         test_size=int(len(dataset) * 0.2),
     )
 
@@ -100,13 +99,13 @@ def train_segmentation_kvasir_seg(
         cascade,
         WEIGHTS_PATH / "segmentation_kvasir_seg" if not dry else None,
         max_epochs=max_epochs,
+        hooks=[EarlyStopping(50)],
     )
     trainer.train(
         loader_train,
         loader_val,
         summary_writer=writer,
         save_every=1,
-        earlystopping=EarlyStopping(50),
     )
     if writer is not None:
         writer.close()
