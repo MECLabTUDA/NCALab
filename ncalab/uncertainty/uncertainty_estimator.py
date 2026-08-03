@@ -42,28 +42,29 @@ class UncertaintyEstimator(abc.ABC):
         :return: Float tensor of uncertainty heatmap (BCWH), final prediction, reduced uncertainty score for batch (BC)
         :rtype: Tuple[torch.Tensor, List[Prediction], torch.Tensor]
         """
-        assert reduce in ("mean",)
+        assert reduce in ("mean", "min", "max")
         heatmap, predictions = self._estimate(image)
-        if reduce == "mean":
-            score = torch.mean(heatmap, dim=(2, 3))
-        elif reduce == "min":
-            score, _ = torch.min(torch.min(image, dim=2)[0], dim=2)
-        elif reduce == "max":
-            score, _ = torch.max(torch.max(image, dim=2)[0], dim=2)
-        else:
-            score = torch.mean(heatmap, dim=(2, 3))
+        match reduce:
+            case "mean":
+                score = torch.mean(heatmap, dim=(2, 3))
+            case "min":
+                score, _ = torch.min(torch.min(heatmap, dim=2)[0], dim=2)
+            case "max":
+                score, _ = torch.max(torch.max(heatmap, dim=2)[0], dim=2)
+            case _:
+                score = torch.mean(heatmap, dim=(2, 3))
         return heatmap, predictions, score
 
     def __call__(self, *args, **kwargs):
-        self.estimate(*args, **kwargs)
+        return self.estimate(*args, **kwargs)
 
 
-class NQM(UncertaintyEstimator):
+class EstimatorNQM(UncertaintyEstimator):
     """
     Variance over multiple predictions.
     """
 
-    def __init__(self, nca: AbstractNCAModel, N: int = 10, normalize=False):
+    def __init__(self, nca: AbstractNCAModel, N: int = 10, normalize: bool = False):
         super().__init__(nca)
         self.N = N
         self.normalize = normalize
@@ -79,13 +80,11 @@ class NQM(UncertaintyEstimator):
         :rtype: Tuple[torch.Tensor, List[Prediction], float]
         """
         self.nca.eval()
-        heatmap = torch.zeros_like(image)
         # sample N times
         sequence = [self.nca.record(image)[-1] for _ in range(self.N)]
         output_images = torch.stack(
             [prediction.output_image for prediction in sequence]
         )
-
         heatmap = torch.std(
             output_images[:, :, -self.nca.num_output_channels :, :, :], dim=0
         )
@@ -99,39 +98,5 @@ class NQM(UncertaintyEstimator):
                 ),
                 dim=0,
             )
-            heatmap /= normalization
-        return heatmap, sequence
-
-
-class MCMC(UncertaintyEstimator):
-    """
-    Markov-Chain Monte Carlo
-    """
-
-    def __init__(self, nca: AbstractNCAModel, N_last: int = 10, normalize=False):
-        super().__init__(nca)
-        self.N_last = N_last
-        self.normalize = normalize
-
-    def _estimate(self, image: torch.Tensor) -> Tuple[torch.Tensor, List[Prediction]]:
-        """
-        Internal uncertainty estimation method.
-
-        :param image: Input image sample
-        :type image: torch.Tensor
-
-        :return: Float tensor of uncertainty heatmap (BCWH), predictions, reduced uncertainty score
-        :rtype: Tuple[torch.Tensor, List[Prediction], float]
-        """
-        self.nca.eval()
-        heatmap = torch.zeros_like(image)
-        sequence = self.nca.record(image)[-self.N_last :]
-        output_images = torch.stack(
-            [prediction.hidden_channels for prediction in sequence]
-        )
-
-        heatmap = torch.std(output_images, dim=0)
-        if self.normalize:
-            normalization = 10
             heatmap /= normalization
         return heatmap, sequence
