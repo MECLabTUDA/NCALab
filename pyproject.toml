@@ -30,6 +30,7 @@ dependencies = [
     "safetensors>=0.8.0",
     "scipy==1.18.0",
     "scipy-stubs==1.18",
+    "setuptools==83.0.0",
     "tabulate>=0.10.0",
     "tensorboard>=2.20.0",
     "torch==2.13.0+cu132",
