@@ -115,7 +115,7 @@ Examples for specialized NCA models can be found in `ncalab.models.applications`
 
 Central to the inference process is the `Prediction` class, which stores the tensors processed by NCA models and allows to retrieve channel sections individually, e.g. through the `hidden_channels` property accessing the hidden channels.
 
-![Illustration of abstract NCA model and its components, which produce Prediction objects.](whitepaper/ncalab_structure.png){#fig:example width=20%}
+![Illustration of abstract NCA model and its components, which produce Prediction objects.](ncalab_structure.png){#fig:structure width=90%}
 
 
 NCAs are trained by passing them to a `BasicNCATrainer` object which stores training configuration and handles the entire training loop.
