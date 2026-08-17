@@ -28,10 +28,10 @@ def test_growing_training():
 
     try:
         trainer = BasicNCATrainer(nca, None, max_epochs=3)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         pytest.fail(str(e))
 
     try:
         trainer.train(dataloader_train, save_every=100)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         pytest.fail(str(e))
