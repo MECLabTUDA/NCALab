@@ -42,5 +42,5 @@ def test_animator():
         animator = Animator(  # noqa
             model, torch.randn(8, model.num_channels, 32, 32), hidden=True, overlay=True
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         pytest.fail(str(e))

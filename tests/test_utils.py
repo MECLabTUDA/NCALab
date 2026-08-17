@@ -42,11 +42,11 @@ def test_pad_input():
 def test_print_functions():
     try:
         print_mascot("hello world")
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         pytest.fail(str(e))
     try:
         print_NCALab_banner()
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         pytest.fail(str(e))
 
 

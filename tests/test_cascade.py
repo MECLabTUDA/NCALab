@@ -56,10 +56,10 @@ def test_cascade_depth_training_with_validation():
 
     try:
         trainer = BasicNCATrainer(cascade, None, max_epochs=3)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         pytest.fail(str(e))
 
     try:
         trainer.train(dataloader_train, dataloader_val, save_every=100)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         pytest.fail(str(e))

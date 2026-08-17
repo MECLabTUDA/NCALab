@@ -25,6 +25,6 @@ def test_nqm():
     X = torch.normal(0, 0.22, size=(B, C, W, H))
     estimator = EstimatorNQM(nca, N=N, normalize=True)
     for reduce in ("mean", "min", "max"):
-        heatmap, sequence, score = estimator(X, reduce=reduce)
+        heatmap, _, score = estimator(X, reduce=reduce)
         assert heatmap.shape == (B, classes, W, H)
         assert score.shape == (B, classes)

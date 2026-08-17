@@ -36,7 +36,7 @@ def test_binary_segmentation_training():
             num_image_channels=num_image_channels,
             num_hidden_channels=num_hidden_channels,
         )
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         pytest.fail(str(e))
 
     dataset = DummyBinarySegmentationDataset(batch_size * 4)
@@ -44,10 +44,10 @@ def test_binary_segmentation_training():
 
     try:
         trainer = BasicNCATrainer(nca, None, max_epochs=3)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         pytest.fail(str(e))
 
     try:
         trainer.train(dataloader_train, save_every=100)
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         pytest.fail(str(e))

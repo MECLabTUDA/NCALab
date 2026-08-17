@@ -57,5 +57,5 @@ def test_run():
     stepper = AutoStepper(verbose=False)
     try:
         stepper(nca, torch.randn(8, nca.num_channels, 32, 32))
-    except Exception as e:
+    except Exception as e:  # noqa: BLE001
         pytest.fail(str(e))
