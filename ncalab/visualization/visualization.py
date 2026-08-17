@@ -11,9 +11,9 @@ import numpy as np
 from matplotlib.figure import Figure  # type: ignore[import-untyped]
 from scipy.special import softmax
 
-from .utils import string_ellipsis, show_image_row
 from ..prediction import Prediction
 from ..utils import unwrap
+from .utils import show_image_row, string_ellipsis
 
 
 class Visual:
