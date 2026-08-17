@@ -1,3 +1,6 @@
+# v0.6.0
+* Breaking changes: Rename modules to underscore notation
+
 # v0.5.2
 * Introduce TrainerHooks, make EarlyStopping a TrainerHook
 
