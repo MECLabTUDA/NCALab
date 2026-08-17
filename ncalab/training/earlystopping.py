@@ -18,7 +18,7 @@ class EarlyStopping(TrainerHook):
         """
         self.patience = patience
         self.min_delta = min_delta
-        self.best_accuracy = 0.0
+        self.best_accuracy: torch.Tensor | float = 0.0
         self.counter = 0
 
     def halt_training(self) -> bool:

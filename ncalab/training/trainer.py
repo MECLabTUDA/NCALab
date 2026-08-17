@@ -203,7 +203,7 @@ class BasicNCATrainer:
             if len(dataloader_train) > 3:
                 gen = tqdm(gen, desc="Batches")  # type: ignore[assignment]
 
-            all_losses = []
+            all_losses: list[float] = []
             # TRAINING
             for sample in gen:
                 x, y = sample  # x: BCWH, y: BWHC
