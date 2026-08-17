@@ -1,9 +1,11 @@
-from typing import Optional
 
 import torch
 
+from ..prediction import Prediction
+from .trainerhook import TrainerHook
 
-class Pool:
+
+class Pool(TrainerHook):
     """
     Sample pool that retains previous predictions.
     """
@@ -18,23 +20,25 @@ class Pool:
         assert n_seed >= 1
         self.n_seed = n_seed
         self.batch: torch.Tensor | None = None
-        self.losses: torch.Tensor | None = None
 
-    def update(self, batch: torch.Tensor, losses: Optional[torch.Tensor] = None):
+    def _update(self, batch: torch.Tensor, losses: torch.Tensor | None = None):
         """
         :param batch: BCWH
         :type batch: Tensor
         """
-        self.batch = torch.clone(batch)
-        self.losses = losses
+        with torch.no_grad():
+            self.batch = torch.clone(batch)
+            if losses is None:
+                return
+            _, indices = torch.sort(losses, descending=True)
+            self.batch = self.batch[indices]
 
-    def sample(self, seed: torch.Tensor) -> torch.Tensor:
+    def _sample(self, seed: torch.Tensor) -> torch.Tensor:
         """
         :param seed: BCWH image
         :type: Tensor
         :return: BCWH image
         """
-        # TODO rank by loss
         if self.n_seed >= len(seed):
             return seed
         if self.batch is None:
@@ -42,3 +46,14 @@ class Pool:
         batch = torch.clone(seed)
         batch[self.n_seed :] = self.batch[: len(seed) - self.n_seed]
         return batch
+
+    def prepare_input(
+        self, x: torch.Tensor, y: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        return self._sample(x), y
+
+    def process_training_prediction(
+        self, prediction: Prediction, losses: torch.Tensor
+    ) -> Prediction:
+        self._update(prediction.output_image, losses)
+        return prediction

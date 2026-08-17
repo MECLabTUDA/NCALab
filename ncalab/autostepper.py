@@ -6,6 +6,8 @@ import torch
 from .models import AbstractNCAModel
 from .prediction import Prediction
 
+logger = logging.getLogger()
+
 
 class AutoStepper:
     """
@@ -84,7 +86,7 @@ class AutoStepper:
                 self.cooldown += 1
             if self.cooldown >= self.plateau:
                 if self.verbose:
-                    logging.info(f"Breaking after {step} steps.")
+                    logger.info(f"Breaking after {step} steps.")
                 return True
             return False
 

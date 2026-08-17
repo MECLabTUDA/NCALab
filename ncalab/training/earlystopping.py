@@ -1,3 +1,5 @@
+import torch
+
 from .trainerhook import TrainerHook
 
 
@@ -22,7 +24,7 @@ class EarlyStopping(TrainerHook):
     def halt_training(self) -> bool:
         return self.counter >= self.patience
 
-    def _step(self, accuracy: float):
+    def _step(self, accuracy: torch.Tensor | float):
         """
         Increases internal counter if accuracy doesn't improve, otherwise
         resets the counter.
@@ -37,5 +39,5 @@ class EarlyStopping(TrainerHook):
             self.best_accuracy = accuracy
             self.counter = 0
 
-    def on_validate(self, validation_accuracy):
+    def on_validate(self, validation_accuracy: torch.Tensor | float):
         self._step(validation_accuracy)

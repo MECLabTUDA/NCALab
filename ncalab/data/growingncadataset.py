@@ -21,7 +21,7 @@ class GrowingNCADataset(Dataset):
         :param num_channels [int]: Total number of image channels (including hidden)
         :param batch_size [int]: Output batch size. Defaults to 8.
         """
-        super(GrowingNCADataset, self).__init__()
+        super().__init__()
         self.batch_size = batch_size
         self.image = image.astype(np.float32) / 255.0
         self.seed = np.zeros((num_channels, image.shape[0], image.shape[1]))

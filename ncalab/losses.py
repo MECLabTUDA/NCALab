@@ -1,6 +1,6 @@
 import torch  # type: ignore[import-untyped]
-import torch.nn as nn  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
+from torch import nn  # type: ignore[import-untyped]
 
 
 class DiceScore(nn.Module):
@@ -9,7 +9,7 @@ class DiceScore(nn.Module):
     """
 
     def __init__(self):
-        super(DiceScore, self).__init__()
+        super().__init__()
 
     def forward(
         self, x: torch.Tensor, y: torch.Tensor, smooth: float = 1.0
@@ -26,17 +26,14 @@ class DiceScore(nn.Module):
         :rtype: torch.Tensor
         """
         x = torch.sigmoid(x)
-        x = torch.flatten(x)
-        y = torch.flatten(y)
-
-        intersection = (x * y).sum()
-        dice_score = (2.0 * intersection + smooth) / (x.sum() + y.sum() + smooth)
+        intersection = x * y
+        dice_score = (2.0 * intersection + smooth) / (x + y + smooth)
         return dice_score
 
 
 class DiceLoss(nn.Module):
     def __init__(self):
-        super(DiceLoss, self).__init__()
+        super().__init__()
         self.dicescore = DiceScore()
 
     def forward(
@@ -51,9 +48,10 @@ class DiceBCELoss(nn.Module):
     Combination of Dice and BCE Loss between two images.
     """
 
-    def __init__(self):
-        super(DiceBCELoss, self).__init__()
+    def __init__(self, reduction="none"):
+        super().__init__()
         self.dicescore = DiceScore()
+        self.reduction = reduction
 
     def forward(
         self, x: torch.Tensor, y: torch.Tensor, smooth: float = 1.0
@@ -70,23 +68,20 @@ class DiceBCELoss(nn.Module):
         :rtype: torch.Tensor
         """
         dice_loss = 1 - self.dicescore(x, y, smooth)
-
         x = torch.sigmoid(x)
-        x = torch.flatten(x)
-        y = torch.flatten(y)
-
-        BCE = F.binary_cross_entropy(x, y, reduction="mean")
+        BCE = F.binary_cross_entropy(x, y, reduction=self.reduction)
         Dice_BCE = BCE + dice_loss
         return Dice_BCE
 
 
 class FocalLoss(nn.modules.loss._WeightedLoss):
-    def __init__(self, weight=None, gamma=2, device="cpu"):
-        super(FocalLoss, self).__init__(weight)
+    def __init__(self, weight=None, gamma=2, device="cpu", reduction="none"):
+        super().__init__(weight)
         self.gamma = gamma
         self.weight = weight
         self.device = device
-        self.ce_loss = nn.CrossEntropyLoss(weight=weight)
+        self.ce_loss = nn.CrossEntropyLoss(weight=weight, reduction=reduction)
+        self.reduce = reduction
 
     def forward(self, _input, _target):
         focal_loss = 0

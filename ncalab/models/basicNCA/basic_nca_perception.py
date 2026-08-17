@@ -1,9 +1,9 @@
-from typing import List, Literal, Tuple
+from typing import Literal
 
 import numpy as np
 import torch  # type: ignore[import-untyped]
-import torch.nn as nn  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
+from torch import nn  # type: ignore[import-untyped]
 
 
 class BasicNCAPerception(nn.Module):
@@ -15,7 +15,7 @@ class BasicNCAPerception(nn.Module):
         filter_padding: Literal["zero", "reflect", "replicate", "circular"],
         use_temporal_encoding: bool,
         use_laplace: bool,
-        training_timesteps: int | Tuple[int, int] = 100,
+        training_timesteps: int | tuple[int, int] = 100,
         kernel_size: int = 3,
     ):
         super().__init__()
@@ -36,7 +36,7 @@ class BasicNCAPerception(nn.Module):
 
         :param num_learned_filters [int]: Number of learned filters in perception filter bank.
         """
-        self.filters: List[np.ndarray] | nn.ModuleList = []
+        self.filters: list[np.ndarray] | nn.ModuleList = []
         if self.num_learned_filters > 0:
             self.num_filters = self.num_learned_filters
             filters = []

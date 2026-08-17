@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import random
 from datetime import datetime
-from typing import TYPE_CHECKING, Any, Tuple
+from typing import TYPE_CHECKING, Any
 
 import numpy as np
 import torch  # type: ignore[import-untyped]
@@ -33,7 +33,7 @@ def get_compute_device(device: str = "cuda:0") -> torch.device:
 
 def pad_input(
     x: torch.Tensor,
-    nca: "AbstractNCAModel",
+    nca: AbstractNCAModel,
     noise: bool = True,
     mean: float = 0.5,
     std: float = 0.225,
@@ -148,7 +148,7 @@ def release_random_seed() -> int:
 
     :returns: Random seed, initialized by system time stamp.
     """
-    seed = int(datetime.now().timestamp())
+    seed = int(datetime.now().timestamp())  # noqa: DTZ005
     random.seed(seed)
     os.environ["PYTHONHASHSEED"] = str(seed)
     np.random.seed(seed)
@@ -176,7 +176,7 @@ def unwrap(x: Any):
     return x
 
 
-def interpret_range_parameter(x: int | Tuple[int, int]) -> int:
+def interpret_range_parameter(x: int | tuple[int, int]) -> int:
     """
     Interpret a range parameter that is passed for NCA timesteps.
 

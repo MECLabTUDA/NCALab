@@ -2,13 +2,13 @@ from __future__ import annotations
 
 import abc
 import os
-from typing import TYPE_CHECKING, Any, Dict, List, Literal, Optional, Tuple
+from typing import TYPE_CHECKING, Any, Literal
 
 import numpy as np
 import torch  # type: ignore[import-untyped]
-import torch.nn as nn  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
 from safetensors.torch import load_model, save_model
+from torch import nn  # type: ignore[import-untyped]
 from torchmetrics import Metric
 
 from ...prediction import Prediction
@@ -36,8 +36,8 @@ class AbstractNCAModel(nn.Module, abc.ABC):
         num_image_channels: int,
         num_hidden_channels: int,
         num_output_channels: int,
-        plot_function: Optional[Visual] = None,
-        validation_metric: Optional[str] = None,
+        plot_function: Visual | None = None,
+        validation_metric: str | None = None,
         fire_rate: float = 0.5,
         hidden_size: int = 128,
         use_alive_mask: bool = False,
@@ -50,8 +50,8 @@ class AbstractNCAModel(nn.Module, abc.ABC):
         use_temporal_encoding: bool = False,
         rule_type: type[AbstractNCARule] = MLPNCARule,
         rule_args: dict[str, Any] | None = None,
-        training_timesteps: int | Tuple[int, int] = 100,
-        inference_timesteps: int | Tuple[int, int] = 100,
+        training_timesteps: int | tuple[int, int] = 100,
+        inference_timesteps: int | tuple[int, int] = 100,
     ):
         """
         :param device: Pytorch device descriptor.
@@ -74,7 +74,7 @@ class AbstractNCAModel(nn.Module, abc.ABC):
         :param training_timesteps:
         :param inference_timesteps:
         """
-        super(AbstractNCAModel, self).__init__()
+        super().__init__()
         self.device = device
 
         self.num_image_channels = num_image_channels
@@ -120,7 +120,7 @@ class AbstractNCAModel(nn.Module, abc.ABC):
         # task-specific head
         self.head: AbstractNCAHead | None = None
 
-        self.metrics: Dict[str, Metric] = {}
+        self.metrics: dict[str, Metric] = {}
         self.to(device)
 
     def _define_rule(self) -> AbstractNCARule:
@@ -238,7 +238,7 @@ class AbstractNCAModel(nn.Module, abc.ABC):
         return prediction
 
     @abc.abstractmethod
-    def loss(self, pred: Prediction, label: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def loss(self, pred: Prediction, label: torch.Tensor) -> dict[str, torch.Tensor]:
         """
         Compute loss. Needs to be overloaded by any subclass.
         Please note that the returned dict needs to hold "total" key in which the
@@ -267,7 +267,7 @@ class AbstractNCAModel(nn.Module, abc.ABC):
             self.head.freeze()
 
     def predict(
-        self, image: torch.Tensor, steps: Optional[int | Tuple[int, int]] = None
+        self, image: torch.Tensor, steps: int | tuple[int, int] | None = None
     ) -> Prediction:
         """
         Make an NCA prediction, performing multiple forward passes to
@@ -296,8 +296,8 @@ class AbstractNCAModel(nn.Module, abc.ABC):
             return prediction
 
     def record(
-        self, image: torch.Tensor, steps: Optional[int | Tuple[int, int]] = None
-    ) -> List[Prediction]:
+        self, image: torch.Tensor, steps: int | tuple[int, int] | None = None
+    ) -> list[Prediction]:
         """
         Record predictions for all time steps and return the resulting
         sequence of predictions.
@@ -329,8 +329,8 @@ class AbstractNCAModel(nn.Module, abc.ABC):
     def validate(
         self,
         dataloader: torch.utils.data.DataLoader,
-        steps: Optional[int] = None,
-    ) -> Tuple[Dict[str, float], List[Prediction]]:
+        steps: int | None = None,
+    ) -> tuple[dict[str, float], list[Prediction]]:
         """
         Make a prediction on an image of the validation set and return metrics computed
         with respect to a labelled validation image.
@@ -342,8 +342,8 @@ class AbstractNCAModel(nn.Module, abc.ABC):
         """
         with torch.no_grad():
             self.eval()
-            predictions: List[Prediction] = []
-            for _, metric in self.metrics.items():
+            predictions: list[Prediction] = []
+            for metric in self.metrics.values():
                 metric.reset()
                 metric.to(self.device)
             for image, label in dataloader:
@@ -353,7 +353,7 @@ class AbstractNCAModel(nn.Module, abc.ABC):
                 # classification
                 if len(label.shape) == 2:
                     label = label.squeeze(1)
-                for _, metric in self.metrics.items():
+                for metric in self.metrics.values():
                     # treat segmentation as a special case
                     if prediction.mask is not None:
                         # FIXME handle binary segmentation with squeeze, multi-class without squeeze
@@ -365,31 +365,31 @@ class AbstractNCAModel(nn.Module, abc.ABC):
             metrics = {k: m.compute().item() for k, m in self.metrics.items()}
         return metrics, predictions
 
-    def _to_dict(self) -> Dict[str, Any]:
+    def _to_dict(self) -> dict[str, Any]:
         return {}
 
-    def to_dict(self) -> Dict[str, Any]:
-        d = dict(
-            num_image_channels=self.num_image_channels,
-            num_hidden_channels=self.num_hidden_channels,
-            num_output_channels=self.num_output_channels,
-            fire_rate=self.fire_rate,
-            hidden_size=self.hidden_size,
-            use_alive_mask=self.use_alive_mask,
-            num_learned_filters=self.num_learned_filters,
-            use_laplace=self.use_laplace,
-            kernel_size=self.kernel_size,
-            filter_padding=self.filter_padding,
-            pad_noise=self.pad_noise,
-            use_temporal_encoding=self.use_temporal_encoding,
-            training_timesteps=self.training_timesteps,
-            inference_timesteps=self.inference_timesteps,
-        )
+    def to_dict(self) -> dict[str, Any]:
+        d = {
+            "num_image_channels": self.num_image_channels,
+            "num_hidden_channels": self.num_hidden_channels,
+            "num_output_channels": self.num_output_channels,
+            "fire_rate": self.fire_rate,
+            "hidden_size": self.hidden_size,
+            "use_alive_mask": self.use_alive_mask,
+            "num_learned_filters": self.num_learned_filters,
+            "use_laplace": self.use_laplace,
+            "kernel_size": self.kernel_size,
+            "filter_padding": self.filter_padding,
+            "pad_noise": self.pad_noise,
+            "use_temporal_encoding": self.use_temporal_encoding,
+            "training_timesteps": self.training_timesteps,
+            "inference_timesteps": self.inference_timesteps,
+        }
         d.update(self._to_dict())
         return d
 
     @classmethod
-    def from_dict(cls, d: Dict[str, Any]):
+    def from_dict(cls, d: dict[str, Any]):
         return cls(**d)
 
     def num_trainable_parameters(self) -> int:
@@ -406,7 +406,7 @@ class AbstractNCAModel(nn.Module, abc.ABC):
         save_model(self, str(path))
 
     @staticmethod
-    def load(model: "AbstractNCAModel", path: str | os.PathLike) -> "AbstractNCAModel":
+    def load(model: AbstractNCAModel, path: str | os.PathLike) -> AbstractNCAModel:
         load_model(model, path)
         return model
 

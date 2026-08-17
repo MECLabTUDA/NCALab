@@ -9,10 +9,14 @@ class TrainerHook(abc.ABC):
     def __init__(self):
         pass
 
-    def prepare_input(self, x: torch.Tensor) -> torch.Tensor:
-        return x
+    def prepare_input(
+        self, x: torch.Tensor, y: torch.Tensor
+    ) -> tuple[torch.Tensor, torch.Tensor]:
+        return x, y
 
-    def process_training_prediction(self, prediction: Prediction) -> Prediction:
+    def process_training_prediction(
+        self, prediction: Prediction, losses: torch.Tensor
+    ) -> Prediction:
         return prediction
 
     def halt_training(self) -> bool:

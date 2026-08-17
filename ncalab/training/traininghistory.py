@@ -3,7 +3,6 @@ import enum
 import json
 from datetime import datetime
 from pathlib import Path, PosixPath
-from typing import Dict, List, Optional
 
 import click
 import numpy as np
@@ -29,14 +28,14 @@ class TrainingHistory:
 
     def __init__(
         self,
-        path: Optional[Path | PosixPath],
-        metrics: Dict[str, float],
+        path: Path | PosixPath | None,
+        metrics: dict[str, float],
         current_epoch: int,
         current_model: AbstractNCAModel,
         # TODO current_accuracy
         best_accuracy: float = 0,
         best_epoch: int = 0,
-        best_model: Optional[AbstractNCAModel] = None,
+        best_model: AbstractNCAModel | None = None,
         verbose: bool = True,
     ):
         """
@@ -66,9 +65,9 @@ class TrainingHistory:
         self.best_epoch = best_epoch
         self.best_model = best_model
         self.verbose = verbose
-        self.created_timestamp = datetime.now()
-        self.modified_timestamp = datetime.now()
-        self.loss: List[float] = []
+        self.created_timestamp = datetime.now()  # noqa: DTZ005
+        self.modified_timestamp = datetime.now()  # noqa: DTZ005
+        self.loss: list[float] = []
         self.status: TrainingStatus = TrainingStatus.STATUS_NONE
 
     def update(
@@ -92,7 +91,7 @@ class TrainingHistory:
         :param overwrite: Whether to overwrite best accuracy even with no improvement, defaults to False
         :type overwrite: bool, optional
         """
-        self.modified_timestamp = datetime.now()
+        self.modified_timestamp = datetime.now()  # noqa: DTZ005
         self.current_epoch = epoch
         self.current_model = model
         self.current_accuracy = accuracy
@@ -135,7 +134,7 @@ class TrainingHistory:
     def load(path):
         raise NotImplementedError
 
-    def to_dict(self) -> Dict:
+    def to_dict(self) -> dict:
         """
         Return dict of recorded values
 

@@ -8,7 +8,7 @@ class AbstractNCARule(nn.Module, abc.ABC):
     def __init__(
         self, device: torch.device, input_size: int, hidden_size: int, output_size: int
     ):
-        super(AbstractNCARule, self).__init__()
+        super().__init__()
         self.device = device
         self.input_size = input_size
         self.hidden_size = hidden_size

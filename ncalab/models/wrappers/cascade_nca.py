@@ -1,9 +1,8 @@
 import copy
-from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import torch  # type: ignore[import-untyped]
-import torch.nn as nn  # type: ignore[import-untyped]
+from torch import nn  # type: ignore[import-untyped]
 
 from ncalab.models.basicNCA import AbstractNCAModel
 from ncalab.prediction import Prediction
@@ -65,8 +64,8 @@ class CascadeNCA(AbstractNCAModel):
     def __init__(
         self,
         wrapped: AbstractNCAModel,
-        scales: List[int],
-        steps: List[int],
+        scales: list[int],
+        steps: list[int],
         single_model: bool = True,
     ):
         """
@@ -79,7 +78,7 @@ class CascadeNCA(AbstractNCAModel):
         :param single_model: Only train a single instance of the NCA model
         :type single_model: bool
         """
-        super(CascadeNCA, self).__init__(
+        super().__init__(
             device=wrapped.device,
             num_image_channels=wrapped.num_image_channels,
             num_hidden_channels=wrapped.num_hidden_channels,
@@ -122,7 +121,7 @@ class CascadeNCA(AbstractNCAModel):
         self.steps = steps
 
         self.single_model = single_model
-        self.models: List[AbstractNCAModel]
+        self.models: list[AbstractNCAModel]
         if single_model:
             self.models = [wrapped for _ in scales]
         else:
@@ -182,8 +181,8 @@ class CascadeNCA(AbstractNCAModel):
         )
 
     def record(
-        self, image: torch.Tensor, steps: Optional[int | Tuple[int, int]] = None
-    ) -> List[Prediction]:
+        self, image: torch.Tensor, steps: int | tuple[int, int] | None = None
+    ) -> list[Prediction]:
         """
         Records predictions for all time steps and returns the resulting
         sequence of predictions.
@@ -220,5 +219,5 @@ class CascadeNCA(AbstractNCAModel):
                 )
         return sequence
 
-    def loss(self, pred: Prediction, label: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def loss(self, pred: Prediction, label: torch.Tensor) -> dict[str, torch.Tensor]:
         return self.wrapped.loss(pred, label)

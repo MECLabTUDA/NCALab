@@ -2,11 +2,10 @@ from __future__ import annotations
 
 from copy import copy
 from pathlib import Path, PosixPath  # for type hint
-from typing import Dict, List, Optional, Tuple
 
 import numpy as np
 import torch  # type: ignore[import-untyped]
-import torch.optim as optim  # type: ignore[import-untyped]
+from torch import optim  # type: ignore[import-untyped]
 from torch.utils.data import DataLoader  # for type hint
 from torch.utils.tensorboard import SummaryWriter  # for type hint
 from tqdm import tqdm  # type: ignore[import-untyped]
@@ -15,7 +14,6 @@ from ..models.basicNCA import AbstractNCAModel  # for type hint
 from ..prediction import Prediction
 from ..utils import interpret_range_parameter, pad_input
 from ..visualization import Visual
-from .pool import Pool
 from .trainerhook import TrainerHook
 from .traininghistory import TrainingHistory
 
@@ -28,15 +26,14 @@ class BasicNCATrainer:
     def __init__(
         self,
         nca: AbstractNCAModel,
-        model_path: Optional[Path | PosixPath],
+        model_path: Path | PosixPath | None,
         gradient_clipping: bool = False,
-        optimizer: Optional[optim.Optimizer] = None,
+        optimizer: optim.Optimizer | None = None,
         lr: float = 1e-3,
-        lr_scheduler: Optional[optim.lr_scheduler.LRScheduler] = None,
+        lr_scheduler: optim.lr_scheduler.LRScheduler | None = None,
         batch_repeat: int = 2,
         max_epochs: int = 200,
-        pool: Optional[Pool] = None,
-        hooks: Optional[List[TrainerHook]] = None,
+        hooks: list[TrainerHook] | None = None,
     ):
         """
         :param nca: NCA model instance to train.
@@ -49,8 +46,6 @@ class BasicNCATrainer:
         :type lr: float, optional
         :param batch_repeat: How often each batch will be duplicated, dfaults to 2.
         :param max_epochs: Maximum number of epochs in training, defaults to 200.
-        :param pool: Sample pool object.
-        :type pool: ncalab.Pool
         """
         assert batch_repeat >= 1
         assert max_epochs > 0
@@ -67,7 +62,6 @@ class BasicNCATrainer:
             if optimizer is None
             else optimizer
         )
-        self.pool = pool
         self.hooks = [] if hooks is None else hooks
 
     def info(self) -> str:
@@ -96,8 +90,8 @@ class BasicNCATrainer:
         y: torch.Tensor,
         head_optimizer: torch.optim.Optimizer | None,
         total_batch_iterations: int,
-        summary_writer: Optional[SummaryWriter] = None,
-    ) -> Tuple[Prediction, Dict[str, torch.Tensor]]:
+        summary_writer: SummaryWriter | None = None,
+    ) -> tuple[Prediction, dict[str, torch.Tensor]]:
         """
         Run a single training iteration.
 
@@ -124,7 +118,15 @@ class BasicNCATrainer:
             x_in, steps=interpret_range_parameter(self.nca.training_timesteps)
         )
         losses = self.nca.loss(prediction, y.to(device))
-        losses["total"].backward()
+        # TODO use dedicated class (LossInstance) to model composite losses
+        assert "total" in losses, "Model: Loss dict must contain 'total' item."
+        # loss must not be reduced
+        assert len(losses["total"]) == len(x_in)
+
+        for hook in self.hooks:
+            prediction = hook.process_training_prediction(prediction, losses["total"])
+
+        losses["total"].mean().backward()
 
         if self.gradient_clipping:
             torch.nn.utils.clip_grad_norm_(self.nca.parameters(), 1.0)
@@ -134,18 +136,18 @@ class BasicNCATrainer:
         if summary_writer:
             for key in losses:
                 summary_writer.add_scalar(
-                    f"Loss/train_{key}", losses[key], total_batch_iterations
+                    f"Loss/train_{key}", losses[key].mean(), total_batch_iterations
                 )
         return prediction, losses
 
     def train(
         self,
         dataloader_train: DataLoader,
-        dataloader_val: Optional[DataLoader] = None,
-        dataloader_test: Optional[DataLoader] = None,
-        save_every: Optional[int] = None,
-        summary_writer: Optional[SummaryWriter] = None,
-        plot_function: Optional[Visual] = None,
+        dataloader_val: DataLoader | None = None,
+        dataloader_test: DataLoader | None = None,
+        save_every: int | None = None,
+        summary_writer: SummaryWriter | None = None,
+        plot_function: Visual | None = None,
     ) -> TrainingHistory:
         """
         Execute basic NCA training loop with a single function call.
@@ -172,18 +174,16 @@ class BasicNCATrainer:
         assert save_every > 0
 
         # Use default plot function for NCA flavor if no override is explicitly given
-        if not plot_function:
-            if self.nca.plot_function:
-                plot_function = self.nca.plot_function
+        if not plot_function and self.nca.plot_function:
+            plot_function = self.nca.plot_function
 
         if summary_writer is not None:
             summary_writer.add_text("Training Info", self.info())
 
         self.lr_scheduler = optim.lr_scheduler.ExponentialLR(self.optimizer, 0.9)
         head_optimizer = None
-        if self.nca.head is not None:
-            if self.nca.head.optimizer is not None:
-                head_optimizer = copy(self.nca.head.optimizer)
+        if self.nca.head is not None and self.nca.head.optimizer is not None:
+            head_optimizer = copy(self.nca.head.optimizer)
 
         # MAIN LOOP
         total_batch_iterations = 0
@@ -216,8 +216,8 @@ class BasicNCATrainer:
                 x = pad_input(x, self.nca, noise=self.nca.pad_noise)
                 # Call model-specific input preparation hook
                 x = self.nca.prepare_input(x)
-                if self.pool is not None:
-                    x = self.pool.sample(x)
+                for hook in self.hooks:
+                    x, y = hook.prepare_input(x, y)
 
                 # Batch duplication, slightly stabelizes the training
                 if self.batch_repeat > 1:
@@ -231,13 +231,9 @@ class BasicNCATrainer:
                     total_batch_iterations,
                     summary_writer,
                 )
-                # TODO use dedicated class (LossInstance) to model composite losses
-                assert "total" in losses, "Model: Loss dict must contain 'total' item."
                 with torch.no_grad():
                     total_batch_iterations += 1
-                    if self.pool is not None:
-                        self.pool.update(train_prediction.output_image)
-                    all_losses.append(losses["total"].item())
+                    all_losses.extend(losses["total"].detach().cpu().numpy())
             history.loss.append(float(np.mean(all_losses)))
             if self.lr_scheduler is not None:
                 self.lr_scheduler.step()

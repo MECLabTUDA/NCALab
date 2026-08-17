@@ -1,10 +1,10 @@
 import copy
 import json
 from pathlib import Path, PosixPath
-from typing import Dict, List, Type
+from typing import Literal
 
-from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader
+from torch.utils.tensorboard import SummaryWriter
 
 from .trainer import BasicNCATrainer
 from .traininghistory import TrainingHistory
@@ -18,8 +18,8 @@ class TrainValRecord:
 
     def __init__(
         self,
-        train: List[str],
-        val: List[str],
+        train: list[str],
+        val: list[str],
     ):
         """
         :param train:  List of training image file paths
@@ -32,10 +32,10 @@ class TrainValRecord:
 
     def dataloaders(
         self,
-        DatasetType: Type,
+        DatasetType: type,
         path: Path | PosixPath,
         transform=None,
-        batch_sizes=None,
+        batch_sizes: dict[Literal["train", "val"], int] | None = None,
     ):
         """
         Generate a pair of training and validation DataLoader objects, based on
@@ -63,7 +63,6 @@ class SplitDefinition:
     """
     Stores a k-fold cross-validation split.
     """
-
     def __init__(self):
         self.folds = []
         self.dataloader_test = None
@@ -118,18 +117,18 @@ class KFoldCrossValidationTrainer:
         :param split [SplitDefinition]: Definition of the split used for k-fold cross-training.
         """
         self.trainer = trainer
-        self.model_prototype = copy.deepcopy(trainer.nca)
+        self.model_prototype = trainer.nca
         self.model_name = trainer.model_path.with_suffix("")  # type: ignore[union-attr]
         self.split = split
 
     def train(
         self,
-        DatasetType: Type,
+        DatasetType: type,
         datapath: Path | PosixPath,
         transform,
-        batch_sizes: None | Dict = None,
+        batch_sizes: None | dict = None,
         save_every: int | None = None,
-    ) -> List[TrainingHistory]:
+    ) -> list[TrainingHistory]:
         """
         Run training loop with a single function call.
 
@@ -160,4 +159,5 @@ class KFoldCrossValidationTrainer:
                 summary_writer=writer,
             )
             summaries.append(summary)
+            writer.close()
         return summaries

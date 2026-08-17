@@ -1,21 +1,19 @@
 import itertools
-from collections.abc import Iterable
 import logging
-from typing import Any, Dict, Optional
+from collections.abc import Iterable
+from typing import Any
 
 import pandas as pd
-
-from torch.utils.tensorboard import SummaryWriter
 from torch.utils.data import DataLoader  # for type hint
+from torch.utils.tensorboard import SummaryWriter
 
 from ..training import BasicNCATrainer  # for type hint
 
+logger = logging.getLogger()
+
 
 class ParameterSet:
-    """ """
-
     def __init__(self, **kwargs):
-        """ """
         self.params = kwargs
         # Replace parameters by iterable parameters (list with single entry)
         # if they are not iterables.
@@ -49,7 +47,7 @@ class ParameterSet:
         s += f"{len(self)} combinations"
         return s
 
-    def next(self) -> Dict[str, Any]:
+    def next(self) -> dict[str, Any]:
         if self.index < len(self.combinations):
             ret = self.combinations[self.index]
             self.index += 1
@@ -109,7 +107,7 @@ class ParameterSearch:
     def search(
         self,
         dataloader_train: DataLoader,
-        dataloader_val: Optional[DataLoader] = None,
+        dataloader_val: DataLoader | None = None,
     ):
         """
         Run search.
@@ -137,8 +135,8 @@ class ParameterSearch:
                         for k, v in model_args.items()
                     ]
                 )
-                logging.info(f"Running experiment '{experiment_name}'")
-                logging.info(
+                logger.info(f"Running experiment '{experiment_name}'")
+                logger.info(
                     f"This is experiment {i} / {len(self.trainer_params) * len(self.model_params)}"
                 )
                 writer = SummaryWriter(comment=experiment_name)

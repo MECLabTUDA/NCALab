@@ -1,4 +1,4 @@
-from typing import Dict, Literal
+from typing import Literal
 
 import torch  # type: ignore[import-untyped]
 import torchmetrics.segmentation
@@ -57,7 +57,7 @@ class BinarySegmentationNCAModel(AbstractNCAModel):
         :param lambda_dice: Weight of Dice loss term, defaults to 0.5
         :type lambda_dice: float, optional
         """
-        super(BinarySegmentationNCAModel, self).__init__(
+        super().__init__(
             device,
             num_image_channels,
             num_hidden_channels,
@@ -77,12 +77,12 @@ class BinarySegmentationNCAModel(AbstractNCAModel):
             "dice": torchmetrics.segmentation.DiceScore(num_classes=2).to(self.device),
         }
         self.lambda_hidden = lambda_hidden
-        self.bce_loss = torch.nn.BCEWithLogitsLoss(reduction="mean")
+        self.bce_loss = torch.nn.BCEWithLogitsLoss(reduction="none")
         self.dice_loss = DiceLoss()
         self.lambda_bce = lambda_bce
         self.lambda_dice = lambda_dice
 
-    def loss(self, pred: Prediction, label: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def loss(self, pred: Prediction, label: torch.Tensor) -> dict[str, torch.Tensor]:
         """
         Compute loss as a weighted sum of Dice, BCE and hidden channel loss.
 
@@ -93,11 +93,11 @@ class BinarySegmentationNCAModel(AbstractNCAModel):
         """
         y = pred.logits
 
-        loss_dice = self.dice_loss(y, label)
+        loss_dice = self.dice_loss(y, label).mean(dim=(1, 2, 3))
         if label.ndim == 3:
             label = label.unsqueeze(1)
-        loss_bce = self.bce_loss(y, label.float())
-        loss_hidden = torch.mean(torch.abs(pred.hidden_channels))
+        loss_bce = self.bce_loss(y, label.float()).mean(dim=(1, 2, 3))
+        loss_hidden = torch.abs(pred.hidden_channels).mean(dim=(1, 2, 3))
 
         loss = (
             self.lambda_dice * loss_dice

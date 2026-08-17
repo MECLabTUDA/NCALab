@@ -1,6 +1,3 @@
-from typing import Tuple
-
-
 class Color:
     """
     Abstraction for RGBA color.
@@ -11,7 +8,7 @@ class Color:
 
     def __init__(
         self,
-        rgba4f: Tuple[float, float, float, float] | float,
+        rgba4f: tuple[float, float, float, float] | float,
         g: float = 0.0,
         b: float = 0.0,
         a: float = 1.0,
@@ -36,11 +33,11 @@ class Color:
         return Color((r / 255, g / 255, b / 255, a / 255))
 
     @property
-    def rgba4f(self) -> Tuple[float, float, float, float]:
+    def rgba4f(self) -> tuple[float, float, float, float]:
         return self._rgba4f
 
     @property
-    def rgba4b(self) -> Tuple[int, int, int, int]:
+    def rgba4b(self) -> tuple[int, int, int, int]:
         return (
             int(self.rgba4f[0] * 255.0),
             int(self.rgba4f[1] * 255.0),
@@ -49,7 +46,7 @@ class Color:
         )
 
     @property
-    def rgb3f(self) -> Tuple[float, float, float]:
+    def rgb3f(self) -> tuple[float, float, float]:
         return self.rgba4f[:3]
 
     @staticmethod
@@ -58,6 +55,6 @@ class Color:
         raise NotImplementedError
 
     @property
-    def hsva4f(self) -> Tuple[float, float, float, float]:
+    def hsva4f(self) -> tuple[float, float, float, float]:
         # TODO: implement
         raise NotImplementedError

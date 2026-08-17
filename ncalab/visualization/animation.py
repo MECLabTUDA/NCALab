@@ -1,12 +1,12 @@
 from pathlib import Path
-from typing import TYPE_CHECKING, List, Optional
+from typing import TYPE_CHECKING
 
 import cv2
 import matplotlib as mpl
-import matplotlib.animation as animation  # type: ignore[import-untyped]
 import matplotlib.pyplot as plt  # type: ignore[import-untyped]
 import numpy as np
 import torch
+from matplotlib import animation  # type: ignore[import-untyped]
 
 from .color import Color
 
@@ -17,8 +17,6 @@ from ..prediction import Prediction
 
 
 class AnimatorStyle:
-    """ """
-
     def __init__(
         self,
         color_background: Color,
@@ -137,7 +135,7 @@ class Animator:
         self,
         nca: "AbstractNCAModel",
         seed: torch.Tensor,
-        steps: Optional[int] = None,
+        steps: int | None = None,
         interval: int = 100,
         repeat: bool = True,
         repeat_delay: int = 10000,
@@ -176,7 +174,7 @@ class Animator:
 
         fpath = ROOT_PATH / "fonts" / "PixelOperatorMono-Bold.ttf"
 
-        recorded_predictions: List[Prediction] = nca.record(seed, steps)
+        recorded_predictions: list[Prediction] = nca.record(seed, steps)
         inference_timesteps = len(recorded_predictions)
         predictions = Prediction.flatten_recorded_predictions(recorded_predictions)
 

@@ -1,4 +1,3 @@
-from typing import Dict, List
 
 import numpy as np
 import torch  # type: ignore[import-untyped]
@@ -35,7 +34,7 @@ class GrowingNCAModel(AbstractNCAModel):
         :param hidden_size [int]: Default number of nodes in hidden layer. Defaults to 128.
         :param use_alive_mask [bool]: Whether to use alive masking. Defaults to False.
         """
-        super(GrowingNCAModel, self).__init__(
+        super().__init__(
             device,
             num_image_channels=4,
             num_hidden_channels=num_hidden_channels,
@@ -50,7 +49,7 @@ class GrowingNCAModel(AbstractNCAModel):
         )
         self.lambda_hidden = lambda_hidden
 
-    def loss(self, pred: Prediction, label: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def loss(self, pred: Prediction, label: torch.Tensor) -> dict[str, torch.Tensor]:
         """
         Implements a simple MSE loss between target and prediction.
 
@@ -75,7 +74,7 @@ class GrowingNCAModel(AbstractNCAModel):
         x[:, self.num_image_channels - 1 :, width // 2, height // 2] = 1.0
         return x
 
-    def grow(self, seed: torch.Tensor, steps: int = 100) -> List[np.ndarray]:
+    def grow(self, seed: torch.Tensor, steps: int = 100) -> list[np.ndarray]:
         """
         Run the growth process and return the resulting output sequence.
 

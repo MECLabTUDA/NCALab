@@ -1,9 +1,8 @@
-from typing import Dict
 
 import torch  # type: ignore[import-untyped]
-import torch.nn as nn  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
 from pytorch_msssim import ssim  # type: ignore[import-untyped]
+from torch import nn  # type: ignore[import-untyped]
 
 from ....prediction import Prediction
 from ....visualization import VisualDepthEstimation
@@ -13,10 +12,8 @@ from ...basicNCA import AbstractNCAModel
 
 
 class SmoothnessLoss(nn.Module):
-    """ """
-
     def __init__(self):
-        super(SmoothnessLoss, self).__init__()
+        super().__init__()
 
     def forward(self, depth_map: torch.Tensor, rgb_image: torch.Tensor):
         # Ensure the inputs are in the right shape
@@ -77,7 +74,7 @@ class DepthNCAModel(AbstractNCAModel):
         pad_noise: bool = False,
         **kwargs,
     ):
-        super(DepthNCAModel, self).__init__(
+        super().__init__(
             device,
             num_image_channels,
             num_hidden_channels,
@@ -95,7 +92,7 @@ class DepthNCAModel(AbstractNCAModel):
         )
         self.vignette = None
 
-    def loss(self, pred: Prediction, label: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def loss(self, pred: Prediction, label: torch.Tensor) -> dict[str, torch.Tensor]:
         """
         :param image: Input image, BCWH.
         :param label: Ground truth.

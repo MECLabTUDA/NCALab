@@ -1,5 +1,5 @@
 import abc
-from typing import List, Literal, Tuple
+from typing import Literal
 
 import torch
 
@@ -16,7 +16,7 @@ class UncertaintyEstimator(abc.ABC):
         self.nca = nca
 
     @abc.abstractmethod
-    def _estimate(self, image: torch.Tensor) -> Tuple[torch.Tensor, List[Prediction]]:
+    def _estimate(self, image: torch.Tensor) -> tuple[torch.Tensor, list[Prediction]]:
         """
         Internal uncertainty estimation method.
 
@@ -30,7 +30,7 @@ class UncertaintyEstimator(abc.ABC):
 
     def estimate(
         self, image: torch.Tensor, reduce: Literal["min", "max", "mean"] = "mean"
-    ) -> Tuple[torch.Tensor, List[Prediction], torch.Tensor]:
+    ) -> tuple[torch.Tensor, list[Prediction], torch.Tensor]:
         """
         Estimate predictive uncertainty.
 
@@ -69,7 +69,7 @@ class EstimatorNQM(UncertaintyEstimator):
         self.N = N
         self.normalize = normalize
 
-    def _estimate(self, image: torch.Tensor) -> Tuple[torch.Tensor, List[Prediction]]:
+    def _estimate(self, image: torch.Tensor) -> tuple[torch.Tensor, list[Prediction]]:
         """
         Internal uncertainty estimation method.
 

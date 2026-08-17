@@ -1,5 +1,4 @@
 import itertools
-from typing import List, Optional
 
 import numpy as np
 import torch
@@ -19,8 +18,8 @@ class Prediction:
         steps: int,
         output_image: torch.Tensor,
         logits: torch.Tensor,
-        head_prediction: Optional[torch.Tensor] = None,
-        mask: Optional[torch.Tensor] = None,
+        head_prediction: torch.Tensor | None = None,
+        mask: torch.Tensor | None = None,
     ):
         """
         Constructor is typically not called explicitly.
@@ -38,13 +37,13 @@ class Prediction:
         self.steps = steps
         assert output_image.shape[1] == model.num_channels
         self.output_image = output_image
-        self._output_array: Optional[np.ndarray] = None
+        self._output_array: np.ndarray | None = None
         self.logits = logits
-        self._logits_array: Optional[np.ndarray] = None
+        self._logits_array: np.ndarray | None = None
         self.head_prediction = head_prediction
-        self._head_prediction_array: Optional[np.ndarray] = None
+        self._head_prediction_array: np.ndarray | None = None
         self.mask = mask
-        self._mask_array: Optional[np.ndarray] = None
+        self._mask_array: np.ndarray | None = None
 
     @property
     def image_channels(self) -> torch.Tensor:
@@ -176,7 +175,7 @@ class Prediction:
             self._mask_array = self.mask.detach().cpu().numpy()
         return self._mask_array
 
-    def unwrap_batch(self) -> List["Prediction"]:
+    def unwrap_batch(self) -> list["Prediction"]:
         """
         Unwrap individual samples of a batch into a list of individual predictions.
 
@@ -207,8 +206,8 @@ class Prediction:
 
     @staticmethod
     def flatten_recorded_predictions(
-        recorded_predictions: List["Prediction"],
-    ) -> List["Prediction"]:
+        recorded_predictions: list["Prediction"],
+    ) -> list["Prediction"]:
         """
         Given a list of predictions (obtained by AbstractNCAModel.record), each with
         batch size B, create a list where each individual sample (batch size 1) is chained.
@@ -218,15 +217,15 @@ class Prediction:
         """
         if not recorded_predictions:
             return []
-        unwrapped_predictions: List[List[Prediction]] = [
+        unwrapped_predictions: list[list[Prediction]] = [
             p.unwrap_batch() for p in recorded_predictions
         ]
         # samples are interleaved. disentangle.
-        transposed_predictions: List[List[Prediction]] = [
+        transposed_predictions: list[list[Prediction]] = [
             list(i) for i in zip(*unwrapped_predictions)
         ]
         # flatten
-        predictions_over_time: List[Prediction] = list(
+        predictions_over_time: list[Prediction] = list(
             itertools.chain(*transposed_predictions)
         )
         return predictions_over_time

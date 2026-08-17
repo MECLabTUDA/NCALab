@@ -32,7 +32,7 @@ class MLPNCARule(AbstractNCARule):
         :param nonlinearity: Activation function, defaults to nn.ReLU
         :type nonlinearity: type[nn.Module], optional
         """
-        super(MLPNCARule, self).__init__(device, input_size, hidden_size, output_size)
+        super().__init__(device, input_size, hidden_size, output_size)
         self.nonlinearity = nonlinearity
         self._build_network()
         self._initialize_network()
