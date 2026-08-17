@@ -114,6 +114,7 @@ Additionally, different hooks exist for modifying the inference process, e.g. fo
 Examples for specialized NCA models can be found in `ncalab.models.applications`.
 
 Central to the inference process is the `Prediction` class, which stores the tensors processed by NCA models and allows to retrieve channel sections individually, e.g. through the `hidden_channels` property accessing the hidden channels.
+The interplay of abstract NCA model components and Predictions is illustrated in Figure 1.
 
 ![Illustration of abstract NCA model and its components, which produce Prediction objects.](ncalab_structure.png){#fig:structure width=90%}
 
