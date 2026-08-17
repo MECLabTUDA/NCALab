@@ -1,3 +1,6 @@
+# v0.5.2
+* Introduce TrainerHooks, make EarlyStopping a TrainerHook
+
 # v0.5.1
 * MedMNIST tasks: Adjust default settings
 * Small fixes in loss implementations
