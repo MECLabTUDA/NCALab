@@ -80,17 +80,6 @@ To our knowledge, post-hoc tasks like transfer learning or uncertainty estimatio
 `NCALab` enables such analyses, allowing to design uncertainty estimators tailored to NCA models and to evaluate them on multiple downstream tasks with little implementation overhead.
 
 
-# Research Impact Statement
-
-A conference paper utilizing `NCALab` was accepted for presentation in [IPCAI 2025](https://ipcai.org), and was published in the _International Journal of Computer-Assisted Radiology and Surgery_ [@krumb2025encapsulatea].
-For creating this paper, `NCALab` was used to train models for image segmentation and monocular depth estimation.
-The trained models are exported to C headers and ported to a microcontroller.
-
-
-# AI usage disclosure
-
-Generative AI has not been used in the scope of this project, neither for software creation nor for documentation or paper authoring.
-
 
 # Features
 
@@ -114,7 +103,28 @@ Until now, NCALab provides the following key features:
 * Uncertainty heatmap generation
 
 
-# Dependencies and Tooling
+
+# Software Design
+
+`NCALab` follows a mostly object-oriented design.
+
+Specialized NCA models subclass the abstract class `AbstractNCAModel` in `ncalab.models`.
+For a bare-minimum implementation, subclasses should implement the `loss()` method, returning a `dict` of loss terms that can be visualized (the item with key `total` is backpropagated).
+Additionally, different hooks exist for modifying the inference process, e.g. for adjusting the prediction after unrolling all NCA steps in `post_prediction()`.
+Examples for specialized NCA models can be found in `ncalab.models.applications`.
+
+Central to the inference process is the `Prediction` class, which stores the tensors processed by NCA models and allows to retrieve channel sections individually, e.g. through the `hidden_channels` property accessing the hidden channels.
+
+![Illustration of abstract NCA model and its components, which produce Prediction objects.](whitepaper/ncalab_structure.png){#fig:example width=20%}
+
+
+NCAs are trained by passing them to a `BasicNCATrainer` object which stores training configuration and handles the entire training loop.
+The NCA trainer can be supplemented by hooks, which are subclasses of `TrainerHook`, e.g. for early stopping (`ncalab.training.earlystopping`).
+
+
+
+
+## Dependencies and Tooling
 
 `NCALab` mostly builds on pytorch [@paszke2019pytorch], numpy [@harris2020array] and matplotlib [@hunter2007matplotlib].
 Code quality is backed by unit tests ([pytest](https://pytest.org), [coverage](https://coverage.readthedocs.io)) and automated static code analysis through [mypy](https://mypy-lang.org/) and [ruff](https://docs.astral.sh/ruff/).
@@ -123,13 +133,17 @@ Code documentation is generated through [Sphinx](https://www.sphinx-doc.org/en/m
 Releases of `NCALab` can be downloaded from the Python Package Index ([pip](https://pypi.org/project/ncalab/)).
 
 
+# Research Impact Statement
 
-# Software Design
+A conference paper utilizing `NCALab` was accepted for presentation in [IPCAI 2025](https://ipcai.org), and was published in the _International Journal of Computer-Assisted Radiology and Surgery_ [@krumb2025encapsulatea].
+For creating this paper, `NCALab` was used to train models for image segmentation and monocular depth estimation.
+The trained models are exported to C headers and ported to a microcontroller.
 
-`NCALab` follows an object-oriented design, where specialized NCA models build on top of the abstract class `AbstractNCAModel`.
-For a bare-minimum implementation, subclasses should implement the `loss()` method, returning a `dict` of loss terms that can be visualized (the item with key `total` is backpropagated).
-Additionally, different hooks exist for modifying the inference process, e.g. for adjusting the prediction after unrolling all NCA steps in `post_prediction()`.
-Central to the inference process is the `Prediction` class, which stores the tensors processed by NCA models and allows to retrieve channel sections individually, e.g. through the `hidden_channels` property accessing the hidden channels.
+
+# AI usage disclosure
+
+Generative AI has not been used in the scope of this project, neither for software creation nor for documentation or paper authoring.
+
 
 
 
