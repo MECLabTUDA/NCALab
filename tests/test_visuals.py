@@ -1,7 +1,5 @@
-from typing import Dict
-
-import torch
 import pytest
+import torch
 
 from ncalab import (
     AbstractNCAModel,
@@ -33,7 +31,7 @@ class DummyModel(AbstractNCAModel):
     def __init__(self, device):
         super().__init__(device, 3, 12, 5)
 
-    def loss(self, pred: Prediction, label: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def loss(self, pred: Prediction, label: torch.Tensor) -> dict[str, torch.Tensor]:
         return {}
 
 

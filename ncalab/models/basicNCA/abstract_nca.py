@@ -14,12 +14,12 @@ from torchmetrics import Metric
 from ...prediction import Prediction
 from ...utils import interpret_range_parameter, pad_input
 from ...visualization import Visual
-from .abstractNCAhead import AbstractNCAHead
-from .basicNCAperception import BasicNCAPerception
-from .mlpNCArule import MLPNCARule
+from .abstract_nca_head import AbstractNCAHead
+from .basic_nca_perception import BasicNCAPerception
+from .mlp_nca_rule import MLPNCARule
 
 if TYPE_CHECKING:
-    from .abstractNCArule import AbstractNCARule
+    from .abstract_nca_rule import AbstractNCARule
 
 
 class AbstractNCAModel(nn.Module, abc.ABC):

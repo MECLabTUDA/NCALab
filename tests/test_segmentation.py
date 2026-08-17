@@ -1,12 +1,10 @@
+import numpy as np
 import pytest
-
 from torch.utils.data import DataLoader, Dataset
 
-import numpy as np
-
 from ncalab import (
-    BinarySegmentationNCAModel,
     BasicNCATrainer,
+    BinarySegmentationNCAModel,
     get_compute_device,
 )
 

@@ -1,4 +1,3 @@
-
 import numpy as np
 import torch  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
@@ -59,8 +58,8 @@ class GrowingNCAModel(AbstractNCAModel):
         :returns [Tensor]: MSE Loss
         """
         assert label.shape[1] == self.num_image_channels
-        loss_hidden = torch.mean(torch.abs(pred.hidden_channels))
-        loss_growing = F.mse_loss(pred.image_channels, label)
+        loss_hidden = torch.mean(torch.abs(pred.hidden_channels), dim=(1, 2, 3))
+        loss_growing = F.mse_loss(pred.image_channels, label, reduction="none")
         loss = loss_growing + self.lambda_hidden * loss_hidden
         return {
             "total": loss,

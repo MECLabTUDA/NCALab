@@ -1,1 +1,1 @@
-from .cascadeNCA import CascadeNCA  # noqa: F401
+from .cascade_nca import CascadeNCA  # noqa: F401

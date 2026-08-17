@@ -1,1 +1,1 @@
-from .depthNCA import DepthNCAModel  # noqa: F401
+from .depth_nca import DepthNCAModel  # noqa: F401

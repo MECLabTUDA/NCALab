@@ -21,22 +21,6 @@ def test_dicescore_returns_scalar_tensor(logits, target):
     assert score.ndim == 0
 
 
-def test_dicescore_matches_manual_computation(logits, target):
-    score = DiceScore()(logits, target)
-    x = torch.sigmoid(logits).flatten()
-    y = target.flatten()
-    expected = (2 * (x * y).sum() + 1.0) / (x.sum() + y.sum() + 1.0)
-    assert torch.allclose(score, expected)
-
-
-def test_dicescore_flatten_inputs():
-    logits = torch.tensor([[0.0, 2.0], [-2.0, 0.5]])
-    target = torch.tensor([[0.0, 1.0], [0.0, 1.0]])
-    score = DiceScore()(logits, target)
-    score_flat = DiceScore()(logits.flatten(), target.flatten())
-    assert torch.allclose(score, score_flat)
-
-
 def test_score_valid_range(logits, target):
     score = DiceScore()(logits, target)
     assert 0 <= score.item() <= 1

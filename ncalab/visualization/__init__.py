@@ -1,4 +1,5 @@
-from .animation import Animator, AnimatorStyle
+from .animation import Animator, AnimatorStyle, Color
+from .utils import string_ellipsis
 from .visualization import (
     Visual,
     VisualBinaryImageClassification,
@@ -12,6 +13,7 @@ from .visualization import (
 __all__ = [
     "Animator",
     "AnimatorStyle",
+    "Color",
     "Visual",
     "VisualBinaryImageClassification",
     "VisualBinaryImageSegmentation",
@@ -19,4 +21,5 @@ __all__ = [
     "VisualGrowing",
     "VisualMultiImageClassification",
     "VisualRGBImageClassification",
+    "string_ellipsis",
 ]

@@ -78,7 +78,7 @@ class BinarySegmentationNCAModel(AbstractNCAModel):
         }
         self.lambda_hidden = lambda_hidden
         self.bce_loss = torch.nn.BCEWithLogitsLoss(reduction="none")
-        self.dice_loss = DiceLoss()
+        self.dice_loss = DiceLoss(reduction="none")
         self.lambda_bce = lambda_bce
         self.lambda_dice = lambda_dice
 
@@ -93,11 +93,11 @@ class BinarySegmentationNCAModel(AbstractNCAModel):
         """
         y = pred.logits
 
-        loss_dice = self.dice_loss(y, label).mean(dim=(1, 2, 3))
+        loss_dice = self.dice_loss(y, label)
         if label.ndim == 3:
             label = label.unsqueeze(1)
-        loss_bce = self.bce_loss(y, label.float()).mean(dim=(1, 2, 3))
-        loss_hidden = torch.abs(pred.hidden_channels).mean(dim=(1, 2, 3))
+        loss_bce = self.bce_loss(y, label.float())
+        loss_hidden = torch.abs(pred.hidden_channels)
 
         loss = (
             self.lambda_dice * loss_dice

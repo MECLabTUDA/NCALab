@@ -8,8 +8,9 @@ class DiceScore(nn.Module):
     Pytorch Module that computes the Dice overlap score between two images.
     """
 
-    def __init__(self):
+    def __init__(self, reduction="mean"):
         super().__init__()
+        self.reduction = reduction
 
     def forward(
         self, x: torch.Tensor, y: torch.Tensor, smooth: float = 1.0
@@ -28,19 +29,38 @@ class DiceScore(nn.Module):
         x = torch.sigmoid(x)
         intersection = x * y
         dice_score = (2.0 * intersection + smooth) / (x + y + smooth)
-        return dice_score
+        if self.reduction == "none":
+            return dice_score
+        if self.reduction == "mean":
+            return dice_score.mean()
+        if self.reduction == "sum":
+            return dice_score.sum()
+        raise RuntimeError("Invalid reduction")
 
 
 class DiceLoss(nn.Module):
-    def __init__(self):
+    def __init__(self, reduction="mean"):
         super().__init__()
+        if reduction not in {"none", "mean", "sum"}:
+            raise ValueError(
+                f"Invalid reduction: {reduction}. "
+                "Expected one of: 'none', 'mean', 'sum'."
+            )
         self.dicescore = DiceScore()
+        self.reduction = reduction
 
     def forward(
         self, x: torch.Tensor, y: torch.Tensor, smooth: float = 1.0
     ) -> torch.Tensor:
         dice_loss = 1 - self.dicescore(x, y, smooth)
-        return dice_loss
+
+        if self.reduction == "none":
+            return dice_loss
+        if self.reduction == "mean":
+            return dice_loss.mean()
+        if self.reduction == "sum":
+            return dice_loss.sum()
+        raise RuntimeError("Invalid reduction")
 
 
 class DiceBCELoss(nn.Module):
@@ -48,7 +68,7 @@ class DiceBCELoss(nn.Module):
     Combination of Dice and BCE Loss between two images.
     """
 
-    def __init__(self, reduction="none"):
+    def __init__(self, reduction="mean"):
         super().__init__()
         self.dicescore = DiceScore()
         self.reduction = reduction
@@ -75,7 +95,7 @@ class DiceBCELoss(nn.Module):
 
 
 class FocalLoss(nn.modules.loss._WeightedLoss):
-    def __init__(self, weight=None, gamma=2, device="cpu", reduction="none"):
+    def __init__(self, weight=None, gamma=2, device="cpu", reduction="mean"):
         super().__init__(weight)
         self.gamma = gamma
         self.weight = weight

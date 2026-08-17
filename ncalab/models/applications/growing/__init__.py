@@ -1,1 +1,1 @@
-from .growingNCA import GrowingNCAModel  # noqa: F401
+from .growing_nca import GrowingNCAModel  # noqa: F401

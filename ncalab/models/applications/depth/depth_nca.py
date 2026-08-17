@@ -1,4 +1,3 @@
-
 import torch  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
 from pytorch_msssim import ssim  # type: ignore[import-untyped]
@@ -50,8 +49,8 @@ class SmoothnessLoss(nn.Module):
             rgb_image, sobel_y.repeat(1, rgb_image.size(1), 1, 1), padding=1
         )
 
-        loss_x = F.l1_loss(depth_grad_x, rgb_grad_x)
-        loss_y = F.l1_loss(depth_grad_y, rgb_grad_y)
+        loss_x = F.l1_loss(depth_grad_x, rgb_grad_x, reduction="none")
+        loss_y = F.l1_loss(depth_grad_y, rgb_grad_y, reduction="none")
 
         # Combine the losses
         total_loss = loss_x + loss_y
@@ -132,7 +131,7 @@ class DepthNCAModel(AbstractNCAModel):
             label.unsqueeze(1),
         )
 
-        loss_depthmap_function = nn.MSELoss()
+        loss_depthmap_function = nn.MSELoss(reduction="none")
         loss_depthmap = loss_depthmap_function(
             y_pred_SSI,
             y_SSI,

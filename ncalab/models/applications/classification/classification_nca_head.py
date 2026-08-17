@@ -1,7 +1,7 @@
 import torch
 from torch import nn
 
-from ncalab.models.basicNCA.abstractNCAhead import AbstractNCAHead
+from ncalab.models.basicNCA.abstract_nca_head import AbstractNCAHead
 
 
 class ClassificationNCAHead(AbstractNCAHead):

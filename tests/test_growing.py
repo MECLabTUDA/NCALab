@@ -1,14 +1,11 @@
-#!/usr/bin/env python3
+import numpy as np
 import pytest
-
 from torch.utils.data import DataLoader
 
-import numpy as np
-
 from ncalab import (
+    BasicNCATrainer,
     GrowingNCADataset,
     GrowingNCAModel,
-    BasicNCATrainer,
     get_compute_device,
 )
 

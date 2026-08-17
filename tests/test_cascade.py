@@ -1,20 +1,15 @@
-#!/usr/bin/env python3
-import pytest
-
 import albumentations as A  # type: ignore[import-untyped]
-from albumentations.pytorch import ToTensorV2  # type: ignore[import-untyped]
-
-from torch.utils.data import Dataset, DataLoader
-
 import numpy as np
+import pytest
+from albumentations.pytorch import ToTensorV2  # type: ignore[import-untyped]
+from torch.utils.data import DataLoader, Dataset
 
 from ncalab import (
-    DepthNCAModel,
-    CascadeNCA,
     BasicNCATrainer,
+    CascadeNCA,
+    DepthNCAModel,
     get_compute_device,
 )
-
 
 T = A.Compose(
     [

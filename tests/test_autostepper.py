@@ -1,5 +1,3 @@
-from typing import Dict
-
 import pytest
 import torch
 
@@ -49,7 +47,7 @@ class DummyModel(AbstractNCAModel):
     def __init__(self, device):
         super().__init__(device, 3, 12, 5)
 
-    def loss(self, pred: Prediction, label: torch.Tensor) -> Dict[str, torch.Tensor]:
+    def loss(self, pred: Prediction, label: torch.Tensor) -> dict[str, torch.Tensor]:
         return {}
 
 
