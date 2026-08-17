@@ -29,6 +29,7 @@ For more information on NCAs, check out our curated [Awesome List](https://githu
 ![Animation of a prediction on DermaMNIST in feature space](artwork/classification_dermamnist.gif)
 ![Animation of a prediction on PathMNIST in feature space](artwork/classification_pathmnist.gif)
 
+
 ## Neural Cellular Automata
 
 NCA are a new type of neural architecture, fusing Cellular Automata and Artificial Neural Networks to create memory-efficient, robust models.
@@ -42,6 +43,7 @@ Instead of a manual neighborhood aggregation (e.g. Moore or von Neumann neighbor
 
 For a better overview on the basic NCA architecture, we recommend you to read the original 2020 [NCA Paper](https://distill.pub/2020/growing-ca/) by Mordvintsev et al.
 
+
 ## Features
 
 Features of NCALab include:
@@ -53,14 +55,16 @@ Features of NCALab include:
   * Convenience features: Fixing random seeds, selecting compute devices, data processing
   * Animation and visualization of NCA predictions
 
+
 ### Roadmap
 
 The following features are planned for future releases of NCALab:
 
-  * Implementation of more approaches presented in research that extend or tweak NCA models
+  * Implementation of more approaches presented in research that extend or tweak NCA models, for instance, muNCA (lean version of NCA for texture synthesis), or M3DNCA
   * Simplifyed saving and loading of trained NCA models
   * Evaluation of federated and continual learning with NCAs
-  * NCAs that operate on 3D voxel data
+  * NCAs that operate on 3D voxel data (e.g. M3DNCA)
+
 
 ## Getting started
 
@@ -79,6 +83,7 @@ You may want to download pre-trained weights for all examples by issuing the fol
 ```bash
 uv run scripts/download_example_weights.py
 ```
+
 
 ### Usage Example Tasks
 
