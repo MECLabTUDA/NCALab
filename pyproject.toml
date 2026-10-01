@@ -1,75 +1,71 @@
 [project]
 name = "ncalab"
-version = "0.5.1"
+version = "0.6.0"
 description = "Training code and pre-trained models for Neural Cellular Automata on different datasets and tasks"
 readme = "README.md"
 requires-python = ">=3.12"
 license = "MIT"
 classifiers = [
-    "Programming Language :: Python :: 3.12",
-    "Development Status :: 3 - Alpha",
+  "Development Status :: 3 - Alpha",
+  "Programming Language :: Python :: 3.12",
 ]
 dependencies = [
-    "albumentations>=2.0.8",
-    "certifi==2026.6.17",
-    "click==8.4.2",
-    "coverage==7.15.4",
-    "cuda-toolkit>=13.2.1",
-    "matplotlib==3.11.1",
-    "medmnist>=3.0.2",
-    "mypy==2.3.1",
-    "numpy>=2.4.6",
-    "numpy-typing-compat==20260602.2.5",
-    "opencv-python>=4.13.0.92",
-    "optype[numpy]==0.18.0",
-    "pandas==3.0.5",
-    "pandas-stubs==3.0.5.260730",
-    "pillow==12.3.0",
-    "pytest==9.1.1",
-    "pytorch-msssim>=1.0.0",
-    "requests==2.34.2",
-    "ruff==0.16.3",
-    "safetensors>=0.8.0",
-    "scipy==1.18.0",
-    "scipy-stubs==1.18.0.1",
-    "setuptools==83.0.0",
-    "tabulate>=0.10.0",
-    "tensorboard>=2.20.0",
-    "torch==2.13.0+cu132",
-    "torchmetrics>=1.9.0",
-    "torchvision>=0.27.0",
-    "tqdm==4.70.0",
-    "types-tqdm==4.70.0.20260805",
+  "albumentations>=2.0.8",
+  "certifi==2026.6.17",
+  "click==8.4.2",
+  "coverage==7.15.4",
+  "cuda-toolkit>=13.2.1",
+  "matplotlib==3.11.1",
+  "medmnist>=3.0.2",
+  "mypy==2.3.1",
+  "numpy>=2.4.6",
+  "numpy-typing-compat==20260602.2.5",
+  "opencv-python>=4.13.0.92",
+  "optype[numpy]==0.18.0",
+  "pandas==3.0.5",
+  "pandas-stubs==3.0.5.260730",
+  "pillow==12.3.0",
+  "pytest==9.1.1",
+  "pytorch-msssim>=1.0.0",
+  "requests==2.34.2",
+  "ruff==0.16.3",
+  "safetensors>=0.8.0",
+  "scipy==1.18.0",
+  "scipy-stubs==1.18.0.1",
+  "setuptools==83.0.0",
+  "tabulate>=0.10.0",
+  "tensorboard>=2.20.0",
+  "torch==2.13.0+cu132",
+  "torchmetrics>=1.9.0",
+  "torchvision>=0.27.0",
+  "tqdm==4.70.0",
+  "types-tqdm==4.70.0.20260805",
 ]
-
 
 [project.urls]
 Documentation = "https://ncalab.readthedocs.io/en/latest/"
 Repository = "https://github.com/MECLabTUDA/NCAlab"
 
+[dependency-groups]
+dev = [
+  "black>=26.5.1",
+  "coverage>=7.14.1",
+  "mypy>=2.1.0",
+  "pytest>=9.1.0",
+  "ruff>=0.15.17",
+]
+docs = [
+  "sphinx>=9.1.0",
+  "sphinx-autoapi>=3.6.0",
+  "sphinx-rtd-theme>=3.0.2",
+]
 
 [tool.setuptools]
 packages = ["ncalab"]
 
-[dependency-groups]
-dev = [
-    "black>=26.5.1",
-    "coverage>=7.14.1",
-    "mypy>=2.1.0",
-    "pytest>=9.1.0",
-    "ruff>=0.15.17",
-]
-docs = [
-    "sphinx>=9.1.0",
-    "sphinx-autoapi>=3.6.0",
-    "sphinx-rtd-theme>=3.0.2",
-]
-
-
 [tool.uv.sources]
 torch = [{ index = "pytorch-cu132" }]
 torchvision = [{ index = "pytorch-cu132" }]
-
 
 [[tool.uv.index]]
 name = "pytorch-cu132"
