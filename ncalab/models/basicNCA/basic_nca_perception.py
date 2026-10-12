@@ -5,7 +5,7 @@ import torch  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
 from torch import nn  # type: ignore[import-untyped]
 
-from ..filters import laplace, sobel_x, sobel_y
+from ...filters import op_laplace, op_sobel_x, op_sobel_y
 
 
 class BasicNCAPerception(nn.Module):
@@ -57,9 +57,9 @@ class BasicNCAPerception(nn.Module):
                 )
             self.filters = nn.ModuleList(filters).to(self.device)
         else:
-            self.filters.extend([sobel_x, sobel_y])
+            self.filters.extend([op_sobel_x, op_sobel_y])
             if self.use_laplace:
-                self.filters.append(laplace)
+                self.filters.append(op_laplace)
             self.num_filters = len(self.filters)
 
     def perceive(self, x: torch.Tensor, step: int) -> torch.Tensor:
