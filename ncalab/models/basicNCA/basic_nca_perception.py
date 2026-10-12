@@ -5,11 +5,13 @@ import torch  # type: ignore[import-untyped]
 import torch.nn.functional as F  # type: ignore[import-untyped]
 from torch import nn  # type: ignore[import-untyped]
 
+from ..filters import laplace, sobel_x, sobel_y
+
 
 class BasicNCAPerception(nn.Module):
     def __init__(
         self,
-        device,
+        device: torch.device,
         num_channels: int,
         num_learned_filters: int,
         filter_padding: Literal["zero", "reflect", "replicate", "circular"],
@@ -55,9 +57,6 @@ class BasicNCAPerception(nn.Module):
                 )
             self.filters = nn.ModuleList(filters).to(self.device)
         else:
-            sobel_x = np.outer([1, 2, 1], [-1, 0, 1]) / 8.0
-            sobel_y = sobel_x.T
-            laplace = np.array([[1, 2, 1], [2, -12, 2], [1, 2, 1]])
             self.filters.extend([sobel_x, sobel_y])
             if self.use_laplace:
                 self.filters.append(laplace)
