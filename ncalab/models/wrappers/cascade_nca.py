@@ -6,7 +6,6 @@ from torch import nn  # type: ignore[import-untyped]
 
 from ncalab.models.basicNCA import AbstractNCAModel
 from ncalab.prediction import Prediction
-from ncalab.utils import unwrap
 
 
 def upscale(image: torch.Tensor, scale: float, mode: str = "nearest") -> torch.Tensor:
@@ -92,7 +91,6 @@ class CascadeNCA(AbstractNCAModel):
             validation_metric=wrapped.validation_metric,
             use_laplace=wrapped.use_laplace,
             pad_noise=wrapped.pad_noise,
-            use_temporal_encoding=wrapped.use_temporal_encoding,
             training_timesteps=wrapped.training_timesteps,
             inference_timesteps=wrapped.inference_timesteps,
         )
@@ -209,9 +207,7 @@ class CascadeNCA(AbstractNCAModel):
             sequence.extend(subseq)
             x_in = prediction.output_image
             if i < len(self.scales) - 1:
-                x_scaled = upscale(
-                    unwrap(prediction).output_image, scale / self.scales[i + 1]
-                )
+                x_scaled = upscale(prediction.output_image, scale / self.scales[i + 1])
                 # replace input with downscaled variant of original image
                 x_scaled[:, : model.num_image_channels, :, :] = downscale(
                     image[:, : model.num_image_channels, :, :],

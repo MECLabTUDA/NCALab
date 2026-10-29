@@ -4,6 +4,7 @@ from .applications import (
     ClassificationNCAModel,
     DepthNCAModel,
     GrowingNCAModel,
+    SelfClassificationNCAModel,
 )
 from .basicNCA import (
     AbstractNCAHead,
@@ -26,4 +27,5 @@ __all__ = [
     "DepthNCAModel",
     "GrowingNCAModel",
     "MLPNCARule",
+    "SelfClassificationNCAModel",
 ]

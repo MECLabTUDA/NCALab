@@ -120,7 +120,7 @@ class BasicNCATrainer:
         losses = self.nca.loss(prediction, y.to(device))
         # TODO use dedicated class (LossInstance) to model composite losses
         assert "total" in losses, "Model: Loss dict must contain 'total' item."
-        # loss must not be reduced
+        # loss must not be reduced along batch dimension
         assert len(losses["total"]) == len(x_in)
 
         for hook in self.hooks:
@@ -180,7 +180,7 @@ class BasicNCATrainer:
         if summary_writer is not None:
             summary_writer.add_text("Training Info", self.info())
 
-        self.lr_scheduler = optim.lr_scheduler.ExponentialLR(self.optimizer, 0.9)
+        # self.lr_scheduler = optim.lr_scheduler.ExponentialLR(self.optimizer, 0.9)
         head_optimizer = None
         if self.nca.head is not None and self.nca.head.optimizer is not None:
             head_optimizer = copy(self.nca.head.optimizer)

@@ -14,11 +14,10 @@ from torchvision.transforms import v2  # type: ignore[import-untyped]
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-
-from ncalab import (  # noqa: E402
-    fix_random_seed,
+from ncalab import ClassificationNCAModel  # noqa: E402
+from ncalab import (
     BasicNCATrainer,
-    ClassificationNCAModel,
+    fix_random_seed,
     get_compute_device,
     print_NCALab_banner,
 )
@@ -30,7 +29,6 @@ WEIGHTS_PATH.mkdir(exist_ok=True)
 gradient_clipping = False
 pad_noise = False
 alive_mask = False
-use_temporal_encoding = False
 fire_rate = 1.0
 default_hidden_channels = 20
 
@@ -65,13 +63,13 @@ def train_class_bloodmnist(
 ):
     fix_random_seed()
     print_NCALab_banner()
+    click.secho("Training BloodMNIST example")
 
     comment = "BloodMNIST"
     comment += f"_hidden_{hidden_channels}"
     comment += f"_gc_{gradient_clipping}"
     comment += f"_noise_{pad_noise}"
     comment += f"_AM_{alive_mask}"
-    comment += f"_TE_{use_temporal_encoding}"
 
     writer = SummaryWriter(comment=comment) if not dry else None
 
@@ -97,9 +95,7 @@ def train_class_bloodmnist(
     )
 
     dataset_val = BloodMNIST(split="val", download=True, transform=T_val)
-    loader_val = torch.utils.data.DataLoader(
-        dataset_val, shuffle=True, batch_size=8
-    )
+    loader_val = torch.utils.data.DataLoader(dataset_val, shuffle=True, batch_size=8)
 
     dataset_test = BloodMNIST(split="test", download=True, transform=T_val)
     loader_test = torch.utils.data.DataLoader(dataset_test)
@@ -113,7 +109,6 @@ def train_class_bloodmnist(
         use_alive_mask=alive_mask,
         fire_rate=fire_rate,
         pad_noise=pad_noise,
-        use_temporal_encoding=use_temporal_encoding,
         class_names=list(INFO["bloodmnist"]["label"].values()),
         training_timesteps=32,
         inference_timesteps=32,

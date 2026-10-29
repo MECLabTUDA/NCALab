@@ -5,21 +5,17 @@ from pathlib import Path
 
 import click
 import numpy as np
-
-import torch
+from growing_utils import get_emoji_image
 from torch.utils.data import DataLoader
 from torch.utils.tensorboard import SummaryWriter
-
-from growing_utils import get_emoji_image
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from ncalab import (  # noqa: E402
+from ncalab import GrowingNCADataset  # noqa: E402
+from ncalab import (
     BasicNCATrainer,
-    GrowingNCADataset,
     GrowingNCAModel,
-    Pool,
     fix_random_seed,
     get_compute_device,
     print_NCALab_banner,
@@ -53,7 +49,7 @@ def train_growing_emoji(
     # Select device, try to use GPU or fall back to CPU
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
-    pool = Pool(6, damage=True)
+    # pool = Pool(6)
 
     # Create NCA model definition
     nca = GrowingNCAModel(
@@ -62,7 +58,7 @@ def train_growing_emoji(
         use_alive_mask=True,
         lambda_hidden=1e-2,
     )
-    nca = torch.compile(nca)
+    # nca = torch.compile(nca)
 
     # Create dataset containing a single growing emoji
     image = np.asarray(get_emoji_image())
@@ -74,7 +70,7 @@ def train_growing_emoji(
         nca,
         WEIGHTS_PATH / "ncalab_growing_emoji" if not dry else None,
         max_epochs=max_epochs,
-        pool=pool,
+        # hooks=[pool],
     )
     trainer.train(dataloader_train, summary_writer=writer, save_every=500)
     if writer is not None:

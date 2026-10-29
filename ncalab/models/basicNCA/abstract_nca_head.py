@@ -7,7 +7,7 @@ from torch import nn
 class AbstractNCAHead(nn.Module, abc.ABC):
     def __init__(self):
         super().__init__()
-        self.optimizer = None
+        self.optimizer: torch.optim.Optimizer | None = None
 
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         """
@@ -16,7 +16,7 @@ class AbstractNCAHead(nn.Module, abc.ABC):
 
         :returns: NotImplemented, subclasses are required to implement this method.
         """
-        return NotImplemented
+        raise NotImplementedError
 
     @abc.abstractmethod
     def freeze(self, freeze_last: bool = True) -> None:

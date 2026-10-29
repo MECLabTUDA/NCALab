@@ -1,7 +1,11 @@
 import itertools
+from typing import TYPE_CHECKING
 
 import numpy as np
 import torch
+
+if TYPE_CHECKING:
+    from .models.basicNCA.abstract_nca import AbstractNCAModel
 
 
 class Prediction:
@@ -14,7 +18,7 @@ class Prediction:
 
     def __init__(
         self,
-        model,
+        model: "AbstractNCAModel",
         steps: int,
         output_image: torch.Tensor,
         logits: torch.Tensor,
@@ -33,16 +37,16 @@ class Prediction:
         :param output_image: Output image tensor.
         :type output_image: torch.Tensor
         """
-        self.model = model
-        self.steps = steps
+        self.model: "AbstractNCAModel" = model
+        self.steps: int = steps
         assert output_image.shape[1] == model.num_channels
-        self.output_image = output_image
+        self.output_image: torch.Tensor = output_image
         self._output_array: np.ndarray | None = None
-        self.logits = logits
+        self.logits: torch.Tensor = logits
         self._logits_array: np.ndarray | None = None
-        self.head_prediction = head_prediction
+        self.head_prediction: torch.Tensor | None = head_prediction
         self._head_prediction_array: np.ndarray | None = None
-        self.mask = mask
+        self.mask: torch.Tensor | None = mask
         self._mask_array: np.ndarray | None = None
 
     @property

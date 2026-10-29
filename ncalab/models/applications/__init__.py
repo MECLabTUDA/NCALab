@@ -1,4 +1,8 @@
-from .classification import ClassificationNCAHead, ClassificationNCAModel
+from .classification import (
+    ClassificationNCAHead,
+    ClassificationNCAModel,
+    SelfClassificationNCAModel,
+)
 from .depth import DepthNCAModel
 from .growing import GrowingNCAModel
 from .segmentation import BinarySegmentationNCAModel
@@ -9,4 +13,5 @@ __all__ = [
     "ClassificationNCAModel",
     "DepthNCAModel",
     "GrowingNCAModel",
+    "SelfClassificationNCAModel",
 ]

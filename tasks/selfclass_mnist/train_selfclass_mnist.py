@@ -13,9 +13,9 @@ from torchvision.datasets import MNIST  # type: ignore[import-untyped]
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from ncalab import (  # noqa: E402
+from ncalab import SelfClassificationNCAModel  # noqa: E402
+from ncalab import (
     BasicNCATrainer,
-    SelfClassificationNCAModel,
     fix_random_seed,
     get_compute_device,
     print_mascot,

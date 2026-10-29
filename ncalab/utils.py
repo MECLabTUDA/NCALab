@@ -3,7 +3,7 @@ from __future__ import annotations
 import os
 import random
 from datetime import datetime
-from typing import TYPE_CHECKING, Any
+from typing import TYPE_CHECKING
 
 import numpy as np
 import torch  # type: ignore[import-untyped]
@@ -135,7 +135,7 @@ def fix_random_seed(seed: int = DEFAULT_RANDOM_SEED):
     random.seed(seed)
     os.environ["PYTHONHASHSEED"] = str(seed)
     np.random.seed(seed)
-    torch.manual_seed(seed)
+    _ = torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
@@ -152,14 +152,14 @@ def release_random_seed() -> int:
     random.seed(seed)
     os.environ["PYTHONHASHSEED"] = str(seed)
     np.random.seed(seed)
-    torch.manual_seed(seed)
+    _ = torch.manual_seed(seed)
     torch.cuda.manual_seed(seed)
     torch.backends.cudnn.deterministic = True
     torch.backends.cudnn.benchmark = False
     return seed
 
 
-def unwrap(x: Any):
+def unwrap(x: object) -> object:
     """
     Panics if x is None, otherwise returns x.
 
@@ -167,7 +167,7 @@ def unwrap(x: Any):
     in which we are 99% certain that some_object is not None and want to avoid a mypy complaint.
 
     :param x: Any kind of object.
-    :type x: Any
+    :type x: object
     :raises RuntimeError: If x is None.
     :return: Just passes through the input x if it is not None.
     """

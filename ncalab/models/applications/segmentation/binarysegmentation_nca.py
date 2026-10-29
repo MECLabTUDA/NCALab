@@ -93,10 +93,10 @@ class BinarySegmentationNCAModel(AbstractNCAModel):
         """
         y = pred.logits
 
-        loss_dice = self.dice_loss(y, label)
+        loss_dice: torch.Tensor = self.dice_loss(y, label)
         if label.ndim == 3:
             label = label.unsqueeze(1)
-        loss_bce = self.bce_loss(y, label.float())
+        loss_bce: torch.Tensor = self.bce_loss(y, label.float())
         loss_hidden = torch.abs(pred.hidden_channels)
 
         loss = (

@@ -28,7 +28,6 @@ class SelfClassificationNCAModel(AbstractNCAModel):
         use_laplace: bool = False,
         kernel_size: int = 3,
         pad_noise: bool = False,
-        use_temporal_encoding: bool = False,
         class_names: list[str] | None = None,
         lambda_hidden: float = 0,
         **kwargs,
@@ -60,7 +59,6 @@ class SelfClassificationNCAModel(AbstractNCAModel):
             use_laplace=use_laplace,
             kernel_size=kernel_size,
             pad_noise=pad_noise,
-            use_temporal_encoding=use_temporal_encoding,
             **kwargs,
         )
         self._num_classes = num_classes
@@ -121,7 +119,7 @@ class SelfClassificationNCAModel(AbstractNCAModel):
         )
         loss_ce = (ce * mask).sum() / (mask.sum() + 1e-8)
         loss_classification = loss_ce
-        loss_hidden = torch.mean(torch.abs(pred.hidden_channels))
+        loss_hidden = torch.mean(torch.abs(pred.hidden_channels), dim=(1, 2, 3))
 
         loss = loss_classification + self.lambda_hidden * loss_hidden
         return {

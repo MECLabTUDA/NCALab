@@ -31,7 +31,6 @@ class ClassificationNCAModel(AbstractNCAModel):
         use_laplace: bool = False,
         kernel_size: int = 3,
         pad_noise: bool = False,
-        use_temporal_encoding: bool = False,
         use_classifier: bool = True,
         class_names: list[str] | None = None,
         avg_pool_size: int = 8,
@@ -66,7 +65,6 @@ class ClassificationNCAModel(AbstractNCAModel):
             use_laplace=use_laplace,
             kernel_size=kernel_size,
             pad_noise=pad_noise,
-            use_temporal_encoding=use_temporal_encoding,
             **kwargs,
         )
         self._num_classes = num_classes
@@ -114,7 +112,7 @@ class ClassificationNCAModel(AbstractNCAModel):
             "auroc": auroc_metric,
             "f1": f1_metric,
         }
-        self.focal_loss = FocalLoss()
+        self.focal_loss = FocalLoss(reduction="none").to(self.device)
 
     @property
     def num_classes(self) -> int:
@@ -164,7 +162,7 @@ class ClassificationNCAModel(AbstractNCAModel):
 
         :returns: Dictionary of identifiers mapped to computed losses.
         """
-        loss_focal = self.focal_loss(pred.logits, label.view(-1), reduce=None)
+        loss_focal = self.focal_loss(pred.logits, label.view(-1))
         loss_classification = loss_focal
         loss_hidden = torch.mean(torch.abs(pred.hidden_channels), dim=(1, 2, 3))
 

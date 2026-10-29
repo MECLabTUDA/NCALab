@@ -7,6 +7,7 @@ import click
 import numpy as np  # type: ignore[import-untyped]
 import torch  # type: ignore[import-untyped]
 import torchvision  # type: ignore[import-untyped]
+from torch import optim  # type: ignore[import-untyped]
 from torch.utils.data.sampler import SubsetRandomSampler  # type: ignore[import-untyped]
 from torch.utils.tensorboard import SummaryWriter  # type: ignore[import-untyped]
 from torchvision import transforms  # type: ignore[import-untyped]
@@ -14,9 +15,9 @@ from torchvision.transforms import v2  # type: ignore[import-untyped]
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
-from ncalab import (  # noqa: E402
+from ncalab import CascadeNCA  # noqa: E402
+from ncalab import (
     BasicNCATrainer,
-    CascadeNCA,
     ClassificationNCAModel,
     fix_random_seed,
     get_compute_device,
@@ -30,7 +31,6 @@ WEIGHTS_PATH.mkdir(exist_ok=True)
 gradient_clipping = False
 pad_noise = True
 alive_mask = False
-use_temporal_encoding = True
 fire_rate = 0.5
 default_hidden_channels = 24
 
@@ -70,10 +70,10 @@ def train_class_cifar10(
     comment += f"_gc_{gradient_clipping}"
     comment += f"_noise_{pad_noise}"
     comment += f"_AM_{alive_mask}"
-    comment += f"_TE_{use_temporal_encoding}"
 
     writer = SummaryWriter(comment=comment) if not dry else None
     print_NCALab_banner()
+    click.secho("Training CIFAR10 example")
     fix_random_seed()
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
@@ -138,15 +138,14 @@ def train_class_cifar10(
         use_alive_mask=alive_mask,
         fire_rate=fire_rate,
         pad_noise=pad_noise,
-        use_temporal_encoding=use_temporal_encoding,
         class_names=class_names,
         training_timesteps=48,
         inference_timesteps=48,
         use_classifier=True,
         lambda_hidden=1e-2,
     )
-    cascade = CascadeNCA(nca, [4, 2, 1], [16, 8, 8])
-    cascade = torch.compile(cascade)
+    cascade = CascadeNCA(nca, [4, 2, 1], [16, 16, 8])
+    # cascade = torch.compile(cascade)
     # Train the NCA model
     trainer = BasicNCATrainer(
         cascade,
@@ -155,6 +154,7 @@ def train_class_cifar10(
         max_epochs=max_epochs,
         gradient_clipping=gradient_clipping,
     )
+    trainer.lr_scheduler = optim.lr_scheduler.ExponentialLR(trainer.optimizer, 0.9)
     trainer.train(
         loader_train,
         loader_val,

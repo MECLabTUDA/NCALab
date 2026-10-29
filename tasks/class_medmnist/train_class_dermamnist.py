@@ -15,9 +15,9 @@ from torchvision.transforms import v2  # type: ignore[import-untyped]
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from ncalab import (  # noqa: E402
+from ncalab import ClassificationNCAModel  # noqa: E402
+from ncalab import (
     BasicNCATrainer,
-    ClassificationNCAModel,
     fix_random_seed,
     get_compute_device,
     print_NCALab_banner,
@@ -30,7 +30,6 @@ WEIGHTS_PATH.mkdir(exist_ok=True)
 gradient_clipping = False
 pad_noise = False
 alive_mask = False
-use_temporal_encoding = True
 fire_rate = 0.8
 default_hidden_channels = 64
 
@@ -45,13 +44,13 @@ def train_class_dermamnist(
 ):
     fix_random_seed()
     print_NCALab_banner()
+    click.secho("Training DermaMNIST example")
 
     comment = "DermaMNIST"
     comment += f"_hidden_{hidden_channels}"
     comment += f"_gc_{gradient_clipping}"
     comment += f"_noise_{pad_noise}"
     comment += f"_AM_{alive_mask}"
-    comment += f"_TE_{use_temporal_encoding}"
 
     writer = SummaryWriter(comment=comment) if not dry else None
 
@@ -118,7 +117,6 @@ def train_class_dermamnist(
         use_alive_mask=alive_mask,
         fire_rate=fire_rate,
         pad_noise=pad_noise,
-        use_temporal_encoding=use_temporal_encoding,
         class_names=list(INFO["dermamnist"]["label"].values()),
         training_timesteps=32,
         inference_timesteps=32,

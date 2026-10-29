@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import abc
 import os
-from typing import TYPE_CHECKING, Any, Literal
+from typing import TYPE_CHECKING, Any, Literal, override
 
 import numpy as np
 import torch  # type: ignore[import-untyped]
@@ -47,9 +47,7 @@ class AbstractNCAModel(nn.Module, abc.ABC):
         use_laplace: bool = False,
         kernel_size: int = 3,
         pad_noise: bool = False,
-        use_temporal_encoding: bool = False,
         rule_type: type[AbstractNCARule] = MLPNCARule,
-        rule_args: dict[str, Any] | None = None,
         training_timesteps: int | tuple[int, int] = 100,
         inference_timesteps: int | tuple[int, int] = 100,
     ):
@@ -68,31 +66,28 @@ class AbstractNCAModel(nn.Module, abc.ABC):
         :param use_laplace: Whether to use Laplace filter (only if num_learned_filters == 0)
         :param kernel_size: Filter kernel size (only for learned filters)
         :param pad_noise: Whether to pad input image tensor with noise in hidden / output channels
-        :param use_temporal_encoding:
         :param rule_type:
-        :param rule_args:
         :param training_timesteps:
         :param inference_timesteps:
         """
         super().__init__()
         self.device = device
 
-        self.num_image_channels = num_image_channels
-        self.num_hidden_channels = num_hidden_channels
-        self.num_output_channels = num_output_channels
+        self.num_image_channels: int = num_image_channels
+        self.num_hidden_channels: int = num_hidden_channels
+        self.num_output_channels: int = num_output_channels
         self.num_channels = (
             num_image_channels + num_hidden_channels + num_output_channels
         )
-        self.fire_rate = fire_rate
-        self.hidden_size = hidden_size
-        self.use_alive_mask = use_alive_mask
-        self.immutable_image_channels = immutable_image_channels
-        self.num_learned_filters = num_learned_filters
-        self.use_laplace = use_laplace
+        self.fire_rate: float = fire_rate
+        self.hidden_size: int = hidden_size
+        self.use_alive_mask: bool = use_alive_mask
+        self.immutable_image_channels: bool = immutable_image_channels
+        self.num_learned_filters: int = num_learned_filters
+        self.use_laplace: bool = use_laplace
         self.kernel_size = kernel_size
         self.filter_padding = filter_padding
         self.pad_noise = pad_noise
-        self.use_temporal_encoding = use_temporal_encoding
         self.plot_function = plot_function
         self.validation_metric = validation_metric
         self.training_timesteps = training_timesteps
@@ -105,31 +100,26 @@ class AbstractNCAModel(nn.Module, abc.ABC):
             self.num_channels,
             self.num_learned_filters,
             self.filter_padding,
-            self.use_temporal_encoding,
             self.use_laplace,
-            self.training_timesteps,
-            self.kernel_size,
+            training_timesteps=self.training_timesteps,
+            kernel_size=self.kernel_size,
         )
-        self.input_vector_size = self.num_channels * (self.perception.num_filters + 1)
-        if self.use_temporal_encoding:
-            self.input_vector_size += 1
         # state transition rule
+        # FIXME this needs to be improved
         self.rule_type = rule_type
-        self.rule_args = rule_args
         self.rule = self._define_rule()
         # task-specific head
         self.head: AbstractNCAHead | None = None
 
         self.metrics: dict[str, Metric] = {}
-        self.to(device)
+        _ = self.to(device)
 
     def _define_rule(self) -> AbstractNCARule:
         return self.rule_type(
             self.device,
-            self.input_vector_size,
+            self.perception.vector_dim(),
             self.hidden_size,
             self.num_channels,
-            **(self.rule_args or {}),
         )
 
     def prepare_input(self, x: torch.Tensor) -> torch.Tensor:
@@ -143,7 +133,7 @@ class AbstractNCAModel(nn.Module, abc.ABC):
         """
         return x
 
-    def _alive(self, x):
+    def _alive(self, x: torch.Tensor):
         mask = (
             F.max_pool2d(
                 x[:, 3, :, :],
@@ -210,6 +200,7 @@ class AbstractNCAModel(nn.Module, abc.ABC):
             return self.head(hidden)
         return None
 
+    @override
     def forward(
         self,
         x: torch.Tensor,
@@ -381,7 +372,6 @@ class AbstractNCAModel(nn.Module, abc.ABC):
             "kernel_size": self.kernel_size,
             "filter_padding": self.filter_padding,
             "pad_noise": self.pad_noise,
-            "use_temporal_encoding": self.use_temporal_encoding,
             "training_timesteps": self.training_timesteps,
             "inference_timesteps": self.inference_timesteps,
         }

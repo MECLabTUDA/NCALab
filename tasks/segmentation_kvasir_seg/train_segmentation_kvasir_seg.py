@@ -20,9 +20,9 @@ root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
 
-from ncalab import (  # noqa: E402
+from ncalab import BinarySegmentationNCAModel  # noqa: E402
+from ncalab import (
     BasicNCATrainer,
-    BinarySegmentationNCAModel,
     CascadeNCA,
     EarlyStopping,
     fix_random_seed,
@@ -71,7 +71,6 @@ def train_segmentation_kvasir_seg(
         num_hidden_channels=hidden_channels,
         pad_noise=True,
         fire_rate=0.8,
-        use_temporal_encoding=True,
     )
     cascade = CascadeNCA(nca, [4, 2, 1], [16, 8, 8])
     cascade = torch.compile(cascade)
