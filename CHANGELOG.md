@@ -1,5 +1,6 @@
 # v0.6.0
-* Breaking changes: Rename modules to underscore notation
+* Breaking change: Rename modules to underscore notation
+* Model TemporalEncoding as a dedicated class
 
 # v0.5.2
 * Introduce TrainerHooks, make EarlyStopping a TrainerHook
