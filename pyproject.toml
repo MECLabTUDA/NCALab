@@ -24,7 +24,7 @@ dependencies = [
   "optype[numpy]==0.18.0",
   "pandas==3.0.5",
   "pandas-stubs==3.0.5.260730",
-  "pillow==12.3.0",
+  "pillow==13.0.0",
   "pytest==9.1.1",
   "pytorch-msssim>=1.0.0",
   "requests==2.34.2",
