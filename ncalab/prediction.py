@@ -37,7 +37,7 @@ class Prediction:
         :param output_image: Output image tensor.
         :type output_image: torch.Tensor
         """
-        self.model: "AbstractNCAModel" = model
+        self.model: AbstractNCAModel = model
         self.steps: int = steps
         assert output_image.shape[1] == model.num_channels
         self.output_image: torch.Tensor = output_image
