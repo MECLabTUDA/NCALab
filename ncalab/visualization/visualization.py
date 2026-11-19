@@ -4,7 +4,7 @@ for various downstream tasks. These functions are used
 for tensorboard "images" tab.
 """
 
-import warnings
+from typing import cast
 
 import matplotlib.pyplot as plt  # type: ignore[import-untyped]
 import numpy as np
@@ -94,7 +94,7 @@ class VisualRGBImageClassification(Visual):
             class_channels[i] *= mask
 
         if prediction.head_prediction is not None:
-            y_prob = unwrap(prediction.head_prediction_array)
+            y_prob = cast(np.ndarray, unwrap(prediction.head_prediction_array))
         else:
             y_prob = np.mean(class_channels, (2, 3))
         y_logit = softmax(y_prob, axis=-1)
@@ -117,17 +117,6 @@ class VisualRGBImageClassification(Visual):
             [spine.set_linewidth(2) for spine in ax[1, j].spines.values()]
         figure.subplots_adjust()
         return figure
-
-
-class VisualMultiImageClassification(Visual):
-    def __init__(self):
-        warnings.warn(
-            "VisualMultiImageClassification is deprecated and will be removed in future versions. "
-            "Please use VisualRGBImageClassification instead.",
-            DeprecationWarning,
-            stacklevel=2,
-        )
-        self.new_instance = VisualRGBImageClassification()
 
 
 class VisualBinaryImageSegmentation(Visual):

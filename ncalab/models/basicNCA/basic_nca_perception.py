@@ -71,8 +71,10 @@ class BasicNCAPerception(nn.Module):
         return d
 
     def perceive(self, x: torch.Tensor, step: int) -> torch.Tensor:
-        def _perceive_with(x: torch.Tensor, weight: nn.Conv2d | np.ndarray):
+        def _perceive_with(x: torch.Tensor, weight: nn.Conv2d | np.ndarray | nn.Module):
             if isinstance(weight, nn.Conv2d):
+                return weight(x)
+            if isinstance(weight, nn.Module):
                 return weight(x)
             # if using a hard coded filter matrix.
             # this is done in the original Growing NCA paper, but learned filters typically

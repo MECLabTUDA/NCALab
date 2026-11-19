@@ -6,7 +6,6 @@ from .visualization import (
     VisualBinaryImageSegmentation,
     VisualDepthEstimation,
     VisualGrowing,
-    VisualMultiImageClassification,
     VisualRGBImageClassification,
 )
 
@@ -19,7 +18,6 @@ __all__ = [
     "VisualBinaryImageSegmentation",
     "VisualDepthEstimation",
     "VisualGrowing",
-    "VisualMultiImageClassification",
     "VisualRGBImageClassification",
     "string_ellipsis",
 ]
