@@ -41,7 +41,7 @@ However, the training dynamics of NCAs are not yet fully understood, and there i
 
 # Neural Cellular Automata
 
-Neural cellular automata (NCA) are a computational model combining the principles of Cellular Automata and Nneural Networks, allowing systems to learn and evolve over time.
+Neural cellular automata (NCA) are a computational model combining the principles of Cellular Automata and Neural Networks, allowing systems to learn and evolve over time.
 In NCAs, a grid of cells, each cell being capable of assuming a continuous, multi-dimensional state, changes based on a learned rule determined by neural networks rather than fixed algorithms.
 Typically, the inference is done in two steps, which are called _Perception_ and _Update_.
 In the perception step, each cell's neighborhood is aggregated by applying multiple depth-wise convolutions.
@@ -54,7 +54,7 @@ For more information, we want to point the reader to the comprehensive original 
 
 # State of the Field
 
-NCAs are recently gaining attention especially in medical imaging, where they are deployed for various modalities in different downstream tasks, including 3D prostate segmentation on MRI [@kalkhof2023mednca] [@kalkhof2023m3dncaa], image registration [@ranem2024ncamorph] or image synthesis [@kalkhof2024frequencytime], [@kalkhof2025parameterefficient].
+NCAs are recently gaining attention especially in medical imaging, where they are deployed for various modalities in different downstream tasks, including 3D prostate segmentation on MRI [@kalkhof2023mednca; @kalkhof2023m3dncaa], image registration [@ranem2024ncamorph] or image synthesis [@kalkhof2024frequencytime], [@kalkhof2025parameterefficient].
 In most cases, they outperform other Convolutional Neural Network or Vision Transformer architectures in terms of _model size_ and robustness [@kalkhof2023mednca], while yielding similarly accurate predictions.
 Especially in constrained settings, such as radiology departments without access to GPU hardware, state-of-the art medical image segmentation is hardly possible with contemporary architectures based on Convolutional Neural Networks or Vision Transformers.
 NCAs, on the other hand, are a promising approach to enable AI support even in constrained settings.
@@ -63,7 +63,7 @@ NCAs, on the other hand, are a promising approach to enable AI support even in c
 # Statement of Need
 
 Research of NCA models and training has just started a few years ago, and there is no _unified_ framework or reference implementation for training, evaluation and systematic experimentation with NCAs.
-Most NCA implementations live in custom codebases dedicated to the downstream task at hand, with little or now quality control or unit tests.
+Most NCA implementations live in custom codebases dedicated to the downstream task at hand, with little or no quality control or unit tests.
 Further, there is currently no set of best practices for designing NCA models with respect to their hyperparameters, such as the number of neurons, hidden channels or fire rate.
 
 A systematic analysis of different NCA hyperparameters and architectural variations is difficult, as the research code of NCA contributions is typically organized in individual repositories with different frameworks and coding styles for each downstream task under investigation.
@@ -89,6 +89,7 @@ To our knowledge, post-hoc tasks like transfer learning or uncertainty estimatio
 * Self-classifying MNIST digits, similar to the work of [@randazzo2020selfclassifying].
 * Pixel-wise medical image segmentation of Endoscopic images on the Kvasir-SEG dataset [@jha2019kvasirseg].
 * Multi-class medical image classification on subsets of the MedMNIST image dataset [@yang2023medmnist].
+* Real-world image classification on CIFAR-10
 
 Until now, NCALab provides the following key features:
 
@@ -131,7 +132,7 @@ The NCA trainer can be supplemented by hooks, which are subclasses of `TrainerHo
 Code quality is backed by unit tests ([pytest](https://pytest.org), [coverage](https://coverage.readthedocs.io)) and automated static code analysis through [mypy](https://mypy-lang.org/) and [ruff](https://docs.astral.sh/ruff/).
 The project uses [uv](https://astral.sh/blog/uv) for fast and simplified dependency management.
 Code documentation is generated through [Sphinx](https://www.sphinx-doc.org/en/master/index.html) and is automatically uploaded to [readthedocs](https://ncalab.readthedocs.io/en/latest/).
-Releases of `NCALab` can be downloaded from the Python Package Index ([pip](https://pypi.org/project/ncalab/)).
+Releases of `NCALab` can be downloaded from the Python Package Index ([PyPI](https://pypi.org/project/ncalab/)).
 
 
 # Research Impact Statement
