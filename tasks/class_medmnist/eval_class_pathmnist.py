@@ -9,23 +9,18 @@ from medmnist import INFO, PathMNIST  # type: ignore[import-untyped]
 from train_class_pathmnist import (
     TASK_PATH,
     WEIGHTS_PATH,
+    T_eval,
     alive_mask,
     default_hidden_channels,
     fire_rate,
     pad_noise,
-    use_temporal_encoding,
-    T_eval,
 )
 
 root_dir = os.path.abspath(os.path.join(os.path.dirname(__file__), "../.."))
 sys.path.append(root_dir)
 
-from ncalab import (  # noqa: E402
-    Animator,
-    ClassificationNCAModel,
-    fix_random_seed,
-    get_compute_device,
-)
+from ncalab import ClassificationNCAModel  # noqa: E402
+from ncalab import Animator, fix_random_seed, get_compute_device
 
 FIGURE_PATH = TASK_PATH / "figures"
 FIGURE_PATH.mkdir(exist_ok=True)
@@ -51,10 +46,9 @@ def eval_selfclass_pathmnist(
         use_alive_mask=alive_mask,
         fire_rate=fire_rate,
         pad_noise=pad_noise,
-        use_temporal_encoding=use_temporal_encoding,
         class_names=list(INFO["pathmnist"]["label"].values()),
-        training_timesteps=(16, 24),
-        inference_timesteps=16,
+        training_timesteps=32,
+        inference_timesteps=32,
         use_classifier=True,
     )
     nca.load_state_dict(

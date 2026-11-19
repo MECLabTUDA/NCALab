@@ -7,6 +7,7 @@ import click
 import numpy as np
 import torch  # type: ignore[import-untyped]
 from medmnist import INFO, PathMNIST  # type: ignore[import-untyped]
+from torch import optim  # type: ignore[import-untyped]
 from torch.utils.tensorboard import SummaryWriter  # type: ignore[import-untyped]
 from torchvision import transforms  # type: ignore[import-untyped]
 from torchvision.transforms import v2  # type: ignore[import-untyped]
@@ -22,10 +23,10 @@ WEIGHTS_PATH = TASK_PATH / "weights"
 WEIGHTS_PATH.mkdir(exist_ok=True)
 
 gradient_clipping = False
-pad_noise = False
+pad_noise = True
 alive_mask = False
 fire_rate = 0.8
-default_hidden_channels = 20
+default_hidden_channels = 32
 
 T_train = transforms.Compose(
     [
@@ -59,9 +60,9 @@ def train_class_pathmnist(
 ):
     comment = (
         f"PathMNIST_hidden_{hidden_channels}"
-        "_gc_{gradient_clipping}"
-        "_noise_{pad_noise}"
-        "_AM_{alive_mask}"
+        f"_gc_{gradient_clipping}"
+        f"_noise_{pad_noise}"
+        f"_AM_{alive_mask}"
     )
 
     writer = SummaryWriter(comment=comment) if not dry else None
@@ -102,9 +103,10 @@ def train_class_pathmnist(
         fire_rate=fire_rate,
         pad_noise=pad_noise,
         class_names=list(INFO["pathmnist"]["label"].values()),
-        training_timesteps=(16, 24),
-        inference_timesteps=16,
+        training_timesteps=32,
+        inference_timesteps=32,
         use_classifier=True,
+        lambda_hidden=1e-2,
     )
     trainer = BasicNCATrainer(
         nca,
@@ -113,6 +115,7 @@ def train_class_pathmnist(
         max_epochs=max_epochs,
         gradient_clipping=gradient_clipping,
     )
+    trainer.lr_scheduler = optim.lr_scheduler.ExponentialLR(trainer.optimizer, 0.9)
     trainer.train(
         loader_train,
         loader_val,

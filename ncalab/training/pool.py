@@ -30,8 +30,8 @@ class Pool(TrainerHook):
             self.batch = torch.clone(batch)
             if losses is None:
                 return
-            losses = losses.reshape(losses.shape[0], -1).mean(dim=1)
-            indices = torch.argsort(losses, descending=True)
+            losses = losses.mean(dim=(1, 2, 3))
+            indices = torch.argsort(losses, descending=False)
             self.batch = self.batch[indices]
 
     def _sample(self, seed: torch.Tensor) -> torch.Tensor:

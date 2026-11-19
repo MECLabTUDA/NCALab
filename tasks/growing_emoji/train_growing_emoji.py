@@ -16,6 +16,7 @@ from ncalab import GrowingNCADataset  # noqa: E402
 from ncalab import (
     BasicNCATrainer,
     GrowingNCAModel,
+    Pool,
     fix_random_seed,
     get_compute_device,
     print_NCALab_banner,
@@ -49,7 +50,7 @@ def train_growing_emoji(
     # Select device, try to use GPU or fall back to CPU
     device = get_compute_device(f"cuda:{gpu_index}" if gpu else "cpu")
 
-    # pool = Pool(6)
+    pool = Pool(8)
 
     # Create NCA model definition
     nca = GrowingNCAModel(
@@ -70,7 +71,7 @@ def train_growing_emoji(
         nca,
         WEIGHTS_PATH / "ncalab_growing_emoji" if not dry else None,
         max_epochs=max_epochs,
-        # hooks=[pool],
+        hooks=[pool],
     )
     trainer.train(dataloader_train, summary_writer=writer, save_every=500)
     if writer is not None:
